@@ -143,163 +143,109 @@
     ]
   },
   {
-    "objectID": "tool_introduction.html",
-    "href": "tool_introduction.html",
-    "title": "Introduction to the tools",
+    "objectID": "toc_header.html",
+    "href": "toc_header.html",
+    "title": "Table of Contents",
     "section": "",
-    "text": "Pankegg is composed of two main tools:\nThe web interface is divided into two main categories:",
+    "text": "Table of Contents"
+  },
+  {
+    "objectID": "input_files.html",
+    "href": "input_files.html",
+    "title": "Supported input",
+    "section": "",
+    "text": "Pankegg was developed to integrate output files from a variety of metagenomics tools, such as CheckM2, Sourmash, GTDB-TK and EggNOG. You can combine them all, or only add the ones that are interesting for you.",
+    "crumbs": [
+      "Getting Started",
+      "Supported input"
+    ]
+  },
+  {
+    "objectID": "input_files.html#input-files",
+    "href": "input_files.html#input-files",
+    "title": "Supported input",
+    "section": "Input files",
+    "text": "Input files\n\nSupported input files\n\n\n\n\n\n\n\nTool\nInput File\nData Extracted\n\n\n\n\ncheckm2\nquality_report.tsv\nbin completeness and contamination\n\n\nSourmash\n*.txt\nID, Status and Taxonomic classification\n\n\nGTDB-TK\n*.summary.tsv\nUser genome and Taxonomic classification\n\n\nEggNOG\n*.annotations.tsv\nKEGG Orthologs, KEGG Pathways, GO terms, Description",
+    "crumbs": [
+      "Getting Started",
+      "Supported input"
+    ]
+  },
+  {
+    "objectID": "input_files.html#additional-input-files-provided-by-pankegg",
+    "href": "input_files.html#additional-input-files-provided-by-pankegg",
+    "title": "Supported input",
+    "section": "Additional Input Files Provided by Pankegg",
+    "text": "Additional Input Files Provided by Pankegg\nPANKEGG requires more input files. However, these are already provided and you don’t need to worry about them. They are located in the data directory.\n\nAdditional input, built into PANKEGG\n\n\n\n\n\n\n\nFile Name\nDescription\nData Origin\n\n\n\n\nkegg_map_info.tsv\nContains mapID, pathway name, and total number of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nkegg_map_orthologs.tsv\nContains mapID, pathway name, and list of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nko.txt\nContains the IDs and names of orthologs\nExtracted from KEGG orthologs database\n\n\npathway.txt\nContains map IDs (pathways) and their names\nExtracted from KEGG pathway database\n\n\npathway_groups.txt\nMaps IDs grouped by KEGG sub-categories\nExtracted from KEGG pathway database",
+    "crumbs": [
+      "Getting Started",
+      "Supported input"
+    ]
+  },
+  {
+    "objectID": "Pankegg_make_db.html",
+    "href": "Pankegg_make_db.html",
+    "title": "Pankegg_make_db.py",
+    "section": "",
+    "text": "Pankegg’s data parser that constructs the SQL database that is later used in the web application.",
     "crumbs": [
       "The tools",
-      "Introduction to the tools"
+      "Pankegg_make_db.py"
     ]
   },
   {
-    "objectID": "tool_introduction.html#feature-pages",
-    "href": "tool_introduction.html#feature-pages",
-    "title": "Introduction to the tools",
-    "section": "Feature Pages",
-    "text": "Feature Pages\nPankegg provides multiple interactive features:\n\nSample vs Sample: Heatmap of selected pathways, scatter plots for bin quality, PCA of bins, tables/plots showing KEGGs unique or shared between samples/pathways.\nBin vs Bin: Plot and table of KEGGs shared or unique between two bins for metabolic pathways.\nTaxonomic Comparison: For a given rank, see sample-wise composition plots (abundance = number of bins classified as taxon / total bins), and pathway-vs-taxa heatmaps.\nPCA: Dedicated page for visualizing principal component analysis (PCA) of each sample, based on KOs, maps, or taxonomy.\n\n\nNote:\nIn this documentation, the terms “map” and “pathway” are sometimes used interchangeably. Typically, “map” refers to the KEGG database’s map ID (e.g., map00010), while “pathway” refers to the biological pathway name. Although the KEGG database provides both a pathway ID and a map ID, this tool focuses on the map ID, which is generally more complete and reliable for referencing metabolic pathways.",
+    "objectID": "Pankegg_make_db.html#input-file-format",
+    "href": "Pankegg_make_db.html#input-file-format",
+    "title": "Pankegg_make_db.py",
+    "section": "Input file format",
+    "text": "Input file format\nTo create the SQL database, you will need a CSV file listing all your samples and their corresponding input directories or files.\nThe expected CSV format uses the following header:\nSample name,Annotation_dir,classification_dir,Checkm2_dir\nEach subsequent line represents a sample, and should look like one of the following examples:\n\nFor Sourmash classification:\n\n    SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/sourmash/*,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv\n    SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/sourmash/*,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv\n\nFor GTDB-TK classification (when using the --gtdbtk flag):\n\n    SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/gtdb_results/*.summary.tsv,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv\n    SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/gtdb_results/*.summary.tsv,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv\n\nCreate the input file\nYou can create this input CSV file automatically with a bash loop, depending on how your data are organized:\n\nIf your results are grouped by sample:\nDir/\n├── SAMPLEID1/\n│   ├── bin_annotation/\n│   ├── sourmash/\n│   ├── gtdb_results/\n│   └── checkm2_dir/\n└── SAMPLEID2/\n    ├── bin_annotation/\n    ├── sourmash/\n    ├── gtdb_results/\n    └── checkm2_dir/\nRun the following script to include Sourmash annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/*; do\n    name=$(basename \"$sample\");\n    ann_path=\"$sample/bin_annotation/*.annotations.tsv\";\n    class_path=\"$sample/sourmash/*\";\n    checkm2_path=\"$sample/checkm2_dir/quality_report.tsv\";\n    echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone\nRun the following script to include GTDBTK annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/*; do\n   name=$(basename \"$sample\");\n   ann_path=\"$sample/bin_annotation/*.annotations.tsv\";\n   class_path=\"$sample/gtdb_results/*.summary.tsv\";\n   checkm2_path=\"$sample/checkm2_dir/quality_report.tsv\";\n   echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone\n\n\nIf your results are grouped by tool, then sample:\nDir/\n├── bin_annotation/\n│   ├── SAMPLEID1/\n│   ├── SAMPLEID2/\n│   └── ...\n├── sourmash/\n│   ├── SAMPLEID1/\n│   ├── SAMPLEID2/\n│   └── ...\n├── gtdb_results/\n│   ├── SAMPLEID1/\n│   ├── SAMPLEID2/\n│   └── ...\n└── checkm2_dir/\n   ├── SAMPLEID1/\n   ├── SAMPLEID2/\n   └── ...\nRun the following script to include Sourmash annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/bin_annotation/*; do\n    name=$(basename \"$sample\");\n    ann_path=\"Dir/bin_annotation/$name/*.annotations.tsv\";\n    class_path=\"Dir/sourmash/$name/*\";\n    checkm2_path=\"Dir/checkm2_dir/$name/quality_report.tsv\";\n    echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone\nRun the following script to include GTDBTK annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/bin_annotation/*; do\n    name=$(basename \"$sample\");\n    ann_path=\"Dir/bin_annotation/$name/*.annotations.tsv\";\n    class_path=\"Dir/gtdb_results/$name/*.summary.tsv\";\n    checkm2_path=\"Dir/checkm2_dir/$name/quality_report.tsv\";\n    echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone",
     "crumbs": [
       "The tools",
-      "Introduction to the tools"
+      "Pankegg_make_db.py"
     ]
   },
   {
-    "objectID": "quickstart.html",
-    "href": "quickstart.html",
-    "title": "Quickstart",
-    "section": "",
-    "text": "This quickstart guide will walk you through setting up Pankegg, running the pipeline on test data, and launching the web application to explore your results.",
+    "objectID": "Pankegg_make_db.html#parameters-make-db",
+    "href": "Pankegg_make_db.html#parameters-make-db",
+    "title": "Pankegg_make_db.py",
+    "section": "Parameters Make DB",
+    "text": "Parameters Make DB\n\n-i, --input\nPath to the CSV file listing all samples and their input files/directories (required).\n-o, --output\nName of the output database file (without the extension). The default is pankegg. The .db extension is automatically added to the output name.\n--output_dir\nDirectory the database will be written to. The default is ./db_output.\n--gtdbtk\nUse this flag if your classification files were generated with GTDB-TK instead of Sourmash.",
     "crumbs": [
-      "Getting Started",
-      "Quickstart"
+      "The tools",
+      "Pankegg_make_db.py"
     ]
   },
   {
-    "objectID": "quickstart.html#install-pankegg-and-dependencies",
-    "href": "quickstart.html#install-pankegg-and-dependencies",
-    "title": "Quickstart",
-    "section": "Install Pankegg and Dependencies",
-    "text": "Install Pankegg and Dependencies\nInstall Pankegg via pip, conda, or pixi.\nSee the Installation section for detailed options.\nwget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip\nunzip master.zip\ncd PANKEGG-master\npip install .",
+    "objectID": "Pankegg_make_db.html#output-make-db",
+    "href": "Pankegg_make_db.html#output-make-db",
+    "title": "Pankegg_make_db.py",
+    "section": "Output Make DB",
+    "text": "Output Make DB\nThe output is an SQLite database (*.db) that can be opened with tools like sqlite3, but is best used with pankegg_app.py for interactive browsing.\nThe database contains the following tables:\n\ntaxonomy\nbin\nmap\nkegg\nbin_map_kegg\nbin_map\nmap_kegg\nbin_extra\nbin_extra_kegg\nsample\n\nEach table stores specific information related to bins, pathways, taxonomy, and annotation results for easy querying and visualization.",
     "crumbs": [
-      "Getting Started",
-      "Quickstart"
+      "The tools",
+      "Pankegg_make_db.py"
     ]
   },
   {
-    "objectID": "quickstart.html#download-example-test-data-optional",
-    "href": "quickstart.html#download-example-test-data-optional",
-    "title": "Quickstart",
-    "section": "Download Example Test Data (optional)",
-    "text": "Download Example Test Data (optional)\nDownload and extract the example dataset:\nwget https://osf.io/5v3zc/download -O pankegg_test_data.zip\nunzip pankegg_test_data.zip",
+    "objectID": "Pankegg_make_db.html#run-with-testdata",
+    "href": "Pankegg_make_db.html#run-with-testdata",
+    "title": "Pankegg_make_db.py",
+    "section": "Run with Testdata",
+    "text": "Run with Testdata\nTo verify your installation and familiarize yourself with Pankegg, you can run a test using provided data. Download the example archive, unzip it, and generate test databases using the included CSV files:\n\nDownload the test data archive from OSF:\nwget https://osf.io/download/5v3zc/ -O pankegg_test_data.zip\nOR\ncurl -L -o pankegg_test_data.zip  https://osf.io/download/5v3zc/\n\n\nUnzip the archive:\nThis will create a directory called pankegg_test_data.\nunzip pankegg_test_data.zip\n\n\nCreate a test database for Sourmash classification:\npython pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data\n\n\nCreate a test database for GTDB-TK classification:\npython pankegg_make_db.py -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_dir pankegg_test_data --gtdbtk\nAfter running these commands, you should find newly created test_sourmash.db and test_gtdbtk.db inside the pankegg_test_data directory. This is in addition to the already existing sourmash_example.db and gtdbtk_example.db files in the same directory.\nThe existing and newly generated respective databases should be identical, so the validity of pankegg_make_db.py can be tested by comparing the two files.",
     "crumbs": [
-      "Getting Started",
-      "Quickstart"
+      "The tools",
+      "Pankegg_make_db.py"
     ]
   },
   {
-    "objectID": "quickstart.html#build-the-sql-database-optional",
-    "href": "quickstart.html#build-the-sql-database-optional",
-    "title": "Quickstart",
-    "section": "Build the SQL Database (optional)",
-    "text": "Build the SQL Database (optional)\nGenerate a Pankegg database from the provided CSV using the included test data (for both Sourmash and GTDB-TK classification):\npython pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data",
+    "objectID": "Pankegg_make_db.html#troubleshooting",
+    "href": "Pankegg_make_db.html#troubleshooting",
+    "title": "Pankegg_make_db.py",
+    "section": "Troubleshooting",
+    "text": "Troubleshooting\nFor more details or troubleshooting, please consult the Reporting Bugs & Contributing section.",
     "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#launch-the-web-application",
-    "href": "quickstart.html#launch-the-web-application",
-    "title": "Quickstart",
-    "section": "Launch the Web Application",
-    "text": "Launch the Web Application\nStart the web server using the database present in the repository:\npython pankegg_app.py --d data/pankegg.db\nor use the the database you generated in point 3:\npython pankegg_app.py --d pankegg_test_data/test_sourmash",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#open-web-browser",
-    "href": "quickstart.html#open-web-browser",
-    "title": "Quickstart",
-    "section": "Open web browser",
-    "text": "Open web browser\nNow, open your web browser and go to the IP address written in your terminal ( http://0.0.0.0:5000) to interactively explore your metagenomic data!",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "reporting_bugs.html#getting-started-with-pankegg",
-    "href": "reporting_bugs.html#getting-started-with-pankegg",
-    "title": "Reporting bugs & contributing",
-    "section": "Getting started with Pankegg",
-    "text": "Getting started with Pankegg\nBefore contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server."
-  },
-  {
-    "objectID": "reporting_bugs.html#did-you-find-a-bug",
-    "href": "reporting_bugs.html#did-you-find-a-bug",
-    "title": "Reporting bugs & contributing",
-    "section": "Did you find a bug?",
-    "text": "Did you find a bug?\n\nEnsure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring."
-  },
-  {
-    "objectID": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
-    "href": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
-    "title": "Reporting bugs & contributing",
-    "section": "How to work on a new feature/bug",
-    "text": "How to work on a new feature/bug\nCreate an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly."
-  },
-  {
-    "objectID": "reporting_bugs.html#how-we-work-with-git",
-    "href": "reporting_bugs.html#how-we-work-with-git",
-    "title": "Reporting bugs & contributing",
-    "section": "How we work with Git",
-    "text": "How we work with Git\nAll work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\nGeneral stuff about git and commit messages\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\nHelpful commit messages\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\nHow we do code reviews\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again."
-  },
-  {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Welcome to Pankegg",
-    "section": "",
-    "text": "Welcome to the Pankegg documentation. Here you will find all the information you need to get started with Pankegg.",
-    "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
-    ]
-  },
-  {
-    "objectID": "index.html#overview",
-    "href": "index.html#overview",
-    "title": "Welcome to Pankegg",
-    "section": "Overview",
-    "text": "Overview\nA powerful parser and visualizer for metagenome bin annotation, classification, and quality assessment.\nPankegg is a flexible and user-friendly interactive software suite built with Python, SQL, Jinja, JavaScript, and Flask, designed to visualize and compare bin annotations, taxonomic classifications, and quality metrics (estimated by CheckM2). It enables interactive exploration and comparison of results across bins and samples through a local web server interface.\nPankegg is ideal for anyone working with output files from CheckM2, EggNOG, Sourmash, or GTDB-TK. While it can be integrated into any workflow, it was originally conceived as the final step of the MUFFIN pipeline to provide a comprehensive visualization and analysis platform.",
-    "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
-    ]
-  },
-  {
-    "objectID": "index.html#mission-statement",
-    "href": "index.html#mission-statement",
-    "title": "Welcome to Pankegg",
-    "section": "Mission Statement",
-    "text": "Mission Statement\nPankegg aims to provide a comprehensive tool for the analysis and visualization of metabolic pathways across various samples and bins.\nOur goal is to facilitate research and understanding in the field of metagenomics and bioinformatics.",
-    "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
-    ]
-  },
-  {
-    "objectID": "index.html#features-and-benefits",
-    "href": "index.html#features-and-benefits",
-    "title": "Welcome to Pankegg",
-    "section": "Features and Benefits",
-    "text": "Features and Benefits\n\nCompare samples and bins with ease\nVisualize taxonomic compositions\nAnalyze pathway completions\nExport data for further analysis",
-    "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
+      "The tools",
+      "Pankegg_make_db.py"
     ]
   },
   {
@@ -413,102 +359,163 @@
     ]
   },
   {
-    "objectID": "Pankegg_make_db.html",
-    "href": "Pankegg_make_db.html",
-    "title": "Pankegg_make_db.py",
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "PANKEGG",
     "section": "",
-    "text": "Pankegg’s data parser that constructs the SQL database that is later used in the web application.",
+    "text": "Welcome to the Pankegg documentation. Here you will find all the information you need to get started with Pankegg.",
     "crumbs": [
-      "The tools",
-      "Pankegg_make_db.py"
+      "Home",
+      "Overview"
     ]
   },
   {
-    "objectID": "Pankegg_make_db.html#input-file-format",
-    "href": "Pankegg_make_db.html#input-file-format",
-    "title": "Pankegg_make_db.py",
-    "section": "Input file format",
-    "text": "Input file format\nTo create the SQL database, you will need a CSV file listing all your samples and their corresponding input directories or files.\nThe expected CSV format uses the following header:\nSample name,Annotation_dir,classification_dir,Checkm2_dir\nEach subsequent line represents a sample, and should look like one of the following examples:\n\nFor Sourmash classification:\n\n    SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/sourmash/*,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv\n    SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/sourmash/*,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv\n\nFor GTDB-TK classification (when using the --gtdbtk flag):\n\n    SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/gtdb_results/*.summary.tsv,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv\n    SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/gtdb_results/*.summary.tsv,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv\n\nCreate the input file\nYou can create this input CSV file automatically with a bash loop, depending on how your data are organized:\n\nIf your results are grouped by sample:\nDir/\n├── SAMPLEID1/\n│   ├── bin_annotation/\n│   ├── sourmash/\n│   ├── gtdb_results/\n│   └── checkm2_dir/\n└── SAMPLEID2/\n    ├── bin_annotation/\n    ├── sourmash/\n    ├── gtdb_results/\n    └── checkm2_dir/\nRun the following script to include Sourmash annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/*; do\n    name=$(basename \"$sample\");\n    ann_path=\"$sample/bin_annotation/*.annotations.tsv\";\n    class_path=\"$sample/sourmash/*\";\n    checkm2_path=\"$sample/checkm2_dir/quality_report.tsv\";\n    echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone\nRun the following script to include GTDBTK annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/*; do\n   name=$(basename \"$sample\");\n   ann_path=\"$sample/bin_annotation/*.annotations.tsv\";\n   class_path=\"$sample/gtdb_results/*.summary.tsv\";\n   checkm2_path=\"$sample/checkm2_dir/quality_report.tsv\";\n   echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone\n\n\nIf your results are grouped by tool, then sample:\nDir/\n├── bin_annotation/\n│   ├── SAMPLEID1/\n│   ├── SAMPLEID2/\n│   └── ...\n├── sourmash/\n│   ├── SAMPLEID1/\n│   ├── SAMPLEID2/\n│   └── ...\n├── gtdb_results/\n│   ├── SAMPLEID1/\n│   ├── SAMPLEID2/\n│   └── ...\n└── checkm2_dir/\n   ├── SAMPLEID1/\n   ├── SAMPLEID2/\n   └── ...\nRun the following script to include Sourmash annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/bin_annotation/*; do\n    name=$(basename \"$sample\");\n    ann_path=\"Dir/bin_annotation/$name/*.annotations.tsv\";\n    class_path=\"Dir/sourmash/$name/*\";\n    checkm2_path=\"Dir/checkm2_dir/$name/quality_report.tsv\";\n    echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone\nRun the following script to include GTDBTK annotation:\necho \"Sample name,Annotation_dir,classification_dir,Checkm2_dir\" &gt; samples.csv\nfor sample in Dir/bin_annotation/*; do\n    name=$(basename \"$sample\");\n    ann_path=\"Dir/bin_annotation/$name/*.annotations.tsv\";\n    class_path=\"Dir/gtdb_results/$name/*.summary.tsv\";\n    checkm2_path=\"Dir/checkm2_dir/$name/quality_report.tsv\";\n    echo \"$name,$ann_path,$class_path,$checkm2_path\" &gt;&gt; samples.csv;\ndone",
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "PANKEGG",
+    "section": "Overview",
+    "text": "Overview\nA powerful parser and visualizer for metagenome bin annotation, classification, and quality assessment.\nPankegg is a flexible and user-friendly interactive software suite built with Python, SQL, Jinja, JavaScript, and Flask, designed to visualize and compare bin annotations, taxonomic classifications, and quality metrics (estimated by CheckM2). It enables interactive exploration and comparison of results across bins and samples through a local web server interface.\nPankegg is ideal for anyone working with output files from CheckM2, EggNOG, Sourmash, or GTDB-TK. While it can be integrated into any workflow, it was originally conceived as the final step of the MUFFIN pipeline to provide a comprehensive visualization and analysis platform.",
     "crumbs": [
-      "The tools",
-      "Pankegg_make_db.py"
+      "Home",
+      "Overview"
     ]
   },
   {
-    "objectID": "Pankegg_make_db.html#parameters-make-db",
-    "href": "Pankegg_make_db.html#parameters-make-db",
-    "title": "Pankegg_make_db.py",
-    "section": "Parameters Make DB",
-    "text": "Parameters Make DB\n\n-i, --input\nPath to the CSV file listing all samples and their input files/directories (required).\n-o, --output\nName of the output database file (without the extension). The default is pankegg. The .db extension is automatically added to the output name.\n--output_dir\nDirectory the database will be written to. The default is ./db_output.\n--gtdbtk\nUse this flag if your classification files were generated with GTDB-TK instead of Sourmash.",
+    "objectID": "index.html#mission-statement",
+    "href": "index.html#mission-statement",
+    "title": "PANKEGG",
+    "section": "Mission Statement",
+    "text": "Mission Statement\nPankegg aims to provide a comprehensive tool for the analysis and visualization of metabolic pathways across various samples and bins.\nOur goal is to facilitate research and understanding in the field of metagenomics and bioinformatics.",
     "crumbs": [
-      "The tools",
-      "Pankegg_make_db.py"
+      "Home",
+      "Overview"
     ]
   },
   {
-    "objectID": "Pankegg_make_db.html#output-make-db",
-    "href": "Pankegg_make_db.html#output-make-db",
-    "title": "Pankegg_make_db.py",
-    "section": "Output Make DB",
-    "text": "Output Make DB\nThe output is an SQLite database (*.db) that can be opened with tools like sqlite3, but is best used with pankegg_app.py for interactive browsing.\nThe database contains the following tables:\n\ntaxonomy\nbin\nmap\nkegg\nbin_map_kegg\nbin_map\nmap_kegg\nbin_extra\nbin_extra_kegg\nsample\n\nEach table stores specific information related to bins, pathways, taxonomy, and annotation results for easy querying and visualization.",
+    "objectID": "index.html#features-and-benefits",
+    "href": "index.html#features-and-benefits",
+    "title": "PANKEGG",
+    "section": "Features and Benefits",
+    "text": "Features and Benefits\n\nCompare samples and bins with ease\nVisualize taxonomic compositions\nAnalyze pathway completions\nExport data for further analysis",
     "crumbs": [
-      "The tools",
-      "Pankegg_make_db.py"
+      "Home",
+      "Overview"
     ]
   },
   {
-    "objectID": "Pankegg_make_db.html#run-with-testdata",
-    "href": "Pankegg_make_db.html#run-with-testdata",
-    "title": "Pankegg_make_db.py",
-    "section": "Run with Testdata",
-    "text": "Run with Testdata\nTo verify your installation and familiarize yourself with Pankegg, you can run a test using provided data. Download the example archive, unzip it, and generate test databases using the included CSV files:\n\nDownload the test data archive from OSF:\nwget https://osf.io/download/5v3zc/ -O pankegg_test_data.zip\nOR\ncurl -L -o pankegg_test_data.zip  https://osf.io/download/5v3zc/\n\n\nUnzip the archive:\nThis will create a directory called pankegg_test_data.\nunzip pankegg_test_data.zip\n\n\nCreate a test database for Sourmash classification:\npython pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data\n\n\nCreate a test database for GTDB-TK classification:\npython pankegg_make_db.py -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_dir pankegg_test_data --gtdbtk\nAfter running these commands, you should find newly created test_sourmash.db and test_gtdbtk.db inside the pankegg_test_data directory. This is in addition to the already existing sourmash_example.db and gtdbtk_example.db files in the same directory.\nThe existing and newly generated respective databases should be identical, so the validity of pankegg_make_db.py can be tested by comparing the two files.",
-    "crumbs": [
-      "The tools",
-      "Pankegg_make_db.py"
-    ]
+    "objectID": "reporting_bugs.html#getting-started-with-pankegg",
+    "href": "reporting_bugs.html#getting-started-with-pankegg",
+    "title": "Reporting bugs & contributing",
+    "section": "Getting started with Pankegg",
+    "text": "Getting started with Pankegg\nBefore contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server."
   },
   {
-    "objectID": "Pankegg_make_db.html#troubleshooting",
-    "href": "Pankegg_make_db.html#troubleshooting",
-    "title": "Pankegg_make_db.py",
-    "section": "Troubleshooting",
-    "text": "Troubleshooting\nFor more details or troubleshooting, please consult the Reporting Bugs & Contributing section.",
-    "crumbs": [
-      "The tools",
-      "Pankegg_make_db.py"
-    ]
+    "objectID": "reporting_bugs.html#did-you-find-a-bug",
+    "href": "reporting_bugs.html#did-you-find-a-bug",
+    "title": "Reporting bugs & contributing",
+    "section": "Did you find a bug?",
+    "text": "Did you find a bug?\n\nEnsure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring."
   },
   {
-    "objectID": "input_files.html",
-    "href": "input_files.html",
-    "title": "Supported input",
+    "objectID": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
+    "href": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
+    "title": "Reporting bugs & contributing",
+    "section": "How to work on a new feature/bug",
+    "text": "How to work on a new feature/bug\nCreate an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly."
+  },
+  {
+    "objectID": "reporting_bugs.html#how-we-work-with-git",
+    "href": "reporting_bugs.html#how-we-work-with-git",
+    "title": "Reporting bugs & contributing",
+    "section": "How we work with Git",
+    "text": "How we work with Git\nAll work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\nGeneral stuff about git and commit messages\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\nHelpful commit messages\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\nHow we do code reviews\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again."
+  },
+  {
+    "objectID": "quickstart.html",
+    "href": "quickstart.html",
+    "title": "Quickstart",
     "section": "",
-    "text": "Pankegg was developed to integrate output files from a variety of metagenomics tools, such as CheckM2, Sourmash, GTDB-TK and EggNOG. You can combine them all, or only add the ones that are interesting for you.",
+    "text": "This quickstart guide will walk you through setting up Pankegg, running the pipeline on test data, and launching the web application to explore your results.",
     "crumbs": [
       "Getting Started",
-      "Supported input"
+      "Quickstart"
     ]
   },
   {
-    "objectID": "input_files.html#input-files",
-    "href": "input_files.html#input-files",
-    "title": "Supported input",
-    "section": "Input files",
-    "text": "Input files\n\nSupported input files\n\n\n\n\n\n\n\nTool\nInput File\nData Extracted\n\n\n\n\ncheckm2\nquality_report.tsv\nbin completeness and contamination\n\n\nSourmash\n*.txt\nID, Status and Taxonomic classification\n\n\nGTDB-TK\n*.summary.tsv\nUser genome and Taxonomic classification\n\n\nEggNOG\n*.annotations.tsv\nKEGG Orthologs, KEGG Pathways, GO terms, Description",
+    "objectID": "quickstart.html#install-pankegg-and-dependencies",
+    "href": "quickstart.html#install-pankegg-and-dependencies",
+    "title": "Quickstart",
+    "section": "Install Pankegg and Dependencies",
+    "text": "Install Pankegg and Dependencies\nInstall Pankegg via pip, conda, or pixi.\nSee the Installation section for detailed options.\nwget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip\nunzip master.zip\ncd PANKEGG-master\npip install .",
     "crumbs": [
       "Getting Started",
-      "Supported input"
+      "Quickstart"
     ]
   },
   {
-    "objectID": "input_files.html#additional-input-files-provided-by-pankegg",
-    "href": "input_files.html#additional-input-files-provided-by-pankegg",
-    "title": "Supported input",
-    "section": "Additional Input Files Provided by Pankegg",
-    "text": "Additional Input Files Provided by Pankegg\nPANKEGG requires more input files. However, these are already provided and you don’t need to worry about them. They are located in the data directory.\n\nAdditional input, built into PANKEGG\n\n\n\n\n\n\n\nFile Name\nDescription\nData Origin\n\n\n\n\nkegg_map_info.tsv\nContains mapID, pathway name, and total number of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nkegg_map_orthologs.tsv\nContains mapID, pathway name, and list of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nko.txt\nContains the IDs and names of orthologs\nExtracted from KEGG orthologs database\n\n\npathway.txt\nContains map IDs (pathways) and their names\nExtracted from KEGG pathway database\n\n\npathway_groups.txt\nMaps IDs grouped by KEGG sub-categories\nExtracted from KEGG pathway database",
+    "objectID": "quickstart.html#download-example-test-data-optional",
+    "href": "quickstart.html#download-example-test-data-optional",
+    "title": "Quickstart",
+    "section": "Download Example Test Data (optional)",
+    "text": "Download Example Test Data (optional)\nDownload and extract the example dataset:\nwget https://osf.io/5v3zc/download -O pankegg_test_data.zip\nunzip pankegg_test_data.zip",
     "crumbs": [
       "Getting Started",
-      "Supported input"
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#build-the-sql-database-optional",
+    "href": "quickstart.html#build-the-sql-database-optional",
+    "title": "Quickstart",
+    "section": "Build the SQL Database (optional)",
+    "text": "Build the SQL Database (optional)\nGenerate a Pankegg database from the provided CSV using the included test data (for both Sourmash and GTDB-TK classification):\npython pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#launch-the-web-application",
+    "href": "quickstart.html#launch-the-web-application",
+    "title": "Quickstart",
+    "section": "Launch the Web Application",
+    "text": "Launch the Web Application\nStart the web server using the database present in the repository:\npython pankegg_app.py --d data/pankegg.db\nor use the the database you generated in point 3:\npython pankegg_app.py --d pankegg_test_data/test_sourmash",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#open-web-browser",
+    "href": "quickstart.html#open-web-browser",
+    "title": "Quickstart",
+    "section": "Open web browser",
+    "text": "Open web browser\nNow, open your web browser and go to the IP address written in your terminal ( http://0.0.0.0:5000) to interactively explore your metagenomic data!",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "tool_introduction.html",
+    "href": "tool_introduction.html",
+    "title": "Introduction to the tools",
+    "section": "",
+    "text": "Pankegg is composed of two main tools:\nThe web interface is divided into two main categories:",
+    "crumbs": [
+      "The tools",
+      "Introduction to the tools"
+    ]
+  },
+  {
+    "objectID": "tool_introduction.html#feature-pages",
+    "href": "tool_introduction.html#feature-pages",
+    "title": "Introduction to the tools",
+    "section": "Feature Pages",
+    "text": "Feature Pages\nPankegg provides multiple interactive features:\n\nSample vs Sample: Heatmap of selected pathways, scatter plots for bin quality, PCA of bins, tables/plots showing KEGGs unique or shared between samples/pathways.\nBin vs Bin: Plot and table of KEGGs shared or unique between two bins for metabolic pathways.\nTaxonomic Comparison: For a given rank, see sample-wise composition plots (abundance = number of bins classified as taxon / total bins), and pathway-vs-taxa heatmaps.\nPCA: Dedicated page for visualizing principal component analysis (PCA) of each sample, based on KOs, maps, or taxonomy.\n\n\nNote:\nIn this documentation, the terms “map” and “pathway” are sometimes used interchangeably. Typically, “map” refers to the KEGG database’s map ID (e.g., map00010), while “pathway” refers to the biological pathway name. Although the KEGG database provides both a pathway ID and a map ID, this tool focuses on the map ID, which is generally more complete and reliable for referencing metabolic pathways.",
+    "crumbs": [
+      "The tools",
+      "Introduction to the tools"
     ]
   },
   {
