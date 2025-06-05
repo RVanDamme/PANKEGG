@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Bin vs Bin Comparison{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Bin vs Bin Comparison</h2>
+
+    <!-- Sample and Bin Selection -->
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <label for="sample1">Select Sample 1:</label>
+            <select class="form-control" id="sample1" name="sample1">
+                <option value="" selected>Select sample</option>
+            </select>
+            <label for="bin1" class="mt-3">Select Bin 1:</label>
+            <select class="form-control" id="bin1" name="bin1">
+                <option value="" selected>Select bin</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="sample2">Select Sample 2:</label>
+            <select class="form-control" id="sample2" name="sample2">
+                <option value="" selected>Select sample</option>
+            </select>
+            <label for="bin2" class="mt-3">Select Bin 2:</label>
+            <select class="form-control" id="bin2" name="bin2">
+                <option value="" selected>Select bin</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Section Common Pathways -->
+    <div class="mt-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Common Pathways</strong>
+            </div>
+            <div class="card-body">
+                <div class="container mt-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            Full table
+                            <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#common-pathways-table-content" aria-expanded="false" aria-controls="common-pathways-table-content">
+                                Show/Hide
+                            </button>
+                        </div>
+                        <div class="my-2 d-flex align-items-center" style="gap:8px;">
+                            <input id="pathwaySearchInput" type="text" class="form-control" placeholder="Search pathway name..." style="max-width: 300px;">
+                            <button id="pathwaySearchBtn" class="btn btn-outline-secondary">Search</button>
+                            <button id="pathwaySearchResetBtn" class="btn btn-outline-danger">Reset</button>
+                        </div>
+                        <div class="collapse show" id="common-pathways-table-content">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped" id="common-pathways-table">
+                                        <thead class="thead-dark">
+                                            <tr>
+                                                <th>Pathway Name</th>
+                                                <th>Both</th>
+                                                <th id="bin1Header">Bin 1</th>
+                                                <th id="bin2Header">Bin 2</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Data is inserted dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="common-pathways-barplot" style="width:100%; height:500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var sample1Select = document.getElementById('sample1');
+    var sample2Select = document.getElementById('sample2');
+    var bin1Select = document.getElementById('bin1');
+    var bin2Select = document.getElementById('bin2');
+    var errorDiv = document.getElementById('error');
+
+    // Populate sample dropdowns
+    fetch("{{ url_for('get_samples') }}")
+        .then(response => response.json())
+        .then(data => {
+            data.samples.forEach(sample => {
+                var option1 = document.createElement('option');
+                option1.value = sample;
+                option1.text = sample;
+                sample1Select.add(option1);
+
+                var option2 = document.createElement('option');
+                option2.value = sample;
+                option2.text = sample;
+                sample2Select.add(option2);
+            });
+        });
+
+    // Fetch bins for selected sample
+    function fetchBins(sampleSelect, binSelect) {
+        if (sampleSelect.value === "") {
+            binSelect.innerHTML = '<option value="" selected>Select bin</option>';
+            return;
+        }
+        var formData = new FormData();
+        formData.append('sample', sampleSelect.value);
+        fetch("{{ url_for('get_bins') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            binSelect.innerHTML = '<option value="" selected>Select bin</option>';
+            data.bins.forEach(bin => {
+                var option = document.createElement('option');
+                option.value = bin;
+                option.text = bin;
+                binSelect.add(option);
+            });
+        });
+    }
+
+    sample1Select.addEventListener('change', function() {
+        fetchBins(sample1Select, bin1Select);
+    });
+    sample2Select.addEventListener('change', function() {
+        fetchBins(sample2Select, bin2Select);
+    });
+
+    function fetchCommonPathwaysForBins(bin1, bin2, bin1Name, bin2Name) {
+        if (bin1 === "" || bin2 === "") {
+            window._allCommonPathwaysRows = [];
+            renderCommonPathwaysTable([]);
+            return;
+        }
+        var formData = new FormData();
+        formData.append('bin1', bin1);
+        formData.append('bin2', bin2);
+
+        fetch("{{ url_for('get_common_pathways_for_bins') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            window._allCommonPathwaysRows = data; // Store for filtering!
+            renderCommonPathwaysTable(data);
+        });
+    }
+
+    bin1Select.addEventListener('change', function() {
+        fetchCommonPathwaysForBins(bin1Select.value, bin2Select.value, bin1Select.selectedOptions[0]?.text, bin2Select.selectedOptions[0]?.text);
+    });
+    bin2Select.addEventListener('change', function() {
+        fetchCommonPathwaysForBins(bin1Select.value, bin2Select.value, bin1Select.selectedOptions[0]?.text, bin2Select.selectedOptions[0]?.text);
+    });
+
+    // ---- Table Search/Filter ----
+    window._allCommonPathwaysRows = [];
+
+    function renderCommonPathwaysTable(data) {
+        var tableBody = document.getElementById('common-pathways-table').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
+        data.forEach(row => {
+            var tr = document.createElement('tr');
+            var tdPathway = document.createElement('td');
+            tdPathway.textContent = row.pathway_name;
+            tr.appendChild(tdPathway);
+
+            var tdBoth = document.createElement('td');
+            tdBoth.textContent = row.both;
+            tr.appendChild(tdBoth);
+
+            var tdBin1 = document.createElement('td');
+            tdBin1.textContent = row.bin1;
+            tr.appendChild(tdBin1);
+
+            var tdBin2 = document.createElement('td');
+            tdBin2.textContent = row.bin2;
+            tr.appendChild(tdBin2);
+
+            if (row.bin1 > row.bin2) {
+                tdBin1.classList.add('text-success', 'fw-bold');
+                tdBin2.classList.add('text-danger', 'fw-bold');
+            } else if (row.bin1 < row.bin2) {
+                tdBin1.classList.add('text-danger', 'fw-bold');
+                tdBin2.classList.add('text-success', 'fw-bold');
+            }
+
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // Filter and Reset logic
+    document.getElementById('pathwaySearchBtn').addEventListener('click', function() {
+        let searchValue = document.getElementById('pathwaySearchInput').value.trim().toLowerCase();
+        if (!searchValue) {
+            renderCommonPathwaysTable(window._allCommonPathwaysRows);
+        } else {
+            let filtered = window._allCommonPathwaysRows.filter(row =>
+                row.pathway_name && row.pathway_name.toLowerCase().includes(searchValue)
+            );
+            renderCommonPathwaysTable(filtered);
+        }
+    });
+
+    document.getElementById('pathwaySearchResetBtn').addEventListener('click', function() {
+        document.getElementById('pathwaySearchInput').value = '';
+        renderCommonPathwaysTable(window._allCommonPathwaysRows);
+    });
+
+    document.getElementById('pathwaySearchInput').addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            document.getElementById('pathwaySearchBtn').click();
+        }
+    });
+
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    function fetchAndRenderCommonPathwaysBarplot(bin1, bin2, bin1Name, bin2Name) {
+        var formData = new FormData();
+        formData.append('bin1', bin1);
+        formData.append('bin2', bin2);
+
+        fetch('/get_common_pathways_for_bins', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data || data.length === 0) {
+                Plotly.purge('common-pathways-barplot');
+                return;
+            }
+            var pathwayNames = [];
+            var bin1Counts = [];
+            var bin2Counts = [];
+            data.forEach(row => {
+                pathwayNames.push(row.pathway_name);
+                bin1Counts.push(row.bin1);
+                bin2Counts.push(row.bin2);
+            });
+            var barData = [
+                {
+                    x: pathwayNames,
+                    y: bin1Counts,
+                    name: bin1Name,
+                    type: 'bar'
+                },
+                {
+                    x: pathwayNames,
+                    y: bin2Counts,
+                    name: bin2Name,
+                    type: 'bar'
+                }
+            ];
+            var barLayout = {
+                barmode: 'group',
+                title: 'Common Pathways Counts'
+            };
+            Plotly.newPlot('common-pathways-barplot', barData, barLayout);
+        });
+    }
+
+    // Example: attach to a button click or after user selects bins.
+    function getSelectedBins() {
+        // update this logic to get currently selected bins from your UI
+        return [document.getElementById('bin1').value, document.getElementById('bin2').value];
+    }
+
+    // You need to call fetchAndRenderCommonPathwaysBarplot(bin1, bin2, ...) whenever bin selection changes!
+    // Example, if you have <select id="bin1"> and <select id="bin2">
+    ['bin1', 'bin2'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('change', function() {
+                var bins = getSelectedBins();
+                fetchAndRenderCommonPathwaysBarplot(
+                    bins[0], bins[1], bins[0] || 'Bin 1', bins[1] || 'Bin 2'
+                );
+            });
+        }
+    });
+
+    // Optionally: initial call to draw the plot if bins are pre-selected
+    var bins = getSelectedBins();
+    if (bins[0] && bins[1]) {
+        fetchAndRenderCommonPathwaysBarplot(
+            bins[0], bins[1], bins[0], bins[1]
+        );
+    }
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,374 @@
+{% macro taxon_unclassified(val) -%}
+    {%- set v = val or '' -%}
+    {%- if v in ['', 'G__', 'g__', 'S__', 's__', 'D__', 'd__', 'P__', 'p__', 'C__', 'c__', 'O__', 'o__', 'F__', 'f__'] %}
+        <span class="text-muted fst-italic">Unclassified</span>
+    {%- else %}
+        {{ v }}
+    {%- endif %}
+{%- endmacro %}
+
+{% extends "base.html" %}
+{% block title %}Home Page{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>{{ context | safe }}</h2>
+    <button class="btn btn-secondary mb-3" onclick="toggleAllBins()">Toggle All Bins</button>
+    <button class="btn btn-secondary mb-3" onclick="toggleAllCollapses()">Toggle All Taxonomy</button>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>Sorting, Search, and Filtering Options</strong>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <fieldset class="form-group">
+                        <legend class="col-form-label pt-0">Sort by:</legend>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio1" value="option1" {{ 'checked' if session.get('selected_sort_option') == 'option1' else '' }}>
+                            <label class="form-check-label" for="inlineRadio1">Bin Name</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio2" value="option2" {{ 'checked' if session.get('selected_sort_option') == 'option2' else '' }}>
+                            <label class="form-check-label" for="inlineRadio2">Completeness</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio3" value="option3" {{ 'checked' if session.get('selected_sort_option') == 'option3' else '' }}>
+                            <label class="form-check-label" for="inlineRadio3">Contamination</label>
+                        </div>
+                    </fieldset>
+                    <form action="{{ url_for('toggle_gtdb_filter') }}" method="post">
+                        <div class="form-check form-switch mt-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="gtdbFilter" name="gtdb_filter" {{ 'checked' if session.get('gtdb_filter', False) else '' }}>
+                            <label class="form-check-label" for="gtdbFilter">GTDB quality filtering</label>
+                        </div>
+                        {% if request.values.get('map_number') %}
+                            <input type="hidden" name="map_number" value="{{ request.values.get('map_number') }}">
+                        {% endif %}
+                        {% if request.values.get('ko_id') %}
+                            <input type="hidden" name="ko_id" value="{{ request.values.get('ko_id') }}">
+                        {% endif %}
+                        {% if request.values.get('taxon') %}
+                            <input type="hidden" name="taxon" value="{{ request.values.get('taxon') }}">
+                        {% endif %}
+                        {% if request.values.get('search_query') %}
+                            <input type="hidden" name="search_query" value="{{ request.values.get('search_query') }}">
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary d-none">Apply Filter</button>
+                    </form>
+                    <script>
+                    document.getElementById('gtdbFilter').onchange = function() {
+                        this.form.submit();  // Automatically submits the form when the checkbox changes
+                    };
+                    </script>
+                </div>
+                <div class="col-md-6">
+                    <form method="post" action="{{ url_for('show_bins') }}">
+                        <div class="mb-2">
+                            <label>Search in:</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="search_fields" value="sample_name" id="fieldSampleName"
+                                    {% if 'sample_name' in search_fields %}checked{% endif %}>
+                                <label class="form-check-label" for="fieldSampleName">Sample Name</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="search_fields" value="bin_name" id="fieldBinName"
+                                    {% if 'bin_name' in search_fields %}checked{% endif %}>
+                                <label class="form-check-label" for="fieldBinName">Bin Name</label>
+                            </div>
+                            {% for rank in ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] %}
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" name="search_fields" value="{{ rank }}" id="field{{ rank|capitalize }}"
+                                    {% if rank in search_fields %}checked{% endif %}>
+                                <label class="form-check-label" for="field{{ rank|capitalize }}">{{ rank|capitalize }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
+                        <input type="hidden" name="ko_id" value="{{ request.values.get('ko_id', '') }}">
+                        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+                        <div class="input-group">
+                            <input type="text" name="search_query" class="form-control" placeholder="Search by Sample, Bin, or Taxonomy (type 'unclassified' for unclassified bins at a selected rank)" value="{{ request.form.get('search_query', '') }}">
+                            <button class="btn btn-outline-secondary" type="submit">Search</button>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            <strong>Tip:</strong> For unclassified filtering, select the rank (e.g. genus/species), then type the complete word <code>unclassified</code> in the search box.
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <table class="table table-bordered table-striped table-responsive text-center">
+        <thead class="thead-dark">
+            <tr>
+                <th>Sample Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for name in sample_names %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBins{{ loop.index }}" aria-expanded="true" aria-controls="collapseBins{{ loop.index }}">
+                            Toggle bins
+                        </button>
+                        <button class="btn btn-success btn-sm" type="button" onclick="generatePlot('{{ name }}')">Generate Plot</button>
+                        <button class="btn btn-warning btn-sm" type="button" onclick="toggleClassification('{{ name | escape }}')">Toggle classification</button>
+                    </td>
+                </tr>
+                <tr id="collapseBins{{ loop.index }}" class="collapse bin-section show">
+                    <td colspan="2">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bin Name</th>
+                                    <th>Genus</th>
+                                    <th>Species</th>
+                                    <th>Completeness</th>
+                                    <th>Contamination</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bin in bins if bin['sample_name'] == name %}
+                                    <tr>
+                                        <td>{{ bin['bin_name'] }}</td>
+                                        <td>{{ taxon_unclassified(bin['genus']) }}</td>
+                                        <td>{{ taxon_unclassified(bin['species']) }}</td>
+                                        <td>{{ bin['completeness'] }}</td>
+                                        <td>{{ bin['contamination'] }}</td>
+                                        <td>
+                                            <a href="{{ url_for('show_maps', bin_id=bin['bin_id']) }}" class="btn btn-info btn-sm">Maps</a>
+                                            <a href="{{ url_for('kegg', bin_id=bin['bin_id']) }}" class="btn btn-warning btn-sm">Kegg</a>
+                                            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTaxonomy{{ bin['bin_id'] }}" aria-expanded="false" aria-controls="collapseTaxonomy{{ bin['bin_id'] }}">
+                                                Toggle Taxonomy
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr id="collapseTaxonomy{{ bin['bin_id'] }}" class="collapse taxonomy-rows-sample-{{ bin['sample_name']|escape }}">
+                                        <td colspan="6" class="taxonomy-cell-bg">
+                                            <div class="container-fluid">
+                                                <div class="row flex-nowrap">
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Kingdom</strong><br>
+                                                        {{ taxon_unclassified(bin['kingdom']) }}
+                                                    </div>
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Phylum</strong><br>
+                                                        {{ taxon_unclassified(bin['phylum']) }}
+                                                    </div>
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Class</strong><br>
+                                                        {{ taxon_unclassified(bin['class']) }}
+                                                    </div>
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Order</strong><br>
+                                                        {{ taxon_unclassified(bin['order']) }}
+                                                    </div>
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Family</strong><br>
+                                                        {{ taxon_unclassified(bin['family']) }}
+                                                    </div>
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Genus</strong><br>
+                                                        {{ taxon_unclassified(bin['genus']) }}
+                                                    </div>
+                                                    <div class="col taxonomy-entry">
+                                                        <strong>Species</strong><br>
+                                                        {{ taxon_unclassified(bin['species']) }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <!-- Modal for Plot -->
+    <div class="modal fade" id="plotModal" tabindex="-1" aria-labelledby="plotModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="plotModalLabel">Completeness vs. Contamination</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="plotContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form action="{{ url_for('export_bins') }}" method="post">
+        <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
+        <input type="hidden" name="ko_id" value="{{ request.values.get('ko_id', '') }}">
+        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+        <input type="hidden" name="search_query" value="{{ request.values.get('search_query', '') }}">
+        <button type="submit" class="btn btn-secondary mb-3">Export Current State</button>
+    </form>
+</div>
+
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<style>
+.taxonomy-cell-bg {
+    background-color: #f7fafc !important;
+    border-top: 2px solid #dee2e6;
+    border-bottom: 2px solid #dee2e6;
+}
+.taxonomy-entry {
+    min-width: 120px;
+    max-width: 220px;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    padding: 4px 6px;
+    font-size: 15px;
+}
+.taxonomy-entry strong {
+    display: block;
+    margin-bottom: 2px;
+    font-weight: 600;
+}
+.taxonomy-entry span.text-muted {
+    font-size: 14px;
+}
+</style>
+
+<script>
+function toggleAllCollapses() {
+    const collapses = document.querySelectorAll('.collapse');
+    collapses.forEach(collapse => {
+        const bsCollapse = new bootstrap.Collapse(collapse, {
+            toggle: false
+        });
+        bsCollapse.toggle();
+    });
+}
+
+function toggleAllBins() {
+    const binSections = document.querySelectorAll('.bin-section');
+    binSections.forEach(section => {
+        const bsCollapse = new bootstrap.Collapse(section, {
+            toggle: false
+        });
+        bsCollapse.toggle();
+        updateLocalStorage(section.id, section.classList.contains('show'));
+    });
+}
+
+function updateLocalStorage(id, isOpen) {
+    let openSections = JSON.parse(localStorage.getItem('openSections')) || [];
+    if (isOpen) {
+        openSections = openSections.filter(sectionId => sectionId !== id);
+    } else {
+        if (!openSections.includes(id)) {
+            openSections.push(id);
+        }
+    }
+    localStorage.setItem('openSections', JSON.stringify(openSections));
+}
+
+function restoreState() {
+    const openSections = JSON.parse(localStorage.getItem('openSections')) || [];
+    openSections.forEach(id => {
+        const section = document.getElementById(id);
+        if (section) {
+            const bsCollapse = new bootstrap.Collapse(section, {
+                toggle: false
+            });
+            bsCollapse.show();
+        }
+    });
+}
+
+function generatePlot(sampleName) {
+    const binsData = {{ bins | tojson }};
+    const data = binsData.filter(bin => bin['sample_name'] === sampleName);
+
+    const traceInFilter = {
+        x: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] > 50).map(bin => bin['completeness']),
+        y: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] > 50).map(bin => bin['contamination']),
+        mode: 'markers',
+        type: 'scatter',
+        text: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] > 50).map(bin => bin['bin_name']),
+        marker: { size: 12, color: '#1BC7C7' },
+        name: 'Bins meeting GTDB filter'
+    };
+
+    const traceOutFilter = {
+        x: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] <= 50).map(bin => bin['completeness']),
+        y: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] <= 50).map(bin => bin['contamination']),
+        mode: 'markers',
+        type: 'scatter',
+        text: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] <= 50).map(bin => bin['bin_name']),
+        marker: { size: 12, color: '#F55B18' },
+        name: 'Bins not meeting GTDB filter'
+    };
+
+    const layout = {
+        title: `Completeness vs. Contamination for ${sampleName}`,
+        xaxis: { title: 'Completeness (%)'},
+        yaxis: { title: 'Contamination (%)'},
+        showlegend: true,
+        legend: {
+            orientation: 'h',  // Horizontal orientation
+            y: -0.3,  // Position below the plot
+            x: 0.5,  // Centered horizontally
+            xanchor: 'center',  // Anchor the legend to the center
+            yanchor: 'top'  // Anchor the legend to the top
+        }
+    };
+
+    Plotly.newPlot('plotContainer', [traceInFilter, traceOutFilter], layout);
+    const plotModal = new bootstrap.Modal(document.getElementById('plotModal'));
+    plotModal.show();
+}
+
+
+function toggleClassification(sampleName) {
+    // Escape special chars for use in querySelector (Bootstrap/Jinja escaping ensures safe classnames)
+    var safeSampleName = CSS.escape(sampleName);
+    var selectors = document.querySelectorAll('.taxonomy-rows-sample-' + safeSampleName);
+    selectors.forEach(row => {
+        const bsCollapse = new bootstrap.Collapse(row, { toggle: false });
+        bsCollapse.toggle();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', restoreState);
+
+document.querySelectorAll('.bin-section').forEach(section => {
+    section.addEventListener('shown.bs.collapse', () => updateLocalStorage(section.id, true));
+    section.addEventListener('hidden.bs.collapse', () => updateLocalStorage(section.id, false));
+});
+
+document.querySelectorAll('input[name="inlineRadioOptions"]').forEach(radio => {
+    radio.onchange = () => {
+        fetch("{{ url_for('set_sort_option') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'sort_option=' + radio.value,
+            credentials: 'include'
+        }).then(response => {
+            if (response.ok) {
+                location.reload(); // Reload the page to reflect changes
+            } else {
+                alert('Something went wrong!');
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+        });
+    };
+});
+</script>
+{% endblock %}

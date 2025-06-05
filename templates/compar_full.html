@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}PCA Comparison{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Perform PCA Comparison</h2>
+    <form id="pcaForm">
+        <div class="form-group">
+            <label for="pcaType">Select PCA Type:</label>
+            <select class="form-control" id="pcaType" name="pca_type">
+                <option value="kos">Based on KOs</option>
+                <option value="maps">Based on Maps</option>
+                <option value="taxonomy">Based on Taxonomy</option>
+            </select>
+        </div>
+        <div class="form-group" id="taxonomyLevelForm" style="display: none;">
+            <label for="taxonomyLevel">Select Taxonomy Level:</label>
+            <select class="form-control" id="taxonomyLevel" name="taxonomy_level">
+                <option value="_species_">Species</option>
+                <option value="_genus_">Genus</option>
+                <option value="_family_">Family</option>
+                <option value="_order_">Order</option>
+                <option value="_class_">Class</option>
+                <option value="_phylum_">Phylum</option>
+                <option value="_kingdom_">Kingdom</option>
+            </select>
+        </div>
+    </form>
+    <div id="pcaPlot" class="mt-4"></div>
+    <div id="varianceExplained" class="mt-4"></div>
+    <div id="error" class="mt-4 text-danger"></div>
+</div>
+
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        var pcaTypeSelect = document.getElementById('pcaType');
+        var taxonomyLevelSelect = document.getElementById('taxonomyLevel');
+        var taxonomyLevelForm = document.getElementById('taxonomyLevelForm');
+
+        pcaTypeSelect.addEventListener('change', function() {
+            if (pcaTypeSelect.value === 'taxonomy') {
+                taxonomyLevelForm.style.display = 'block';
+            } else {
+                taxonomyLevelForm.style.display = 'none';
+            }
+            fetchPcaData();
+        });
+
+        taxonomyLevelSelect.addEventListener('change', function() {
+            if (pcaTypeSelect.value === 'taxonomy') {
+                fetchPcaData();
+            }
+        });
+
+        function fetchPcaData() {
+            var formData = new FormData();
+            formData.append('pca_type', pcaTypeSelect.value);
+            if (pcaTypeSelect.value === 'taxonomy') {
+                var taxonomyLevel = taxonomyLevelSelect.value;
+                formData.append('taxonomy_level', taxonomyLevel);
+            }
+
+            fetch("{{ url_for('compar_full') }}", {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                var pcaData = data.pca_data;
+
+                // Clear any existing plots or error messages
+                document.getElementById('pcaPlot').innerHTML = '';
+                document.getElementById('varianceExplained').innerHTML = '';
+                document.getElementById('error').innerHTML = '';
+
+                if (data.error) {
+                    document.getElementById('error').innerHTML = data.error;
+                    return;
+                }
+
+                // Display explained variance
+                document.getElementById('varianceExplained').innerHTML =
+                    'Explained Variance: PC1 = ' + data.explained_variance[0].toFixed(2) +
+                    ', PC2 = ' + data.explained_variance[1].toFixed(2);
+
+                var plotData = [{
+                    x: pcaData.map(d => d.PC1),
+                    y: pcaData.map(d => d.PC2),
+                    mode: 'markers',
+                    type: 'scatter',
+                    text: pcaData.map(d => d.sample_name),
+                    marker: { size: 12 }
+                }];
+
+                var layout = {
+                    title: data.context,
+                    xaxis: { title: 'PC1' },
+                    yaxis: { title: 'PC2' }
+                };
+
+                Plotly.newPlot('pcaPlot', plotData, layout);
+            });
+        }
+
+        // Initial load
+        fetchPcaData();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}KEGG Page{% endblock %}
+{% block content %}
+
+<div class="container mt-5">
+    <h2>{{ context | safe }}</h2>
+    <button class="btn btn-secondary mb-3" onclick="toggleAllCollapses()">Toggle All Details</button>
+    <!-- Search Form -->
+    <form method="post" action="{{ url_for('kegg') }}" class="mb-4">
+        <input type="hidden" name="bin_id" value="{{ request.values.get('bin_id', '') }}">
+        <input type="hidden" name="ko_id" value="{{ request.values.get('ko_id', '') }}">
+        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+        <div class="input-group">
+            <input type="text" name="search_query" class="form-control" placeholder="Search by pattern" value="{{ request.form.get('search_query', '') }}">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+    </form>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>KO ID</th>
+                <th>KO Name</th>
+                <th>Full Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for (ko_id, ko_name, ko_full_name), details in kegg_entries %}
+            <tr>
+                <td>{{ ko_id }}</td>
+                <td>{{ ko_name }}</td>
+                <td>{{ ko_full_name }}</td>
+                <td>
+                    <!-- View Bins and View Maps: keep these! -->
+                    <a href="{{ url_for('show_bins', ko_id=ko_id) }}" class="btn btn-info">View Bins</a>
+                    <a href="{{ url_for('show_maps', ko_id=ko_id) }}" class="btn btn-primary">View Maps</a>
+                    <button class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                        View Details
+                    </button>
+                    <a href="https://www.kegg.jp/entry/{{ ko_id }}" target="_blank" class="btn btn-warning">KEGG info</a>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <div class="collapse" id="collapse{{ loop.index }}">
+                        <table class="table">
+                           <thead>
+                                <tr>
+                                    <th>Bin Name</th>
+                                    <th>Sample</th>
+                                    <th>GO-terms</th>
+                                    <th>KO associated in EggNOG annotation</th>
+                                    <th>EggNOG Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in details %}
+                                <tr>
+                                    <td>{{ entry.bin_name or '—' }}</td>
+                                    <td>{{ entry.sample_name or '—' }}</td>
+                                    <td>
+                                        {% if entry.go_terms %}
+                                            {{ entry.go_terms | join(', ') }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ entry.ko or '—' }}</td>
+                                    <td>{{ entry.eggnog_desc or '—' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <form action="{{ url_for('export_kegg') }}" method="post">
+        <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
+        <input type="hidden" name="bin_id" value="{{ request.values.get('bin_id', '') }}">
+        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+        <input type="hidden" name="search_query" value="{{ request.values.get('search_query', '') }}">
+        <button type="submit" class="btn btn-secondary mb-3">Export Current State</button>
+    </form>
+</div>
+<script>
+function toggleAllCollapses() {
+    var collapses = document.querySelectorAll('.collapse');
+    collapses.forEach(function(collapse) {
+        if (collapse.classList.contains('show')) {
+            collapse.classList.remove('show');
+        } else {
+            collapse.classList.add('show');
+        }
+    });
+}
+</script>
+{% endblock %}

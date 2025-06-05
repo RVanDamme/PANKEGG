@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Home Page{% endblock %}
+{% block content %}
+
+<!-- Hero Section -->
+<section class="hero-section text-center">
+    <div class="container">
+        <h1>Welcome to Pankegg</h1>
+        <p>Your comprehensive tool for metabolic pathway analysis</p>
+        <a href="#features" class="btn btn-light btn-lg">Learn More</a>
+    </div>
+</section>
+
+<!-- Navigation and Search Section -->
+<section id="navigation" class="py-5">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <div class="col">
+                <h2>Navigation and Search</h2>
+                <p>Effortlessly navigate through the different results and quickly find the information you are looking for</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Bin Information</h5>
+                        <p class="card-text">View detailed information about each bin including completeness, contamination, and associated pathways.</p>
+                        <a href="./bin" class="btn btn-primary">View Bins</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Map Information</h5>
+                        <p class="card-text">Access all maps associated with various bins and pathways for a detailed understanding.</p>
+                        <a href="./map" class="btn btn-primary">View Maps</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">KEGG Identifiers</h5>
+                        <p class="card-text">Find detailed information and associated maps for each KEGG identifier.</p>
+                        <a href="./kegg" class="btn btn-primary">View KEGG IDs</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Taxonomy</h5>
+                        <p class="card-text">Find detailed information about the different Taxonomic rank.</p>
+                        <a href="./taxonomy" class="btn btn-primary">View Taxonomy</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <div class="col">
+                <h2>Visualisation</h2>
+                <p>Explore the various functionalities of Pankegg</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Sample vs Sample</h5>
+                        <p class="card-text">Compare different samples based on various metrics and visualizations.</p>
+                        <a href="./sample_vs_sample" class="btn btn-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Bin vs Bin</h5>
+                        <p class="card-text">Compare different bins within the selected samples to find common pathways and more.</p>
+                        <a href="./bin_vs_bin" class="btn btn-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Taxonomy Comparison</h5>
+                        <p class="card-text">Compare the taxonomic composition across samples with detailed visualizations.</p>
+                        <a href="./taxonomy_comparison" class="btn btn-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">PCA</h5>
+                        <p class="card-text">Get a PCA of all samples.</p>
+                        <a href="./compar_full" class="btn btn-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="py-5 bg-light">
+    <div class="container">
+        <div class="row text-center mb-4">
+            <div class="col">
+                <h2>About Pankegg</h2>
+                <p>Learn more about the project and its objectives</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h3>Our Mission</h3>
+                <p>Pankegg aims to provide a comprehensive tool for the analysis and visualization of metabolic pathways across various samples and bins. Our goal is to facilitate research and understanding in the field of metagenomics and bioinformatics.</p>
+            </div>
+            <div class="col-md-6">
+                <h3>Features and Benefits</h3>
+                <p>With Pankegg, you can:</p>
+                <ul>
+                    <li>Compare samples and bins with ease</li>
+                    <li>Visualize taxonomic compositions</li>
+                    <li>Analyze pathway completions</li>
+                    <li>Export data for further analysis</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="py-4 bg-dark text-white text-center">
+    <div class="container">
+        <p>&copy; 2024 Pankegg NG. All rights reserved.</p>
+    </div>
+</footer>
+
+
+{% endblock %}

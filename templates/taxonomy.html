@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Taxonomy{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Taxonomy level: {{ level }}</h2>
+    <select class="form-select" onchange="window.location.href='{{ url_for('taxonomy') }}?level=' + this.value">
+        <option value="" disabled selected>Select Taxonomic Level</option>
+        <option value="kingdom">Kingdom</option>
+        <option value="phylum">Phylum</option>
+        <option value="class">Class</option>
+        <option value="order">Order</option>
+        <option value="family">Family</option>
+        <option value="genus">Genus</option>
+        <option value="species">Species</option>
+    </select>
+
+    <table class="table table-bordered table-striped mt-3">
+        <thead class="table-dark">
+            <tr>
+                <th>Name</th>
+                <th>Bins Associated</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for taxon in taxons %}
+            <tr>
+                <td>{{ taxon.name }}</td>
+                <td>{{ taxon.count }}</td>
+                <td>
+                    <a href="{{ url_for('show_bins', taxon=taxon.name) }}" class="btn btn-info btn-sm">Bins</a>
+                    <a href="{{ url_for('show_maps', taxon=taxon.name) }}" class="btn btn-warning btn-sm">Maps</a>
+                    <a href="{{ url_for('kegg', taxon=taxon.name) }}" class="btn btn-primary btn-sm">Kegg</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script>
+    document.querySelector('select').value = "{{ level }}";
+</script>
+{% endblock %}

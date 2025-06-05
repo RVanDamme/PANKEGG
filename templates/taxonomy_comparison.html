@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Taxonomy Comparison{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Sample Taxonomy Comparison</h2>
+
+    <!-- Taxonomic Rank Selector -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <label for="taxonomy-rank">Select Taxonomic Rank:</label>
+            <select class="form-control" id="taxonomy-rank" name="taxonomy-rank">
+                <option value="" selected>Select rank</option>
+                <option value="_kingdom_">Kingdom</option>
+                <option value="_phylum_">Phylum</option>
+                <option value="_class_">Class</option>
+                <option value="_order_">Order</option>
+                <option value="_family_">Family</option>
+                <option value="_genus_">Genus</option>
+                <option value="_species_">Species</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Bar plot container -->
+    <div class="mt-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Taxonomic Composition</strong>
+                <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#taxonomy-barplot-content" aria-expanded="false" aria-controls="taxonomy-barplot-content">
+                    Show/Hide
+                </button>
+            </div>
+            <div class="collapse show" id="taxonomy-barplot-content">
+                <div class="card-body">
+                    <div id="taxonomy-barplot" style="width:100%; height:400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sample Selector for Heatmap -->
+    <div class="mt-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Sample Heatmap</strong>
+                <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#heatmap-content" aria-expanded="false" aria-controls="heatmap-content">
+                    Show/Hide
+                </button>
+            </div>
+            <div class="collapse" id="heatmap-content">
+                <div class="card-body">
+                    <label for="sample-select">Select Sample:</label>
+                    <select class="form-control" id="sample-select" name="sample-select">
+                        <option value="" selected>Select sample</option>
+                    </select>
+                    <div id="heatmap" style="width:100%; height:1000px;" class="mt-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script type="text/javascript">
+document.addEventListener('DOMContentLoaded', function() {
+    var taxonomyRankSelect = document.getElementById('taxonomy-rank');
+    var sampleSelect = document.getElementById('sample-select');
+    var errorDiv = document.getElementById('error');
+
+    // Fetch sample list for dropdown
+    fetch("{{ url_for('get_samples') }}")
+        .then(response => response.json())
+        .then(data => {
+            data.samples.forEach(sample => {
+                var option = document.createElement('option');
+                option.value = sample;
+                option.text = sample;
+                sampleSelect.add(option);
+            });
+        });
+
+    // Fetch and display taxonomic rank data
+    function fetchTaxonomyData(rank) {
+        if (rank === "") {
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('rank', rank);
+
+        fetch("{{ url_for('get_taxonomy_data') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(`Taxonomy data:`, data);  // Debug log
+            if (data.error) {
+                errorDiv.innerHTML = data.error;
+                return;
+            }
+
+            var samples = Object.keys(data);
+            var taxa = Array.from(new Set(samples.flatMap(sample => Object.keys(data[sample])).filter(key => key !== 'bins_info')));
+
+            var traces = taxa.map(taxon => {
+                return {
+                    x: samples.map(sample => `${sample} (Bins with classification: ${data[sample].bins_info.classified_bins}/${data[sample].bins_info.total_bins})`),
+                    y: samples.map(sample => (data[sample][taxon] || 0) / 100), // Divided by 100 to have a 0 to 1 range
+                    name: taxon,
+                    type: 'bar'
+                };
+            });
+
+            var layout = {
+                barmode: 'stack',
+                title: 'Taxonomic Composition by Sample (Percentage)',
+                xaxis: {
+                    title: 'Samples',
+                    automargin: true
+                },
+                yaxis: {
+                    title: 'Percentage',
+                    tickformat: ',.0%',
+                    range: [0, 1] // 0 to 1 range to display percentage correctly
+                },
+                margin: {
+                    b: 150  // Increase bottom margin to allow space for sample names
+                }
+            };
+
+            Plotly.newPlot('taxonomy-barplot', traces, layout);
+        });
+    }
+
+    // Fetch and render Heatmap Data
+    function fetchHeatmapData(sample, rank) {
+        if (sample === "" || rank === "") {
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('sample', sample);
+        formData.append('rank', rank);
+
+        fetch("{{ url_for('get_heatmap_data_for_taxonomy') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(`Heatmap data:`, data);  // Debug log
+            if (data.error) {
+                errorDiv.innerHTML = data.error;
+                return;
+            }
+
+            var z = data.heatmap_data.z;
+            var x = data.heatmap_data.x;
+            var y = data.heatmap_data.y;
+
+            // Convert rank to human readable version for Title
+            var rankText = rank.replace(/_/g, ' ').replace(/(^|\s)\S/g, letter => letter.toUpperCase());
+
+            var plotData = [{
+                z: z,
+                x: x,
+                y: y,
+                type: 'heatmap',
+                hoverongaps: false
+            }];
+
+            var layout = {
+                title: `Heatmap for Sample: ${sample} (${rankText})`,
+                xaxis: {
+                    title: 'Taxa',
+                    tickangle: -45,
+                    automargin: true
+                },
+                yaxis: {
+                    title: 'Maps',
+                    automargin: true
+                },
+                margin: {
+                    b: 150,  // Increase bottom margin to allow space for sample names
+                    t: 50,   // Increase top margin for the title
+                    l: 150,  // Increase left margin for y-axis labels
+                    r: 50    // Increase right margin for better spacing
+                },
+                height: 1000 // Increase the height of the plot
+            };
+
+            Plotly.newPlot('heatmap', plotData, layout);
+        });
+    }
+
+    // Update graph when taxonomic rank is selected
+    taxonomyRankSelect.addEventListener('change', function() {
+        fetchTaxonomyData(taxonomyRankSelect.value);
+        fetchHeatmapData(sampleSelect.value, taxonomyRankSelect.value);
+    });
+
+    // Update Heatmap when sample is selected
+    sampleSelect.addEventListener('change', function() {
+        fetchHeatmapData(sampleSelect.value, taxonomyRankSelect.value);
+    });
+});
+</script>
+{% endblock %}

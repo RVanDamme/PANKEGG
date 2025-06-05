@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+{% block title %}Home Page{% endblock%}
+{% block content %}
+
+<h1>{{ context }}</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>KO ID</th>
+            <th>KO Name</th>
+            <th>Full Name</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for (ko_id, ko_name, ko_full_name), details in kegg_entries %}
+        <tr>
+            <td>{{ ko_id }}</td>
+            <td>{{ ko_name }}</td>
+            <td>{{ ko_full_name }}</td>
+            <td>
+                <button data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">View Details</button>
+            </td>
+        </tr>
+        <tr class="collapse" id="collapse{{ loop.index }}">
+            <td colspan="4">
+                <table class="table">
+                    <tr>
+                        <th>Bin Name</th>
+                        <th>GO</th>
+                        <th>KO</th>
+                        <th>EggNOG Description</th>
+                    </tr>
+                    {% for detail in details %}
+                    <tr>
+                        <td>{{ detail[0] }}</td>
+                        <td>
+                            {% if detail[1]|length > 5 %}
+                                <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasGO{{ loop.index }}">More</button>
+                                <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGO{{ loop.index }}">
+                                    <div class="offcanvas-header">
+                                        <h5 class="offcanvas-title">GO Terms</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                                    </div>
+                                    <div class="offcanvas-body">
+                                        {% for go in detail[1] %}
+                                            <div>{{ go }}</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div style="max-height: 100px; overflow-y: auto;">
+                                    {% for go in detail[1] %}
+                                        <div>{{ go }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>{{ detail[2] }}</td>
+                        <td>{{ detail[3] }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock%}
+
+
+#for bin with id :
+<div class="container mt-5">
+    <table class="table table-bordered table-striped table-responsive text-center">
+        <thead class="thead-dark">
+            <tr>
+                {% for col in columns %}
+                <th>{{ col }}</th>
+                {% endfor %}
+                <th>Actions</th> <!-- Column for action buttons -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for bin in bins %}
+            <tr>
+                {% for col in columns %}
+                <td>{{ bin[col] if bin[col] is defined else 'Non disponible' }}</td>
+                {% endfor %}
+                <td>
+                    <a href="{{ url_for('show_maps', bin_id=bin['bin_id']) }}" class="btn btn-info btn-sm">Maps</a>
+                    <a href="{{ url_for('kegg', bin_id=bin['bin_id']) }}" class="btn btn-warning btn-sm">Kegg</a>
+                    <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTaxonomy{{ loop.index }}" aria-expanded="false" aria-controls="collapseTaxonomy{{ loop.index }}">
+                        Toggle Taxonomy
+                    </button>
+                </td>
+            </tr>
+            <!-- Collapsible row for taxonomy details -->
+            <tr id="collapseTaxonomy{{ loop.index }}" class="collapse">
+                <td colspan="{{ columns|length + 1 }}">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-2"><strong>Kingdom</strong><br>{{ bin.kingdom or 'Not Available' }}</div>
+                            <div class="col-2"><strong>Phylum</strong><br>{{ bin.phylum or 'Not Available' }}</div>
+                            <div class="col-2"><strong>Class</strong><br>{{ bin.class or 'Not Available' }}</div>
+                            <div class="col-2"><strong>Order</strong><br>{{ bin.order or 'Not Available' }}</div>
+                            <div class="col-2"><strong>Family</strong><br>{{ bin.family or 'Not Available' }}</div>
+                            <div class="col-2"><strong>Genus</strong><br>{{ bin.genus or 'Not Available' }}</div>
+                            <div class="col-2"><strong>Species</strong><br>{{ bin.species or 'Not Available' }}</div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% extends "base.html" %}
+{% block title %}Home Page{% endblock%}
+{% block content %}
+
+<div class="container mt-5">
+    <h2>{{ context }}</h2>
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>KO ID</th>
+                <th>KO Name</th>
+                <th>Full Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for (ko_id, ko_name, ko_full_name), details in kegg_entries %}
+            <tr>
+                <td>{{ ko_id }}</td>
+                <td>{{ ko_name }}</td>
+                <td>{{ ko_full_name }}</td>
+                <td>
+                    <button class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" aria-controls="collapse{{ loop.index }}">
+                        View Details
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <div class="collapse" id="collapse{{ loop.index }}">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Bin Name</th>
+                                    <th>GO</th>
+                                    <th>KO</th>
+                                    <th>EggNOG Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in details %}
+                                <tr>
+                                    <td>{{ detail[0] }}</td>
+                                    <td>
+                                        {% if detail[1]|length > 5 %}
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasGO{{ loop.index }}">More</button>
+                                            <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasGO{{ loop.index }}">
+                                                <div class="offcanvas-header">
+                                                    <h5 class="offcanvas-title">GO Terms</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                                                </div>
+                                                <div class="offcanvas-body">
+                                                    {% for go in detail[1] %}
+                                                        <div>{{ go }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div style="max-height: 100px; overflow-y: auto;">
+                                                {% for go in detail[1] %}
+                                                    <div>{{ go }}</div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ detail[2] }}</td>
+                                    <td>{{ detail[3] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock%}
+
+@app.route('/map', methods=['GET', 'POST'])
+def show_maps():
+    bin_id = request.values.get('bin_id')
+    ko_id = request.values.get('ko_id')
+    taxon = request.args.get('taxon')
+    search_query = request.form.get('search_query', '')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    maps = {}
+    bin_name = None  # Pour stocker le nom du bin
+
+    if bin_id:
+        cur.execute("SELECT bin_name FROM bin WHERE id = ?", (bin_id,))
+        bin_name_result = cur.fetchone()
+        bin_name = bin_name_result[0] if bin_name_result else "Unknown bin"
+        context = f"Maps associated with {bin_name}"
+        query = """
+                SELECT m.map_number, m.pathway_name, k.ko_id, k.kegg_name, m.pathway_total_orthologs, mk.real_pathway_id
+                FROM map_kegg mk
+                JOIN kegg k ON mk.kegg_id = k.id
+                JOIN map m ON mk.map_id = m.id
+                JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id
+                WHERE bmk.bin_id = ?
+                """
+        cur.execute(query, (bin_id,))
+    elif ko_id:
+        context = f"Maps containing the KEGG identifier {ko_id}"
+        query = """
+                SELECT m.map_number, m.pathway_name, k2.ko_id, k2.kegg_name, m.pathway_total_orthologs, mk2.real_pathway_id
+                FROM map m
+                LEFT JOIN map_kegg mk ON m.id = mk.map_id
+                LEFT JOIN kegg k ON mk.kegg_id = k.id
+                LEFT JOIN map_kegg mk2 ON m.id = mk2.map_id
+                LEFT JOIN kegg k2 ON mk2.kegg_id = k2.id
+                WHERE k.ko_id = ?
+                """
+        cur.execute(query, (ko_id,))
+    elif taxon:
+        context = f"Maps associated with taxonomy: {taxon}"
+        query = """
+                SELECT m.map_number, m.pathway_name, k.ko_id, k.kegg_name, m.pathway_total_orthologs, mk.real_pathway_id
+                FROM map m
+                JOIN map_kegg mk ON m.id = mk.map_id
+                JOIN kegg k ON mk.kegg_id = k.id
+                JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id
+                JOIN bin bi ON bi.id = bmk.bin_id
+                JOIN taxonomy t ON bi.taxonomic_id = t.id
+                WHERE ? IN (t._kingdom_, t._phylum_, t._class_, t._order_, t._family_, t._genus_, t._species_)
+                """
+        if taxon == "none":
+            cur.execute(query, ("",))
+        else:
+            cur.execute(query, (taxon,))
+    else:
+        context = "All Maps"
+        query = """
+                SELECT m.map_number, m.pathway_name, k.ko_id, k.kegg_name, m.pathway_total_orthologs, mk.real_pathway_id
+                FROM map m
+                LEFT JOIN map_kegg mk ON m.id = mk.map_id
+                LEFT JOIN kegg k ON mk.kegg_id = k.id
+                """
+        # Add search filtering if search_query is present
+        if search_query:
+            query += """
+                    WHERE m.map_number LIKE ? OR m.pathway_name LIKE ?
+                    """
+            search_pattern = f"%{search_query}%"
+            cur.execute(query, (search_pattern, search_pattern))
+        else:
+            cur.execute(query)
+
+    map_completions = {}
+
+    for row in cur.fetchall():
+        map_key = (row[0], row[1])  # map_number, pathway_name
+        if map_key not in maps:
+            maps[map_key] = {
+                'kegg_ids': [],
+                'completion': '0.00%'
+            }
+        if row[2] and row[3]:  # Ensure ko_id and kegg_name are not None
+            maps[map_key]['kegg_ids'].append((row[2], row[3], row[5]))  # Include real_pathway_id
+
+        pathway_total_orthologs = row[4]
+        if map_key[0] not in map_completions:
+            map_completions[map_key[0]] = pathway_total_orthologs
+
+    for map_key in maps.keys():
+        kegg_ids = maps[map_key]['kegg_ids']
+        # Filter kegg_ids to include only those with real_pathway_id = 1
+        filtered_kegg_ids = [kegg_id[0] for kegg_id in kegg_ids if kegg_id[2] == 1]
+        count_id = len(set(filtered_kegg_ids))  # Use set to count unique KOs
+        pathway_total = map_completions[map_key[0]]
+        if pathway_total > 0:
+            completion_ratio = count_id / pathway_total * 100
+            if completion_ratio > 100:
+                maps[map_key]['completion'] = "Undefined"
+            else:
+                maps[map_key]['completion'] = f"{completion_ratio:.2f}%"
+        else:
+            maps[map_key]['completion'] = "Undefined"
+
+    conn.close()
+
+    return render_template('maps.html', maps=maps.items(), context=context)
+
+
+
+
+
+
+
+
+{% extends "base.html" %}
+{% block title %}Home Page{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <h2>{{ context | safe }}</h2>
+    <button class="btn btn-secondary mb-3" onclick="toggleAllBins()">Toggle All Bins</button>
+    <button class="btn btn-secondary mb-3" onclick="toggleAllCollapses()">Toggle All Taxonomy</button>
+    <form action="{{ url_for('toggle_gtdb_filter') }}" method="post">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="gtdbFilter" name="gtdb_filter" {{ 'checked' if session.get('gtdb_filter', False) else '' }}>
+            <label class="form-check-label" for="gtdbFilter">GTDB quality filtering</label>
+        </div>
+        <!-- Preserve parameters of request -->
+        {% if request.values.get('map_number') %}
+            <input type="hidden" name="map_number" value="{{ request.values.get('map_number') }}">
+        {% endif %}
+        {% if request.values.get('kegg_id') %}
+            <input type="hidden" name="kegg_id" value="{{ request.values.get('kegg_id') }}">
+        {% endif %}
+        {% if request.values.get('taxon') %}
+            <input type="hidden" name="taxon" value="{{ request.values.get('taxon') }}">
+        {% endif %}
+        {% if request.values.get('search_query') %}
+            <input type="hidden" name="search_query" value="{{ request.values.get('search_query') }}">
+        {% endif %}
+        <button type="submit" class="btn btn-primary d-none">Apply Filter</button>
+    </form>
+    <script>
+    document.getElementById('gtdbFilter').onchange = function() {
+        this.form.submit();  // Automatically submits the form when the checkbox changes
+    };
+    </script>
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>Sorting and Search Options</strong>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <fieldset class="form-group">
+                        <legend class="col-form-label pt-0">Sort by:</legend>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio1" value="option1" {{ 'checked' if session.get('selected_sort_option') == 'option1' else '' }}>
+                            <label class="form-check-label" for="inlineRadio1">Bin Name</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio2" value="option2" {{ 'checked' if session.get('selected_sort_option') == 'option2' else '' }}>
+                            <label class="form-check-label" for="inlineRadio2">Completeness</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="inlineRadioOptions" id="inlineRadio3" value="option3" {{ 'checked' if session.get('selected_sort_option') == 'option3' else '' }}>
+                            <label class="form-check-label" for="inlineRadio3">Contamination</label>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="col-md-6">
+                    <form method="post" action="{{ url_for('show_bins') }}">
+                        <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
+                        <input type="hidden" name="kegg_id" value="{{ request.values.get('kegg_id', '') }}">
+                        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+                        <div class="input-group">
+                            <input type="text" name="search_query" class="form-control" placeholder="Search by Sample or Bin Name" value="{{ request.form.get('search_query', '') }}">
+                            <button class="btn btn-outline-secondary" type="submit">Search</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Form -->
+    <form method="post" action="{{ url_for('show_bins') }}" class="mb-4">
+        <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
+        <input type="hidden" name="kegg_id" value="{{ request.values.get('kegg_id', '') }}">
+        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+        <div class="input-group">
+            <input type="text" name="search_query" class="form-control" placeholder="Search by Sample or Bin Name" value="{{ request.form.get('search_query', '') }}">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+    </form>
+    <table class="table table-bordered table-striped table-responsive text-center">
+        <thead class="thead-dark">
+            <tr>
+                <th>Sample Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for name in sample_names %}
+                <tr>
+                    <td>{{ name }}</td>
+                    <td>
+                        <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBins{{ loop.index }}" aria-expanded="true" aria-controls="collapseBins{{ loop.index }}">
+                            Toggle bins
+                        </button>
+                        <button class="btn btn-success btn-sm" type="button" onclick="generatePlot('{{ name }}')">Generate Plot</button>
+                    </td>
+                </tr>
+                <tr id="collapseBins{{ loop.index }}" class="collapse bin-section show">
+                    <td colspan="2">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Bin Name</th>
+                                    <th>Completeness</th>
+                                    <th>Contamination</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bin in bins if bin['sample_name'] == name %}
+                                    <tr>
+                                        <td>{{ bin['bin_name'] }}</td>
+                                        <td>{{ bin['completeness'] }}</td>
+                                        <td>{{ bin['contamination'] }}</td>
+                                        <td>
+                                            <a href="{{ url_for('show_maps', bin_id=bin['bin_id']) }}" class="btn btn-info btn-sm">Maps</a>
+                                            <a href="{{ url_for('kegg', bin_id=bin['bin_id']) }}" class="btn btn-warning btn-sm">Kegg</a>
+                                            <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTaxonomy{{ bin['bin_id'] }}" aria-expanded="false" aria-controls="collapseTaxonomy{{ bin['bin_id'] }}">
+                                                Toggle Taxonomy
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr id="collapseTaxonomy{{ bin['bin_id'] }}" class="collapse">
+                                        <td colspan="4">
+                                            <div class="container">
+                                                <div class="row">
+                                                    <div class="col-2"><strong>Kingdom</strong><br>{{ bin['kingdom'] or 'Not Available' }}</div>
+                                                    <div class="col-2"><strong>Phylum</strong><br>{{ bin['phylum'] or 'Not Available' }}</div>
+                                                    <div class="col-2"><strong>Class</strong><br>{{ bin['class'] or 'Not Available' }}</div>
+                                                    <div class="col-2"><strong>Order</strong><br>{{ bin['order'] or 'Not Available' }}</div>
+                                                    <div class="col-2"><strong>Family</strong><br>{{ bin['family'] or 'Not Available' }}</div>
+                                                    <div class="col-2"><strong>Genus</strong><br>{{ bin['genus'] or 'Not Available' }}</div>
+                                                    <div class="col-2"><strong>Species</strong><br>{{ bin['species'] or 'Not Available' }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <!-- Modal for Plot -->
+    <div class="modal fade" id="plotModal" tabindex="-1" aria-labelledby="plotModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="plotModalLabel">Completeness vs. Contamination</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="plotContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form action="{{ url_for('export_bins') }}" method="post">
+        <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
+        <input type="hidden" name="kegg_id" value="{{ request.values.get('kegg_id', '') }}">
+        <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+        <input type="hidden" name="search_query" value="{{ request.values.get('search_query', '') }}">
+        <button type="submit" class="btn btn-secondary mb-3">Export Current State</button>
+    </form>
+</div>
+
+<!-- Include Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script>
+function toggleAllCollapses() {
+    const collapses = document.querySelectorAll('.collapse');
+    collapses.forEach(collapse => {
+        const bsCollapse = new bootstrap.Collapse(collapse, {
+            toggle: false
+        });
+        bsCollapse.toggle();
+    });
+}
+
+function toggleAllBins() {
+    const binSections = document.querySelectorAll('.bin-section');
+    binSections.forEach(section => {
+        const bsCollapse = new bootstrap.Collapse(section, {
+            toggle: false
+        });
+        bsCollapse.toggle();
+        updateLocalStorage(section.id, section.classList.contains('show'));
+    });
+}
+
+function updateLocalStorage(id, isOpen) {
+    let openSections = JSON.parse(localStorage.getItem('openSections')) || [];
+    if (isOpen) {
+        openSections = openSections.filter(sectionId => sectionId !== id);
+    } else {
+        if (!openSections.includes(id)) {
+            openSections.push(id);
+        }
+    }
+    localStorage.setItem('openSections', JSON.stringify(openSections));
+}
+
+function restoreState() {
+    const openSections = JSON.parse(localStorage.getItem('openSections')) || [];
+    openSections.forEach(id => {
+        const section = document.getElementById(id);
+        if (section) {
+            const bsCollapse = new bootstrap.Collapse(section, {
+                toggle: false
+            });
+            bsCollapse.show();
+        }
+    });
+}
+
+function generatePlot(sampleName) {
+    const binsData = {{ bins | tojson }};
+    const data = binsData.filter(bin => bin['sample_name'] === sampleName);
+
+    const traceInFilter = {
+        x: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] > 50).map(bin => bin['completeness']),
+        y: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] > 50).map(bin => bin['contamination']),
+        mode: 'markers',
+        type: 'scatter',
+        text: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] > 50).map(bin => bin['bin_name']),
+        marker: { size: 12, color: '#1BC7C7' },
+        name: 'Bins meeting GTDB filter'
+    };
+
+    const traceOutFilter = {
+        x: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] <= 50).map(bin => bin['completeness']),
+        y: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] <= 50).map(bin => bin['contamination']),
+        mode: 'markers',
+        type: 'scatter',
+        text: data.filter(bin => bin['completeness'] - 5 * bin['contamination'] <= 50).map(bin => bin['bin_name']),
+        marker: { size: 12, color: '#F55B18' },
+        name: 'Bins not meeting GTDB filter'
+    };
+
+    const layout = {
+        title: `Completeness vs. Contamination for ${sampleName}`,
+        xaxis: { title: 'Completeness (%)'},
+        yaxis: { title: 'Contamination (%)'},
+        showlegend: true,
+        legend: {
+            orientation: 'h',  // Horizontal orientation
+            y: -0.3,  // Position below the plot
+            x: 0.5,  // Centered horizontally
+            xanchor: 'center',  // Anchor the legend to the center
+            yanchor: 'top'  // Anchor the legend to the top
+        }
+    };
+
+    Plotly.newPlot('plotContainer', [traceInFilter, traceOutFilter], layout);
+    const plotModal = new bootstrap.Modal(document.getElementById('plotModal'));
+    plotModal.show();
+}
+
+document.addEventListener('DOMContentLoaded', restoreState);
+
+document.querySelectorAll('.bin-section').forEach(section => {
+    section.addEventListener('shown.bs.collapse', () => updateLocalStorage(section.id, true));
+    section.addEventListener('hidden.bs.collapse', () => updateLocalStorage(section.id, false));
+});
+
+document.querySelectorAll('input[name="inlineRadioOptions"]').forEach(radio => {
+    radio.onchange = () => {
+        fetch("{{ url_for('set_sort_option') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'sort_option=' + radio.value,
+            credentials: 'include'
+        }).then(response => {
+            if (response.ok) {
+                location.reload(); // Reload the page to reflect changes
+            } else {
+                alert('Something went wrong!');
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+        });
+    };
+});
+</script>
+
+{% endblock %}
+
+
+
+@app.route('/get_heatmap_data', methods=['POST'])
+def get_heatmap_data():
+    sample = request.form.get('sample')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    query = """
+    SELECT bin.bin_name, m.map_number, COUNT(DISTINCT k.ko_id) as ko_count, m.pathway_total_orthologs
+    FROM map m
+    LEFT JOIN map_kegg mk ON m.id = mk.map_id
+    LEFT JOIN kegg k ON mk.kegg_id = k.id
+    JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id
+    JOIN bin ON bmk.bin_id = bin.id
+    JOIN sample ON bin.sample_id = sample.id
+    WHERE sample.sample_name = ? AND mk.real_pathway_id = 1
+    GROUP BY bin.bin_name, m.map_number
+    """
+    cur.execute(query, (sample,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    if not rows:
+        return jsonify({'error': 'No data found for the selected sample.'})
+
+    df = pd.DataFrame(rows, columns=['bin_name', 'map_number', 'ko_count', 'pathway_total_orthologs'])
+    df['completion_percentage'] = (df['ko_count'] / df['pathway_total_orthologs']) * 100
+
+    heatmaps_data = {}
+    for group, maps in pathway_groups.items():
+        df_group = df[df['map_number'].isin(maps)]
+        if not df_group.empty:
+            heatmap_data = df_group.pivot_table(index='map_number', columns='bin_name', values='completion_percentage',
+                                                fill_value=0)
+            z = heatmap_data.values.tolist()
+            x = heatmap_data.columns.tolist()
+            y = heatmap_data.index.tolist()
+            heatmaps_data[group] = {'z': z, 'x': x, 'y': y}
+
+    return jsonify(heatmaps_data=heatmaps_data, context=f'Heatmap for Sample: {sample}')

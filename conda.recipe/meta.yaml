@@ -1,0 +1,46 @@
+package:
+  name: pankegg
+  version: "1.0"
+
+source:
+  path: ../
+
+build:
+  noarch: python
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  host:
+    - python
+    - setuptools
+    - pip
+  run:
+    - python
+    - flask
+    - pandas
+    - numpy
+    - scikit-learn
+    - scipy
+    - jinja2
+    - click
+    - importlib-metadata
+    - pytest==8.4.0
+
+test:
+  requires:
+    - pytest==8.4.0
+  commands:
+    - python -c "import flask"
+    - python -c "import pandas"
+    - python -c "import numpy"
+    - python -c "import jinja2"
+    - python -c "import click"
+    - python -c "import sklearn"
+    - python -c "import scipy"
+    - pankegg_make_db.py -h || true
+    - pankegg_app.py -h || true
+
+about:
+  home: https://github.com/RVanDamme/PANKEGG
+  license: MIT
+  summary: "The PanKEGG Flask application is a web-based tool for visualizing, comparing, and exporting metagenomic data related to taxonomy and pathways."

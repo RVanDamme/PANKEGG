@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Home Page{% endblock%}
+{% block content %}
+<form method="get">
+    <!-- Button send request with param show_taxonomy True -->
+    <button type="submit" name="show_taxonomy" value="true" class="btn btn-secondary">Show Taxonomy</button>
+    <button type="submit" name="hide_taxonomy" value="true" class="btn btn-secondary">Hide Taxonomy</button>
+</form>
+
+<!-- Table to display Data from the DB -->
+<table border="1">
+    <tr>
+        {% for col in columns %}
+        <th>{{ col }}</th>
+        {% endfor %}
+    </tr>
+    {% for bin in bins %}
+    <tr>
+        {% for col in columns %}
+        <td>
+            {% if bin[col] is defined %}
+                {{ bin[col] }}
+            {% else %}
+                Non disponible
+            {% endif %}
+        </td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock%}

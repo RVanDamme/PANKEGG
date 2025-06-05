@@ -1,0 +1,5 @@
+recursive-include data *.db
+recursive-include templates *.html
+recursive-include data *.csv
+recursive-include data *.tsv
+recursive-include data *.txt

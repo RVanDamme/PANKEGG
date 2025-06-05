@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Comparison Menu{% endblock %}
+{% block content %}
+
+<div class="container">
+    <h1 class="text-center my-4">Comparison Menu</h1>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Sample vs Sample</h5>
+                    <p class="card-text flex-grow-1">Compare different samples based on various metrics and visualizations.</p>
+                    <a href="./sample_vs_sample" class="btn btn-primary mt-auto">Go to Sample vs Sample</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Bin vs Bin</h5>
+                    <p class="card-text flex-grow-1">Compare different bins within the selected samples to find common pathways and more.</p>
+                    <a href="./bin_vs_bin" class="btn btn-primary mt-auto">Go to Bin vs Bin</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Taxonomy</h5>
+                    <p class="card-text flex-grow-1">Compare the taxonomic composition across samples with detailed visualizations.</p>
+                    <a href="./taxonomy_comparison" class="btn btn-primary mt-auto">Go to Taxonomy Comparison</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">PCA</h5>
+                    <p class="card-text flex-grow-1">Get a PCA of all samples.</p>
+                    <a href="./compar_full" class="btn btn-primary mt-auto">Go to PCA</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

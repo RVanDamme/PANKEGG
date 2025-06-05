@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <title>{% block title %}{% endblock %}</title>
+    {% block header %}{% endblock %}
+    <style>
+        .kegg-id {
+            color: #007bff; /* Bootstrap primary blue */
+            font-weight: bold;
+            text-decoration: none; /* Optional: removes underline from links */
+        }
+        .highlighted-ko {
+            color: #FF471F !important; /* Color for highlighted KO ID, important to override */
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .light-blue-ko {
+            color: #ADD8E6; /* Light blue color */
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .highlighted-ko.light-blue-ko {
+            color: #FF471F !important; /* Ensure orange color overrides light blue */
+        }
+        .legend-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .legend-box.kegg-id {
+            background-color: #007bff; /* Same color as kegg-id links */
+        }
+        .legend-box.light-blue-ko {
+            background-color: #ADD8E6; /* Same color as light-blue-ko links */
+        }
+        .legend-box.highlighted-ko {
+            background-color: #FF471F; /* Same color as highlighted-ko links */
+        }
+        .progress-circle {
+            width: 80px;
+            height: 80px;
+            background: conic-gradient(#4caf50 0%, #d3d3d3 0%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #000;
+            position: relative;
+            margin: auto;  /* Center the circle in its column */
+        }
+        .progress-circle span {
+            position: absolute;
+            font-size: 0.9em;  /* Adjust font size if needed */
+        }
+        .progress-circle::before {
+            content: '';
+            width: 60%;
+            height: 60%;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">Navbar</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link active" aria-current="page" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/bin">Bin</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/map">Map</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/kegg">Kegg</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/taxonomy">Taxonomy</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/comparison">Visualisation</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    {% block content %}
+    {% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script>
+    function toggleAllCollapses() {
+        var collapses = document.querySelectorAll('.collapse');
+        var areAnyShown = Array.from(collapses).some(collapse => collapse.classList.contains('show'));
+
+        collapses.forEach(collapse => {
+            if (areAnyShown) {
+                // If at least one is open, collapse all
+                if (collapse.classList.contains('show')) {
+                    new bootstrap.Collapse(collapse, { toggle: true });
+                }
+            } else {
+                // if all are closed, open all
+                if (!collapse.classList.contains('show')) {
+                    new bootstrap.Collapse(collapse, { toggle: true });
+                }
+            }
+        });
+    }
+    </script>
+
+</body>
+</html>
