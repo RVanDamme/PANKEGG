@@ -1,5 +1,16 @@
 [
   {
+    "objectID": "installation_test.html",
+    "href": "installation_test.html",
+    "title": "Test the installation",
+    "section": "",
+    "text": "Once the installation is complete, you can run Pankegg using:\npankegg_make_db --help\npankegg_app --help\nIf the commands are not in your PATH then use the whole path to the executable.\nFor more detailed instructions on how to use Pankegg, see the Usage and Tests section.",
+    "crumbs": [
+      "Installation",
+      "Test the installation"
+    ]
+  },
+  {
     "objectID": "Pankegg_app.html",
     "href": "Pankegg_app.html",
     "title": "Pankegg_app.py",
@@ -77,36 +88,58 @@
     ]
   },
   {
-    "objectID": "installation.html#install-pankegg",
-    "href": "installation.html#install-pankegg",
-    "title": "Download and Install",
-    "section": "Install PANKEGG",
-    "text": "Install PANKEGG\nInstalling Pankegg is simple. You can either download the repository as a zip file, or clone it using git.\n\nDownload via wget or curl\nYou can download the repository as a zip file with wget:\nwget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip\nunzip master.zip\ncd PANKEGG-master\nOr with curl:\ncurl -L https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip -o master.zip\nunzip master.zip\ncd PANKEGG-master\nOR\n\n\nClone via git\nAlternatively, you can clone the repository directly using git:\ngit clone https://github.com/RVanDamme/PANKEGG.git\ncd PANKEGG",
+    "objectID": "CONTRIBUTING.html",
+    "href": "CONTRIBUTING.html",
+    "title": "Reporting bugs & contributing",
+    "section": "",
+    "text": "We thank you for taking the time to contribute, whether with bugs, code or with ideas, to the project.\n\n\nBefore contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server.\n\n\n\n\nEnsure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring.\n\n\n\n\nCreate an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly.\n\n\n\nAll work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\n\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\n\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\n\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again.",
     "crumbs": [
-      "Installation",
-      "Download and Install"
+      "Additional Information",
+      "Reporting bugs & contributing"
     ]
   },
   {
-    "objectID": "installation.html#install-dependencies",
-    "href": "installation.html#install-dependencies",
-    "title": "Download and Install",
-    "section": "Install dependencies",
-    "text": "Install dependencies\nYou can install Pankegg and all necessary dependencies via conda, pip, or pixi.\n\nUsing conda\nFor a stable installation, use conda-lock to create and activate a stable conda environment using the provided conda-lock.yml file (found in the conda.recipe directory):\nconda-lock install --name pankegg_env conda-lock.yml\nconda activate pankegg_env\nAlternatively, create and activate a new conda environment using the provided environment.yml file (found in the conda.recipe directory):\nconda env create -f environment.yml\nconda activate pankegg_env\n\n\nUsing pip\nFrom within the repository folder, install all dependencies by running:\npip install .\nOr, install dependencies only:\npip install flask pandas numpy scikit-learn scipy jinja2 click setuptools importlib-metadata\n\n\nUsing pixi\nIf you use pixi, you can use the pixi.lock and run all the Pankegg commands with:\npixi run &lt;pankegg_command&gt;\nSubstitube &lt;pankegg_command&gt; with the command you want to run.",
+    "objectID": "CONTRIBUTING.html#getting-started-with-pankegg",
+    "href": "CONTRIBUTING.html#getting-started-with-pankegg",
+    "title": "Reporting bugs & contributing",
+    "section": "",
+    "text": "Before contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server.",
     "crumbs": [
-      "Installation",
-      "Download and Install"
+      "Additional Information",
+      "Reporting bugs & contributing"
     ]
   },
   {
-    "objectID": "installation.html#windows-subsystem-for-linux",
-    "href": "installation.html#windows-subsystem-for-linux",
-    "title": "Download and Install",
-    "section": "Windows Subsystem for Linux",
-    "text": "Windows Subsystem for Linux\nIf you are using WSL, you should install Pankegg in the WSL itself and NOT on your Windows drive. This is required because of the disparity between the Linux FileSystem and the Windows FileSystem, which prevents the tools from running correctly through WSL when installed in the Windows FS.\nWe also recommend storing your database in the WSL rather than on your Windows drive. While this is not critical, it is a better practice and ensures that Pankegg will read the database properly.",
+    "objectID": "CONTRIBUTING.html#did-you-find-a-bug",
+    "href": "CONTRIBUTING.html#did-you-find-a-bug",
+    "title": "Reporting bugs & contributing",
+    "section": "",
+    "text": "Ensure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring.",
     "crumbs": [
-      "Installation",
-      "Download and Install"
+      "Additional Information",
+      "Reporting bugs & contributing"
+    ]
+  },
+  {
+    "objectID": "CONTRIBUTING.html#how-to-work-on-a-new-featurebug",
+    "href": "CONTRIBUTING.html#how-to-work-on-a-new-featurebug",
+    "title": "Reporting bugs & contributing",
+    "section": "",
+    "text": "Create an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly.",
+    "crumbs": [
+      "Additional Information",
+      "Reporting bugs & contributing"
+    ]
+  },
+  {
+    "objectID": "CONTRIBUTING.html#how-we-work-with-git",
+    "href": "CONTRIBUTING.html#how-we-work-with-git",
+    "title": "Reporting bugs & contributing",
+    "section": "",
+    "text": "All work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\n\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\n\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\n\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again.",
+    "crumbs": [
+      "Additional Information",
+      "Reporting bugs & contributing"
     ]
   },
   {
@@ -129,6 +162,144 @@
     "crumbs": [
       "The tools",
       "Introduction to the tools"
+    ]
+  },
+  {
+    "objectID": "quickstart.html",
+    "href": "quickstart.html",
+    "title": "Quickstart",
+    "section": "",
+    "text": "This quickstart guide will walk you through setting up Pankegg, running the pipeline on test data, and launching the web application to explore your results.",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#install-pankegg-and-dependencies",
+    "href": "quickstart.html#install-pankegg-and-dependencies",
+    "title": "Quickstart",
+    "section": "Install Pankegg and Dependencies",
+    "text": "Install Pankegg and Dependencies\nInstall Pankegg via pip, conda, or pixi.\nSee the Installation section for detailed options.\nwget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip\nunzip master.zip\ncd PANKEGG-master\npip install .",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#download-example-test-data-optional",
+    "href": "quickstart.html#download-example-test-data-optional",
+    "title": "Quickstart",
+    "section": "Download Example Test Data (optional)",
+    "text": "Download Example Test Data (optional)\nDownload and extract the example dataset:\nwget https://osf.io/5v3zc/download -O pankegg_test_data.zip\nunzip pankegg_test_data.zip",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#build-the-sql-database-optional",
+    "href": "quickstart.html#build-the-sql-database-optional",
+    "title": "Quickstart",
+    "section": "Build the SQL Database (optional)",
+    "text": "Build the SQL Database (optional)\nGenerate a Pankegg database from the provided CSV using the included test data (for both Sourmash and GTDB-TK classification):\npython pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#launch-the-web-application",
+    "href": "quickstart.html#launch-the-web-application",
+    "title": "Quickstart",
+    "section": "Launch the Web Application",
+    "text": "Launch the Web Application\nStart the web server using the database present in the repository:\npython pankegg_app.py --d data/pankegg.db\nor use the the database you generated in point 3:\npython pankegg_app.py --d pankegg_test_data/test_sourmash",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "quickstart.html#open-web-browser",
+    "href": "quickstart.html#open-web-browser",
+    "title": "Quickstart",
+    "section": "Open web browser",
+    "text": "Open web browser\nNow, open your web browser and go to the IP address written in your terminal ( http://0.0.0.0:5000) to interactively explore your metagenomic data!",
+    "crumbs": [
+      "Getting Started",
+      "Quickstart"
+    ]
+  },
+  {
+    "objectID": "reporting_bugs.html#getting-started-with-pankegg",
+    "href": "reporting_bugs.html#getting-started-with-pankegg",
+    "title": "Reporting bugs & contributing",
+    "section": "Getting started with Pankegg",
+    "text": "Getting started with Pankegg\nBefore contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server."
+  },
+  {
+    "objectID": "reporting_bugs.html#did-you-find-a-bug",
+    "href": "reporting_bugs.html#did-you-find-a-bug",
+    "title": "Reporting bugs & contributing",
+    "section": "Did you find a bug?",
+    "text": "Did you find a bug?\n\nEnsure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring."
+  },
+  {
+    "objectID": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
+    "href": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
+    "title": "Reporting bugs & contributing",
+    "section": "How to work on a new feature/bug",
+    "text": "How to work on a new feature/bug\nCreate an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly."
+  },
+  {
+    "objectID": "reporting_bugs.html#how-we-work-with-git",
+    "href": "reporting_bugs.html#how-we-work-with-git",
+    "title": "Reporting bugs & contributing",
+    "section": "How we work with Git",
+    "text": "How we work with Git\nAll work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\nGeneral stuff about git and commit messages\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\nHelpful commit messages\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\nHow we do code reviews\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Welcome to Pankegg",
+    "section": "",
+    "text": "Welcome to the Pankegg documentation. Here you will find all the information you need to get started with Pankegg.",
+    "crumbs": [
+      "Home",
+      "Welcome to Pankegg"
+    ]
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "Welcome to Pankegg",
+    "section": "Overview",
+    "text": "Overview\nA powerful parser and visualizer for metagenome bin annotation, classification, and quality assessment.\nPankegg is a flexible and user-friendly interactive software suite built with Python, SQL, Jinja, JavaScript, and Flask, designed to visualize and compare bin annotations, taxonomic classifications, and quality metrics (estimated by CheckM2). It enables interactive exploration and comparison of results across bins and samples through a local web server interface.\nPankegg is ideal for anyone working with output files from CheckM2, EggNOG, Sourmash, or GTDB-TK. While it can be integrated into any workflow, it was originally conceived as the final step of the MUFFIN pipeline to provide a comprehensive visualization and analysis platform.",
+    "crumbs": [
+      "Home",
+      "Welcome to Pankegg"
+    ]
+  },
+  {
+    "objectID": "index.html#mission-statement",
+    "href": "index.html#mission-statement",
+    "title": "Welcome to Pankegg",
+    "section": "Mission Statement",
+    "text": "Mission Statement\nPankegg aims to provide a comprehensive tool for the analysis and visualization of metabolic pathways across various samples and bins.\nOur goal is to facilitate research and understanding in the field of metagenomics and bioinformatics.",
+    "crumbs": [
+      "Home",
+      "Welcome to Pankegg"
+    ]
+  },
+  {
+    "objectID": "index.html#features-and-benefits",
+    "href": "index.html#features-and-benefits",
+    "title": "Welcome to Pankegg",
+    "section": "Features and Benefits",
+    "text": "Features and Benefits\n\nCompare samples and bins with ease\nVisualize taxonomic compositions\nAnalyze pathway completions\nExport data for further analysis",
+    "crumbs": [
+      "Home",
+      "Welcome to Pankegg"
     ]
   },
   {
@@ -242,78 +413,6 @@
     ]
   },
   {
-    "objectID": "installation_test.html",
-    "href": "installation_test.html",
-    "title": "Test the installation",
-    "section": "",
-    "text": "Once the installation is complete, you can run Pankegg using:\npankegg_make_db --help\npankegg_app --help\nIf the commands are not in your PATH then use the whole path to the executable.\nFor more detailed instructions on how to use Pankegg, see the Usage and Tests section.",
-    "crumbs": [
-      "Installation",
-      "Test the installation"
-    ]
-  },
-  {
-    "objectID": "reporting_bugs.html#getting-started-with-pankegg",
-    "href": "reporting_bugs.html#getting-started-with-pankegg",
-    "title": "Reporting bugs & contributing",
-    "section": "Getting started with Pankegg",
-    "text": "Getting started with Pankegg\nBefore contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server."
-  },
-  {
-    "objectID": "reporting_bugs.html#did-you-find-a-bug",
-    "href": "reporting_bugs.html#did-you-find-a-bug",
-    "title": "Reporting bugs & contributing",
-    "section": "Did you find a bug?",
-    "text": "Did you find a bug?\n\nEnsure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring."
-  },
-  {
-    "objectID": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
-    "href": "reporting_bugs.html#how-to-work-on-a-new-featurebug",
-    "title": "Reporting bugs & contributing",
-    "section": "How to work on a new feature/bug",
-    "text": "How to work on a new feature/bug\nCreate an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly."
-  },
-  {
-    "objectID": "reporting_bugs.html#how-we-work-with-git",
-    "href": "reporting_bugs.html#how-we-work-with-git",
-    "title": "Reporting bugs & contributing",
-    "section": "How we work with Git",
-    "text": "How we work with Git\nAll work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\nGeneral stuff about git and commit messages\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\nHelpful commit messages\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\nHow we do code reviews\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again."
-  },
-  {
-    "objectID": "input_files.html",
-    "href": "input_files.html",
-    "title": "Supported input",
-    "section": "",
-    "text": "Pankegg was developed to integrate output files from a variety of metagenomics tools, such as CheckM2, Sourmash, GTDB-TK and EggNOG. You can combine them all, or only add the ones that are interesting for you.",
-    "crumbs": [
-      "Getting Started",
-      "Supported input"
-    ]
-  },
-  {
-    "objectID": "input_files.html#input-files",
-    "href": "input_files.html#input-files",
-    "title": "Supported input",
-    "section": "Input files",
-    "text": "Input files\n\nSupported input files\n\n\n\n\n\n\n\nTool\nInput File\nData Extracted\n\n\n\n\ncheckm2\nquality_report.tsv\nbin completeness and contamination\n\n\nSourmash\n*.txt\nID, Status and Taxonomic classification\n\n\nGTDB-TK\n*.summary.tsv\nUser genome and Taxonomic classification\n\n\nEggNOG\n*.annotations.tsv\nKEGG Orthologs, KEGG Pathways, GO terms, Description",
-    "crumbs": [
-      "Getting Started",
-      "Supported input"
-    ]
-  },
-  {
-    "objectID": "input_files.html#additional-input-files-provided-by-pankegg",
-    "href": "input_files.html#additional-input-files-provided-by-pankegg",
-    "title": "Supported input",
-    "section": "Additional Input Files Provided by Pankegg",
-    "text": "Additional Input Files Provided by Pankegg\nPANKEGG requires more input files. However, these are already provided and you don’t need to worry about them. They are located in the data directory.\n\nAdditional input, built into PANKEGG\n\n\n\n\n\n\n\nFile Name\nDescription\nData Origin\n\n\n\n\nkegg_map_info.tsv\nContains mapID, pathway name, and total number of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nkegg_map_orthologs.tsv\nContains mapID, pathway name, and list of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nko.txt\nContains the IDs and names of orthologs\nExtracted from KEGG orthologs database\n\n\npathway.txt\nContains map IDs (pathways) and their names\nExtracted from KEGG pathway database\n\n\npathway_groups.txt\nMaps IDs grouped by KEGG sub-categories\nExtracted from KEGG pathway database",
-    "crumbs": [
-      "Getting Started",
-      "Supported input"
-    ]
-  },
-  {
     "objectID": "Pankegg_make_db.html",
     "href": "Pankegg_make_db.html",
     "title": "Pankegg_make_db.py",
@@ -380,102 +479,69 @@
     ]
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Welcome to Pankegg",
+    "objectID": "input_files.html",
+    "href": "input_files.html",
+    "title": "Supported input",
     "section": "",
-    "text": "Welcome to the Pankegg documentation. Here you will find all the information you need to get started with Pankegg.",
+    "text": "Pankegg was developed to integrate output files from a variety of metagenomics tools, such as CheckM2, Sourmash, GTDB-TK and EggNOG. You can combine them all, or only add the ones that are interesting for you.",
     "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
+      "Getting Started",
+      "Supported input"
     ]
   },
   {
-    "objectID": "index.html#overview",
-    "href": "index.html#overview",
-    "title": "Welcome to Pankegg",
-    "section": "Overview",
-    "text": "Overview\nA powerful parser and visualizer for metagenome bin annotation, classification, and quality assessment.\nPankegg is a flexible and user-friendly interactive software suite built with Python, SQL, Jinja, JavaScript, and Flask, designed to visualize and compare bin annotations, taxonomic classifications, and quality metrics (estimated by CheckM2). It enables interactive exploration and comparison of results across bins and samples through a local web server interface.\nPankegg is ideal for anyone working with output files from CheckM2, EggNOG, Sourmash, or GTDB-TK. While it can be integrated into any workflow, it was originally conceived as the final step of the MUFFIN pipeline to provide a comprehensive visualization and analysis platform.",
+    "objectID": "input_files.html#input-files",
+    "href": "input_files.html#input-files",
+    "title": "Supported input",
+    "section": "Input files",
+    "text": "Input files\n\nSupported input files\n\n\n\n\n\n\n\nTool\nInput File\nData Extracted\n\n\n\n\ncheckm2\nquality_report.tsv\nbin completeness and contamination\n\n\nSourmash\n*.txt\nID, Status and Taxonomic classification\n\n\nGTDB-TK\n*.summary.tsv\nUser genome and Taxonomic classification\n\n\nEggNOG\n*.annotations.tsv\nKEGG Orthologs, KEGG Pathways, GO terms, Description",
     "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
+      "Getting Started",
+      "Supported input"
     ]
   },
   {
-    "objectID": "index.html#mission-statement",
-    "href": "index.html#mission-statement",
-    "title": "Welcome to Pankegg",
-    "section": "Mission Statement",
-    "text": "Mission Statement\nPankegg aims to provide a comprehensive tool for the analysis and visualization of metabolic pathways across various samples and bins.\nOur goal is to facilitate research and understanding in the field of metagenomics and bioinformatics.",
+    "objectID": "input_files.html#additional-input-files-provided-by-pankegg",
+    "href": "input_files.html#additional-input-files-provided-by-pankegg",
+    "title": "Supported input",
+    "section": "Additional Input Files Provided by Pankegg",
+    "text": "Additional Input Files Provided by Pankegg\nPANKEGG requires more input files. However, these are already provided and you don’t need to worry about them. They are located in the data directory.\n\nAdditional input, built into PANKEGG\n\n\n\n\n\n\n\nFile Name\nDescription\nData Origin\n\n\n\n\nkegg_map_info.tsv\nContains mapID, pathway name, and total number of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nkegg_map_orthologs.tsv\nContains mapID, pathway name, and list of orthologs per pathway (map)\nExtracted from KEGG pathway database\n\n\nko.txt\nContains the IDs and names of orthologs\nExtracted from KEGG orthologs database\n\n\npathway.txt\nContains map IDs (pathways) and their names\nExtracted from KEGG pathway database\n\n\npathway_groups.txt\nMaps IDs grouped by KEGG sub-categories\nExtracted from KEGG pathway database",
     "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
+      "Getting Started",
+      "Supported input"
     ]
   },
   {
-    "objectID": "index.html#features-and-benefits",
-    "href": "index.html#features-and-benefits",
-    "title": "Welcome to Pankegg",
-    "section": "Features and Benefits",
-    "text": "Features and Benefits\n\nCompare samples and bins with ease\nVisualize taxonomic compositions\nAnalyze pathway completions\nExport data for further analysis",
+    "objectID": "installation.html#install-pankegg",
+    "href": "installation.html#install-pankegg",
+    "title": "Download and Install",
+    "section": "Install PANKEGG",
+    "text": "Install PANKEGG\nInstalling Pankegg is simple. You can either download the repository as a zip file, or clone it using git.\n\nDownload via wget or curl\nYou can download the repository as a zip file with wget:\nwget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip\nunzip master.zip\ncd PANKEGG-master\nOr with curl:\ncurl -L https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip -o master.zip\nunzip master.zip\ncd PANKEGG-master\nOR\n\n\nClone via git\nAlternatively, you can clone the repository directly using git:\ngit clone https://github.com/RVanDamme/PANKEGG.git\ncd PANKEGG",
     "crumbs": [
-      "Home",
-      "Welcome to Pankegg"
+      "Installation",
+      "Download and Install"
     ]
   },
   {
-    "objectID": "CONTRIBUTING.html",
-    "href": "CONTRIBUTING.html",
-    "title": "Reporting bugs & contributing",
-    "section": "",
-    "text": "We thank you for taking the time to contribute, whether with bugs, code or with ideas, to the project.\n\n\nBefore contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server.\n\n\n\n\nEnsure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring.\n\n\n\n\nCreate an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly.\n\n\n\nAll work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\n\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\n\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\n\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again.",
+    "objectID": "installation.html#install-dependencies",
+    "href": "installation.html#install-dependencies",
+    "title": "Download and Install",
+    "section": "Install dependencies",
+    "text": "Install dependencies\nYou can install Pankegg and all necessary dependencies via conda, pip, or pixi.\n\nUsing conda\nFor a stable installation, use conda-lock to create and activate a stable conda environment using the provided conda-lock.yml file (found in the conda.recipe directory):\nconda-lock install --name pankegg_env conda-lock.yml\nconda activate pankegg_env\nAlternatively, create and activate a new conda environment using the provided environment.yml file (found in the conda.recipe directory):\nconda env create -f environment.yml\nconda activate pankegg_env\n\n\nUsing pip\nFrom within the repository folder, install all dependencies by running:\npip install .\nOr, install dependencies only:\npip install flask pandas numpy scikit-learn scipy jinja2 click setuptools importlib-metadata\n\n\nUsing pixi\nIf you use pixi, you can use the pixi.lock and run all the Pankegg commands with:\npixi run &lt;pankegg_command&gt;\nSubstitube &lt;pankegg_command&gt; with the command you want to run.",
     "crumbs": [
-      "Additional Information",
-      "Reporting bugs & contributing"
+      "Installation",
+      "Download and Install"
     ]
   },
   {
-    "objectID": "CONTRIBUTING.html#getting-started-with-pankegg",
-    "href": "CONTRIBUTING.html#getting-started-with-pankegg",
-    "title": "Reporting bugs & contributing",
-    "section": "",
-    "text": "Before contributing, take a moment to explore the repository:\n\npankegg_make_db.py: builds the SQLite database from your annotation CSV files.\npankegg_app.py: launches the Flask web interface to browse bins and KEGG pathways.\nlib/: utility modules with SQL commands and database helpers.\ntemplates/: Jinja HTML templates for the web pages.\ndata/: example files and a sample pankegg.db.\nsetup.py and .github/workflows/: packaging and CI configuration.\n\nWe recommend inspecting data/pankegg.db with sqlite3 and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server.",
+    "objectID": "installation.html#windows-subsystem-for-linux",
+    "href": "installation.html#windows-subsystem-for-linux",
+    "title": "Download and Install",
+    "section": "Windows Subsystem for Linux",
+    "text": "Windows Subsystem for Linux\nIf you are using WSL, you should install Pankegg in the WSL itself and NOT on your Windows drive. This is required because of the disparity between the Linux FileSystem and the Windows FileSystem, which prevents the tools from running correctly through WSL when installed in the Windows FS.\nWe also recommend storing your database in the WSL rather than on your Windows drive. While this is not critical, it is a better practice and ensures that Pankegg will read the database properly.",
     "crumbs": [
-      "Additional Information",
-      "Reporting bugs & contributing"
-    ]
-  },
-  {
-    "objectID": "CONTRIBUTING.html#did-you-find-a-bug",
-    "href": "CONTRIBUTING.html#did-you-find-a-bug",
-    "title": "Reporting bugs & contributing",
-    "section": "",
-    "text": "Ensure that the bug was not already reported by searching reported Issues.\nIf you’re unable to find an (open) issue addressing the problem, open a new one. Be sure to prefix the issue title with [BUG] and to include:\na clear description,\nas much relevant information as possible, and\na code sample or a database test case demonstrating the problematic behaviour that is occurring.",
-    "crumbs": [
-      "Additional Information",
-      "Reporting bugs & contributing"
-    ]
-  },
-  {
-    "objectID": "CONTRIBUTING.html#how-to-work-on-a-new-featurebug",
-    "href": "CONTRIBUTING.html#how-to-work-on-a-new-featurebug",
-    "title": "Reporting bugs & contributing",
-    "section": "",
-    "text": "Create an issue on Github or you can alternatively pick one already created.\nAssign yourself to that issue.\nDiscussions on how to proceed about that issue take place in the comment section on that issue.\nSome of the work might have been done already by somebody, hence we avoid unnecessary work duplication and a waste of time and effort. Other reason for discussing the issue beforehand is to communicate with the team the changes as some of the features might impact different components, and we can plan accordingly.",
-    "crumbs": [
-      "Additional Information",
-      "Reporting bugs & contributing"
-    ]
-  },
-  {
-    "objectID": "CONTRIBUTING.html#how-we-work-with-git",
-    "href": "CONTRIBUTING.html#how-we-work-with-git",
-    "title": "Reporting bugs & contributing",
-    "section": "",
-    "text": "All work should take place in a dedicated branch with a short descriptive name.\nUse comments in your code, choose variable and function names that clearly show what you intend to implement.\nOnce the feature is done you can request it to be merged back into main by making a Pull Request.\nBefore making the pull request it is a good idea to rebase your branch to main to ensure that eventual conflicts with the main branch is solved before the PR is reviewed and we can therefore have a clean merge.\n\n\nIn general it is better to commit often. Small commits are easier to roll back and also makes the code easier to review.\nWrite helpful commit messages that describes the changes and possibly why they were necessary.\nEach commit should contain changes that are functionally connected and/or related. If you for example want to write and in the first line of the commit message this is an indicator that it should have been two commits.\nLearn how to select chunks of changed files to do multiple separate commits of unrelated things. This can be done with either git add -p or git commit -p.\n\n\nThe commit messages may be seen as meta-comments on the code that are incredibly helpful for anyone who wants to know how this piece of software is working, including colleagues (current and future) and external users.\nSome tips about writing helpful commit messages:\n\nSeparate subject (the first line of the message) from body with a blank line.\nLimit the subject line to 50 characters.\nCapitalize the subject line.\nDo not end the subject line with a period.\nUse the imperative mood in the subject line.\nWrap the body at 72 characters.\nUse the body to explain what and why vs. how.\n\nFor an in-depth explanation of the above points, please see How to Write a Git Commit Message.\n\n\n\n\nA code review is initiated when someone has made a Pull Request in the appropriate repo on github.\nWork should not continue on the branch unless it is a Draft Pull Request. Once the PR is marked ready the review can start.\nThe initiator of the PR should recruit a reviewer that get assigned reviewer duty on the branch.\nOther people may also look at and review the code.\nA reviewers job is to:\n\nWrite polite and friendly comments - remember that it can be tough to have other people critizising your work, a little kindness goes a long way. This does not mean we should not comment on things that need to be changed of course.\nRead the code and make sure it is understandable\nMake sure that commit messages and commits are structured so that it is possible to understand why certain changes were made.\n\nOnce the review is positive the Pull Request can be merged into main and the feature branch deleted.\n\nThanks again.",
-    "crumbs": [
-      "Additional Information",
-      "Reporting bugs & contributing"
+      "Installation",
+      "Download and Install"
     ]
   },
   {
@@ -487,72 +553,6 @@
     "crumbs": [
       "Additional Information",
       "Authors and contributors"
-    ]
-  },
-  {
-    "objectID": "quickstart.html",
-    "href": "quickstart.html",
-    "title": "Quickstart",
-    "section": "",
-    "text": "This quickstart guide will walk you through setting up Pankegg, running the pipeline on test data, and launching the web application to explore your results.",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#install-pankegg-and-dependencies",
-    "href": "quickstart.html#install-pankegg-and-dependencies",
-    "title": "Quickstart",
-    "section": "Install Pankegg and Dependencies",
-    "text": "Install Pankegg and Dependencies\nInstall Pankegg via pip, conda, or pixi.\nSee the Installation section for detailed options.\nwget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip\nunzip master.zip\ncd PANKEGG-master\npip install .",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#download-example-test-data-optional",
-    "href": "quickstart.html#download-example-test-data-optional",
-    "title": "Quickstart",
-    "section": "Download Example Test Data (optional)",
-    "text": "Download Example Test Data (optional)\nDownload and extract the example dataset:\nwget https://osf.io/5v3zc/download -O pankegg_test_data.zip\nunzip pankegg_test_data.zip",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#build-the-sql-database-optional",
-    "href": "quickstart.html#build-the-sql-database-optional",
-    "title": "Quickstart",
-    "section": "Build the SQL Database (optional)",
-    "text": "Build the SQL Database (optional)\nGenerate a Pankegg database from the provided CSV using the included test data (for both Sourmash and GTDB-TK classification):\npython pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#launch-the-web-application",
-    "href": "quickstart.html#launch-the-web-application",
-    "title": "Quickstart",
-    "section": "Launch the Web Application",
-    "text": "Launch the Web Application\nStart the web server using the database present in the repository:\npython pankegg_app.py --d data/pankegg.db\nor use the the database you generated in point 3:\npython pankegg_app.py --d pankegg_test_data/test_sourmash",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
-    ]
-  },
-  {
-    "objectID": "quickstart.html#open-web-browser",
-    "href": "quickstart.html#open-web-browser",
-    "title": "Quickstart",
-    "section": "Open web browser",
-    "text": "Open web browser\nNow, open your web browser and go to the IP address written in your terminal ( http://0.0.0.0:5000) to interactively explore your metagenomic data!",
-    "crumbs": [
-      "Getting Started",
-      "Quickstart"
     ]
   }
 ]
