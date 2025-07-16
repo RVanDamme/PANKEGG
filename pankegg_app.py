@@ -67,6 +67,142 @@ app.jinja_env.filters['taxon_unclassified'] = taxon_unclassified
 def page_not_found(error):
     return "<h2>404 Not Found</h2><p>The item you requested was not found.</p>", 404
 
+@app.route('/pathway_stat', methods=['GET','POST'])
+@app.route('/pathway_stat', methods=['GET'])
+def pathway_stat():
+    # Expect exactly one query parameter 'q' with a map ID (e.g. map00010)
+    q = request.args.get('q', '').strip()
+    if not q or not q.lower().startswith('map') or not q[3:].isdigit():
+        abort(404, description=f"Invalid or missing map ID '{q}'")
+
+    map_number = q[3:]
+    pathway = None
+    total_completeness = 0
+    samples = []
+    db_kos = []
+
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    try:
+        # Fetch the pathway by map_number (using LIKE to allow leading zeros)
+        cur.execute(
+            "SELECT id, map_number, pathway_name, pathway_total_orthologs"
+            " FROM map WHERE map_number LIKE ?",
+            (f"%{map_number}%",)
+        )
+        row = cur.fetchone()
+        if not row:
+            abort(404, description=f"No pathway found for ID '{q}'")
+
+        pathway = {
+            'id': row['id'],
+            'number': row['map_number'],
+            'name': row['pathway_name'],
+            'total_orthologs': row['pathway_total_orthologs']
+        }
+
+        # DB-wide KO list
+        cur.execute(
+            "SELECT k.ko_id FROM map_kegg mk"
+            " JOIN kegg k ON mk.kegg_id = k.id"
+            " WHERE mk.map_id = ? AND mk.real_pathway_id = 1",
+            (pathway['id'],)
+        )
+        db_kos = [r['ko_id'] for r in cur.fetchall()]
+
+        # Overall completeness
+        cur.execute(
+            "SELECT COUNT(*) AS cnt FROM map_kegg WHERE map_id = ? AND real_pathway_id = 1",
+            (pathway['id'],)
+        )
+        hits = cur.fetchone()['cnt'] or 0
+        if pathway['total_orthologs'] > 0:
+            total_completeness = round(100 * hits / pathway['total_orthologs'], 2)
+
+        # Per-sample and per-bin completeness & KO lists
+        cur.execute("SELECT id, sample_name FROM sample")
+        for s in cur.fetchall():
+            sid, sname = s['id'], s['sample_name']
+
+            # Sample KO list
+            cur.execute(
+                "SELECT DISTINCT k.ko_id FROM map_kegg mk"
+                " JOIN kegg k ON mk.kegg_id = k.id"
+                " JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id"
+                " JOIN bin b ON bmk.bin_id = b.id"
+                " WHERE mk.map_id = ? AND mk.real_pathway_id = 1 AND b.sample_id = ?",
+                (pathway['id'], sid)
+            )
+            sample_kos = [r['ko_id'] for r in cur.fetchall()]
+
+            # Sample completeness
+            cur.execute(
+                "SELECT COUNT(DISTINCT mk.id) AS cnt FROM map_kegg mk"
+                " JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id"
+                " JOIN bin b ON bmk.bin_id = b.id"
+                " WHERE mk.map_id = ? AND mk.real_pathway_id = 1 AND b.sample_id = ?",
+                (pathway['id'], sid)
+            )
+            cnt = cur.fetchone()['cnt'] or 0
+            sample_compl = round(100 * cnt / pathway['total_orthologs'], 2) if pathway['total_orthologs'] > 0 else 0
+
+            # Bin details
+            bins = []
+            cur.execute(
+                '''SELECT b.id, b.bin_name,
+                          t."_family_" AS family,
+                          t."_genus_"  AS genus,
+                          t."_species_" AS species
+                   FROM bin b
+                   JOIN taxonomy t ON b.taxonomic_id = t.id
+                   WHERE b.sample_id = ?''',
+                (sid,)
+            )
+            for br in cur.fetchall():
+                bid = br['id']
+
+                # Bin KO list
+                cur.execute(
+                    "SELECT DISTINCT k.ko_id FROM map_kegg mk"
+                    " JOIN kegg k ON mk.kegg_id = k.id"
+                    " JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id"
+                    " WHERE mk.map_id = ? AND mk.real_pathway_id = 1 AND bmk.bin_id = ?",
+                    (pathway['id'], bid)
+                )
+                bin_kos = [r['ko_id'] for r in cur.fetchall()]
+
+                # Bin completeness
+                cur.execute(
+                    "SELECT COUNT(*) AS cnt FROM map_kegg mk"
+                    " JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id"
+                    " WHERE mk.map_id = ? AND mk.real_pathway_id = 1 AND bmk.bin_id = ?",
+                    (pathway['id'], bid)
+                )
+                bcnt = cur.fetchone()['cnt'] or 0
+                bin_compl = round(100 * bcnt / pathway['total_orthologs'], 2) if pathway['total_orthologs'] > 0 else 0
+
+                bins.append({
+                    'name': br['bin_name'],
+                    'taxonomy': {'family': br['family'], 'genus': br['genus'], 'species': br['species']},
+                    'completeness': bin_compl,
+                    'kos': bin_kos
+                })
+
+            samples.append({'name': sname, 'completeness': sample_compl, 'bins': bins, 'kos': sample_kos})
+
+    except sqlite3.Error as e:
+        return handle_sql_error(e)
+    finally:
+        conn.close()
+
+    return render_template(
+        'pathway_stat.html',
+        pathway=pathway,
+        total_completeness=total_completeness,
+        samples=samples,
+        db_kos=db_kos
+    )
 
 @app.route('/get_taxonomy_data', methods=['POST'])
 def get_taxonomy_data():

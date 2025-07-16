@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Pathway Statistics{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <!-- Search Form -->
+  <form method="get" action="" class="mb-4 form-inline">
+    <div class="form-group">
+      <label for="pathway_query" class="sr-only">Map ID</label>
+      <input type="text" name="q" id="pathway_query" value="{{ request.args.get('q','') }}" placeholder="e.g. map00010"
+             class="form-control" style="width:200px;">
+    </div>
+    <button type="submit" class="btn btn-primary ml-2">Search</button>
+  </form>
+
+  {% if pathway %}
+  <h1 class="mb-2">Pathway Statistics: {{ pathway.number }} - {{ pathway.name }}</h1>
+  <div class="alert alert-info" role="alert">
+    <h5 class="d-inline">
+      Overall DB completeness: <strong>{{ '%.2f'|format(total_completeness) }}%</strong>
+    </h5>
+    <button type="button"
+            class="btn btn-sm btn-secondary ml-3"
+            data-kos="{{ db_kos|join('\n') }}"
+            data-map="{{ pathway.number }}"
+            onclick="openKoPanel(this)">
+      List KOs
+    </button>
+    <p class="mb-0">About Pathway Completion: The pathway completion percentage is calculated by counting the number of KEGG orthologs (KOs) detected in the selected bin(s) that are associated with this pathway in KEGG. The percentage shown is number of detected KOs / total theoretical KOs for this pathway.<br>
+      <small>Note: Not all orthologs contribute equally to pathway functionality—this value is only an approximate indicator. For detailed insight, go to the Map page and use the "Highlight pathway" button to copy detected KOs and visualize them by clicking on the go to KEGG button or for a more detailed search use the KEGG’s Color tool.</small>
+    </p>
+  </div>
+
+  <!-- Samples Table -->
+  <table class="table table-bordered">
+    <thead class="table-dark">
+      <tr>
+        <th>Sample</th>
+        <th>Completeness</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sample in samples %}
+      <tr>
+        <td>{{ sample.name }}</td>
+        <td class="text-center">
+          <div class="progress-circle"
+               style="background: conic-gradient(#17ECFD {{ '%.2f'|format(sample.completeness) }}%, #d3d3d3 {{ '%.2f'|format(sample.completeness) }}%);">
+            <span>{{ '%.2f'|format(sample.completeness) }}%</span>
+          </div>
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-info toggle-btn" data-target="#bins-{{ loop.index0 }}">Show bins</button>
+          <button class="btn btn-sm btn-secondary ml-1"
+                  data-kos="{{ sample.kos|join('\n') }}"
+                  data-map="{{ pathway.number }}"
+                  onclick="openKoPanel(this)">
+            List KOs
+          </button>
+        </td>
+      </tr>
+      <tr id="bins-{{ loop.index0 }}" class="d-none">
+        <td colspan="3">
+          <table class="table table-bordered mb-0">
+            <thead class="bg-dark text-white">
+              <tr>
+                <th>Bin</th>
+                <th>Family</th>
+                <th>Genus</th>
+                <th>Species</th>
+                <th>Completeness</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for bin in sample.bins %}
+              <tr>
+                <td>{{ bin.name }}</td>
+                <td>{{ bin.taxonomy.family or '-' }}</td>
+                <td>{{ bin.taxonomy.genus or '-' }}</td>
+                <td>{{ bin.taxonomy.species or '-' }}</td>
+                <td>{{ '%.2f'|format(bin.completeness) }}%</td>
+                <td>
+                  <button class="btn btn-sm btn-secondary"
+                          data-kos="{{ bin.kos|join('\n') }}"
+                          data-map="{{ pathway.number }}"
+                          onclick="openKoPanel(this)">
+                    List KOs
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- KO List Panel -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="koPanel" aria-labelledby="koPanelLabel">
+    <div class="offcanvas-header">
+      <h5 id="koPanelLabel">KEGG Orthologs (KOs)</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+      <textarea id="koTextarea" class="form-control mb-3" rows="10" readonly></textarea>
+      <button class="btn btn-secondary" onclick="copyTextarea()">Copy to clipboard</button>
+      <a id="koPanelKeggLink" href="#" target="_blank" class="btn btn-primary ms-2">Go to KEGG</a>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script>
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tgt = document.querySelector(btn.dataset.target);
+        if (tgt.classList.contains('d-none')) {
+          tgt.classList.remove('d-none'); btn.textContent = 'Hide bins';
+        } else {
+          tgt.classList.add('d-none'); btn.textContent = 'Show bins';
+        }
+      });
+    });
+
+    function openKoPanel(el) {
+      const kos = el.dataset.kos;
+      const map = el.dataset.map;
+      document.getElementById('koTextarea').value = kos;
+      document.getElementById('koPanelKeggLink').href = `https://www.kegg.jp/kegg-bin/show_pathway?${map}`;
+      var offcanvas = new bootstrap.Offcanvas(document.getElementById('koPanel'));
+      offcanvas.show();
+    }
+
+    function copyTextarea() {
+      const ta = document.getElementById('koTextarea');
+      navigator.clipboard.writeText(ta.value).then(
+        () => alert('KO list copied!'), err => console.error(err)
+      );
+    }
+  </script>
+
+  <style>
+    .progress-circle {
+      width:50px; height:50px; border-radius:50%;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:0.9em; color:#222; font-weight:bold;
+      background: conic-gradient(#17ECFD 0%,#d3d3d3 0%);
+      position:relative; margin:0 auto;
+    }
+    .progress-circle span {position:absolute; width:100%; text-align:center;}
+  </style>
+  {% endif %}
+</div>
+{% endblock %}
