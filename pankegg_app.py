@@ -68,12 +68,15 @@ def page_not_found(error):
     return "<h2>404 Not Found</h2><p>The item you requested was not found.</p>", 404
 
 @app.route('/pathway_stat', methods=['GET','POST'])
-@app.route('/pathway_stat', methods=['GET'])
 def pathway_stat():
     # Expect exactly one query parameter 'q' with a map ID (e.g. map00010)
     q = request.args.get('q', '').strip()
-    if not q or not q.lower().startswith('map') or not q[3:].isdigit():
-        abort(404, description=f"Invalid or missing map ID '{q}'")
+    # If no query provided, just show the blank search form
+    if not q:
+        return render_template('pathway_stat.html')
+    if not q.lower().startswith('map') or not q[3:].isdigit():
+        abort(404, description=f"Invalid map ID '{q}'")
+
 
     map_number = q[3:]
     pathway = None
