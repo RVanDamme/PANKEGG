@@ -645,6 +645,37 @@ def get_scatterplot_data():
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
 
+@app.route('/get_scatterplot_all_samples', methods=['GET'])
+def get_scatterplot_all_samples():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    # Pull every bin’s completeness & contamination, grouped by sample
+    cur.execute("""
+        SELECT s.sample_name,
+               b.bin_name,
+               b.completeness,
+               b.contamination
+        FROM bin b
+        JOIN sample s ON b.sample_id = s.id
+    """)
+    rows = cur.fetchall()
+    conn.close()
+
+    # Build one trace per sample
+    import pandas as pd
+    df = pd.DataFrame(rows, columns=['sample_name','bin_name','completeness','contamination'])
+    result = {}
+    for sample, group in df.groupby('sample_name'):
+        result[sample] = {
+            'x': group['completeness'].tolist(),
+            'y': group['contamination'].tolist(),
+            'text': group['bin_name'].tolist()
+        }
+    from flask import jsonify
+    return jsonify(result)
+
+
+
 
 @app.route('/get_common_pathways_data', methods=['POST'])
 def get_common_pathways_data():

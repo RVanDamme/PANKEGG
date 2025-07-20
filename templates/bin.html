@@ -14,6 +14,12 @@
     <h2>{{ context | safe }}</h2>
     <button class="btn btn-secondary mb-3" onclick="toggleAllBins()">Toggle All Bins</button>
     <button class="btn btn-secondary mb-3" onclick="toggleAllCollapses()">Toggle All Taxonomy</button>
+    <div class="mb-4">
+    <button id="plot-all-samples" class="btn btn-primary">
+        Plot All Samples Quality
+    </button>
+    </div>
+
 
     <div class="card mb-4">
         <div class="card-header">
@@ -250,6 +256,7 @@ function toggleAllCollapses() {
             toggle: false
         });
         bsCollapse.toggle();
+        
     });
 }
 
@@ -331,6 +338,53 @@ function generatePlot(sampleName) {
     const plotModal = new bootstrap.Modal(document.getElementById('plotModal'));
     plotModal.show();
 }
+
+
+// Colorblind‑friendly palette (8 colors)
+const cbfPalette = [
+  '#1b9e77','#d95f02','#7570b3','#e7298a',
+  '#66a61e','#e6ab02','#a6761d','#666666'
+];
+
+// Generate the combined plot in the modal
+function generateAllSamplesPlot() {
+  fetch('{{ url_for("get_scatterplot_all_samples") }}')
+    .then(r => r.json())
+    .then(data => {
+      const traces = [];
+      let colorIndex = 0;
+      for (const [sample, vals] of Object.entries(data)) {
+        traces.push({
+          x: vals.x,
+          y: vals.y,
+          text: vals.text,
+          mode: 'markers',
+          type: 'scatter',
+          name: sample,
+          marker: {
+            color: cbfPalette[colorIndex % cbfPalette.length],
+            size: 10
+          }
+        });
+        colorIndex++;
+      }
+      Plotly.newPlot('plotContainer', traces, {
+        title: 'Bin Quality Across All Samples',
+        xaxis: { title: 'Completeness (%)' },
+        yaxis: { title: 'Contamination (%)' }
+      });
+      // show the modal
+      const modal = new bootstrap.Modal(document.getElementById('plotModal'));
+      modal.show();
+    })
+    .catch(console.error);
+}
+
+// Wire up the button
+document.getElementById('plot-all-samples')
+        .addEventListener('click', generateAllSamplesPlot);
+
+
 
 
 function toggleClassification(sampleName) {
