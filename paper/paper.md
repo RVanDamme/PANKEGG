@@ -75,7 +75,7 @@ Pankegg relies on widely used coding languages (Python, JavaScript, and HTML), S
 - Python SQLite3 [@python-sqlite3]
 
 Making its installation straightforward in most systems through pip [@pip], conda [@conda], and pixi [@pixi], see the Pankegg installation chapter in our documentation.
-The software installation was tested on Ubuntu, WSL (Ubuntu 16 to 22), Windows 10 & 11, MacOS, and HPE Cray EX supercomputer systems.
+The software installation was tested on Ubuntu, Windows Subsystem for Linux (Ubuntu 16 to 22), Windows 10 & 11, MacOS, and HPE Cray EX supercomputer systems.
 This unified approach reduces the barriers to integrative metagenomic analysis, enabling both specialists and non-specialists to make informed decisions based on large-scale, genome-resolved metagenomic data.
 
 
