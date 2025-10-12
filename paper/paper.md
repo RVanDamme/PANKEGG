@@ -44,7 +44,7 @@ Pankegg answers questions such as:
 
 - How many of my bins pass the GTDB [@Parks:2022] quality threshold?
 - What is their taxonomic classification?
-- Which KEGG orthologs are present?
+- Which Kyoto Encyclopedia of Genes and Genomes (KEGG) orthologs are present?
 - Which proportion of their respective metabolic pathways is covered by the  KEGG orthologs identified? 
 
 Answering these questions typically requires inspecting multiple result files and cross-referencing the information. In contrast, Pankegg provides an all-in-one platform to explore, visualise, interpret, and save the results.
