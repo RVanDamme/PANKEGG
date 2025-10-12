@@ -114,7 +114,7 @@ pip install .
 Download and extract the example dataset:
 
 ``` bash
-wget https://osf.io/5v3zc/download -O pankegg_test_data.zip
+wget https://osf.io/download/5v3zc/ -O pankegg_test_data.zip
 unzip pankegg_test_data.zip
 ```
 
