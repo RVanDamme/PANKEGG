@@ -86,7 +86,7 @@ Pankegg consists of two primary tools:
 
 ## PANGEGG MAKE DB
 
-This script ingests a CSV file specifying the locations of EggNOG annotations, classification (Sourmash or GTDB-TK), and quality metrics (Checkm2) files for each sample. It then constructs an SQL database aggregating all relevant results.
+This script ingests a comma-separated values file specifying the locations of EggNOG annotations, classification (Sourmash or GTDB-TK), and quality metrics (Checkm2) files for each sample. It then constructs an SQL database aggregating all relevant results.
 
 
 ## PANKEGG APP
