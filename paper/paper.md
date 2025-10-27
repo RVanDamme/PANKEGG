@@ -44,7 +44,7 @@ Pankegg answers questions such as:
 
 - How many of my bins pass the GTDB [@Parks:2022] quality threshold?
 - What is their taxonomic classification?
-- Which KEGG orthologs are present?
+- Which Kyoto Encyclopedia of Genes and Genomes (KEGG) orthologs are present?
 - Which proportion of their respective metabolic pathways is covered by the  KEGG orthologs identified? 
 
 Answering these questions typically requires inspecting multiple result files and cross-referencing the information. In contrast, Pankegg provides an all-in-one platform to explore, visualise, interpret, and save the results.
@@ -52,7 +52,7 @@ Answering these questions typically requires inspecting multiple result files an
 
 # Statement of need
 
-The ever-growing progress of sequencing technologies has made it possible to recover thousands of draft and high-quality genomes directly from a plethora of environmental samples, accelerating our understanding of microbial diversity across ecosystems. Shotgun metagenomics with assembly-based approaches recovers metagenome-assembled genomes (MAGs), giving access to taxonomic and functional profiles of uncultured microorganisms.
+The ever-growing progress of sequencing technologies has made it possible to recover thousands of draft and high-quality genomes directly from a plethora of environmental samples, accelerating our understanding of microbial diversity across ecosystems. Shotgun metagenomics with assembly-based approaches recovers MAGs, giving access to taxonomic and functional profiles of uncultured microorganisms.
 
 
 Pankegg integrates taxonomic analysis with KEGG pathway annotations, distinguishing itself from tools like MAGFlow/BIgMAG  [@YepesGarcia2024] and Anvi'o [@Eren2021]. While MAGFlow/BIgMAG and Anvi'o metagenomics provide comprehensive metagenomic workflows and their visualisation, Pankegg focuses on the visualisation and the functional interpretation of orthologs' variations across multiple samples and bins within the context of KEGG pathways [@Kanehisa:2023]. Our focused approach on the KEGG orthologs facilitates a more direct and efficient analysis of metabolic capabilities and variations in microbial communities, even with growing datasets. 
@@ -60,8 +60,8 @@ Pankegg integrates taxonomic analysis with KEGG pathway annotations, distinguish
 As the volume and complexity of metagenomic data increase, so do the challenges of efficiently comparing and visualising results from diverse annotation, classification, and quality assessment tools. In just one year (April 2024 to April 2025), over 135,000 new genomes were added to the Genome Taxonomy Database (GTDB). 
 Tools like CheckM2, Sourmash, GTDB-TK, and EggNOG provide key outputs for quality, taxonomy, and functional annotation, but downstream integration and visualisation remain non-trivial.
 
-Pankegg enables users to merge results from any pipeline, workflow, or manual analysis that provides annotation, classification, and quality information into a standardised SQL database. The database allows users to explore the data through an interactive local web application. 
-The tool is designed to analyse finalised metagenome-assembled genomes (MAGs) and critically evaluate bins obtained during the binning stage of assembly-based metagenomic analysis. By integrating CheckM2 quality metrics, annotation, and taxonomic classification, Pankegg helps users determine which bins meet the GTDB standards to be classified and reported as MAGs and which bins should be excluded due to low quality or inconsistency. Pankegg allows the user to explore and compare the metabolic capabilities of microbial communities.
+Pankegg enables users to merge results from any pipeline, workflow, or manual analysis that provides annotation, classification, and quality information into a standardised structured query lanaguage (SQL) database. The database allows users to explore the data through an interactive local web application. 
+The tool is designed to analyse finalised MAGs and critically evaluate bins obtained during the binning stage of assembly-based metagenomic analysis. By integrating CheckM2 quality metrics, annotation, and taxonomic classification, Pankegg helps users determine which bins meet the GTDB standards to be classified and reported as MAGs and which bins should be excluded due to low quality or inconsistency. Pankegg allows the user to explore and compare the metabolic capabilities of microbial communities.
  
 Pankegg relies on widely used coding languages (Python, JavaScript, and HTML), SQLite as the SQL database engine [@sqlite], and libraries:
 
@@ -75,7 +75,7 @@ Pankegg relies on widely used coding languages (Python, JavaScript, and HTML), S
 - Python SQLite3 [@python-sqlite3]
 
 Making its installation straightforward in most systems through pip [@pip], conda [@conda], and pixi [@pixi], see the Pankegg installation chapter in our documentation.
-The software installation was tested on Ubuntu, WSL (Ubuntu 16 to 22), Windows 10 & 11, MacOS, and HPE Cray EX supercomputer systems.
+The software installation was tested on Ubuntu, Windows Subsystem for Linux (Ubuntu 16 to 22), Windows 10 & 11, macOS, and HPE Cray EX supercomputer systems.
 This unified approach reduces the barriers to integrative metagenomic analysis, enabling both specialists and non-specialists to make informed decisions based on large-scale, genome-resolved metagenomic data.
 
 
@@ -86,7 +86,7 @@ Pankegg consists of two primary tools:
 
 ## PANGEGG MAKE DB
 
-This script ingests a CSV file specifying the locations of EggNOG annotations, classification (Sourmash or GTDB-TK), and quality metrics (Checkm2) files for each sample. It then constructs an SQL database aggregating all relevant results.
+This script ingests a comma-separated values file specifying the locations of EggNOG annotations, classification (Sourmash or GTDB-TK), and quality metrics (Checkm2) files for each sample. It then constructs an SQL database aggregating all relevant results.
 
 
 ## PANKEGG APP

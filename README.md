@@ -114,7 +114,7 @@ pip install .
 Download and extract the example dataset:
 
 ``` bash
-wget https://osf.io/5v3zc/download -O pankegg_test_data.zip
+wget https://osf.io/download/5v3zc/ -O pankegg_test_data.zip
 unzip pankegg_test_data.zip
 ```
 
@@ -298,12 +298,12 @@ Tests](#usage-and-tests) section.
 Pankegg is composed of two main tools:
 
 - **Pankegg Make DB**, the data parser and SQL database creator
-  ([Pankegg_make_db.py](Pankegg_make_db.qmd)), which processes a CSV
+  ([Pankegg_make_db.py](docs/Pankegg_make_db.qmd)), which processes a CSV
   file where each line lists the required input files for a single
   sample. It compiles the information from these files into a structured
   SQL database, making downstream exploration fast and efficient, and  
 - **Pankegg APP**, the web server for interactive data exploration
-  ([Pankegg_app.py](Pankegg_app.qmd)), which uses the database generated
+  ([Pankegg_app.py](docs/Pankegg_app.qmd)), which uses the database generated
   by the parser and provides an interactive browser-based interface to
   explore your results.
 
