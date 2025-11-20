@@ -37,7 +37,7 @@ bibliography: paper.bib
 
 # Summary
 
-[PANKEGG](https://github.com/RVanDamme/PANKEGG) is an interactive software suite for parsing and visualising metagenome-assembled genomes (MAGs) and exploring their metabolic capabilities. It integrates quality metrics, annotation, and taxonomic classification in one interactive central database.
+To study microorganisms present in an environment, many tools are needed. Each of these tools generates a large number of results files, providing different insights. PANKEGG is a one-stop shop tool that centralises all results files and helps navigate and visualize them for comparison, interpretation, and understanding of microbial communities in their environment.[PANKEGG](https://github.com/RVanDamme/PANKEGG) support to researcher by parsing and visualising metagenome-assembled genomes (MAGs) and exploring their metabolic capabilities. It integrates quality metrics, annotation, and taxonomic classification in one interactive central database.
 PANKEGG enables researchers to explore, compare, and interpret their data through a modern browser-based interface, streamlining the analysis of large and complex metagenomic datasets. The software supports output from widely used tools such as CheckM2  [@Chklovski:2022], GTDB-TK [@Chaumeil:2020], Sourmash [@Brown:2016], and EggNOG [@Cantalapiedra:2021], making it a flexible solution for a wide range of microbiome and environmental genomics studies.
 By interconnecting the different analysis results, people can investigate different interactions in the data more visually and conveniently. 
 PANKEGG answers questions such as:
