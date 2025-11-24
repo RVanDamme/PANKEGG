@@ -23,6 +23,7 @@ requirements:
     - scipy
     - jinja2
     - click
+    - python-dotenv
     - importlib-metadata
     - pytest==8.4.0
 
@@ -37,6 +38,7 @@ test:
     - python -c "import click"
     - python -c "import sklearn"
     - python -c "import scipy"
+    - python -c "import python-dotenv"
     - pankegg_make_db.py -h || true
     - pankegg_app.py -h || true
 

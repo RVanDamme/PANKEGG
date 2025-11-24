@@ -15,6 +15,7 @@ setup(
         'jinja2',
         'setuptools',
         'click',
+        'python-dotenv',
         'importlib-metadata; python_version<"3.8"',
         'pytest==8.4.0',
     ],

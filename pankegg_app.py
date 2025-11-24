@@ -20,9 +20,12 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 from scipy.spatial.distance import pdist
 # Import your robust DB print function
 from lib.db_utils import print_db_status
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'local'  # Change this before running a production server (for a local server this is acceptable)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev")
 
 # Helper: Get DB path (env > default)
 def resolve_db_path():

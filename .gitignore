@@ -1,5 +1,5 @@
 # Python cache and compiled files
-__pycache__/
+lib/__pycache__/*.pyc
 *.pyc
 
 # Build and dist directories from pip/setuptools/conda
@@ -19,6 +19,9 @@ Thumbs.db
 # Flask stuff:
 instance/
 .webassets-cache
+
+# Secret key
+.env
 
 # Quarto files
 docs/.quarto/
