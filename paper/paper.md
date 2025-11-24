@@ -8,17 +8,20 @@ tags:
 authors:
   - name: Renaud Van Damme
     orcid: 0000-0002-7909-4868
-    affiliation: 1
+    affiliation: "1, 4"
     corresponding: true
   - name: Arnaud Vanbelle
     orcid: 0009-0005-9472-6703
+    affiliation: 1
+  - name: Tomas Klingström
+    orcid: 0000-0002-9504-1352
     affiliation: 1
   - name: Juliette Hayer
     orcid: 0000-0003-4899-9637
     affiliation: "2, 3"
   - name: Amrei Binzer-Panchal
     orcid: 0000-0002-0472-0609
-    affiliation: 1
+    affiliation: "1, 4"
   - name: Erik Bongcam-Rudloff
     orcid: 0000-0002-1947-8288
     affiliation: 1
@@ -30,6 +33,8 @@ affiliations:
     index: 2
   - name: Laboratoire Mixte International Drug Resistance in Southeast Asia
     index: 3
+  - name: SLU Bioinformatics Infrastructure, Swedish University of Agricultural Sciences, Uppsala, Sweden
+    index: 4
 
 date: 9 June 2025
 bibliography: paper.bib
@@ -60,7 +65,7 @@ PANKEGG integrates taxonomic analysis with KEGG pathway annotations, distinguish
 As the volume and complexity of metagenomic data increase, so do the challenges of efficiently comparing and visualising results from diverse annotation, classification, and quality assessment tools. In just one year (April 2024 to April 2025), over 135,000 new genomes were added to the Genome Taxonomy Database (GTDB). 
 Tools like CheckM2, Sourmash, GTDB-TK, and EggNOG provide key outputs for quality, taxonomy, and functional annotation, but downstream integration and visualisation remain non-trivial.
 
-PANKEGG enables users to merge results from any pipeline, workflow, or manual analysis that provides annotation, classification, and quality information into a standardised structured query lanaguage (SQL) database. The database allows users to explore the data through an interactive local web application. 
+PANKEGG enables users to merge results from any pipeline, workflow, or manual analysis that provides annotation, classification, and quality information into a standardised structured query language (SQL) database. The database allows users to explore the data through an interactive local web application. 
 The tool is designed to analyse finalised MAGs and critically evaluate bins obtained during the binning stage of assembly-based metagenomic analysis. By integrating CheckM2 quality metrics, annotation, and taxonomic classification, PANKEGG helps users determine which bins meet the GTDB standards to be classified and reported as MAGs and which bins should be excluded due to low quality or inconsistency. PANKEGG allows the user to explore and compare the metabolic capabilities of microbial communities.
  
 PANKEGG relies on widely used coding languages (Python, JavaScript, and HTML), SQLite as the SQL database engine [@sqlite], and libraries:
@@ -76,6 +81,7 @@ PANKEGG relies on widely used coding languages (Python, JavaScript, and HTML), S
 
 Making its installation straightforward in most systems through pip [@pip], conda [@conda], and pixi [@pixi], see the PANKEGG installation chapter in our documentation.
 The software installation was tested on Ubuntu, Windows Subsystem for Linux (Ubuntu 16 to 22), Windows 10 & 11, macOS, and HPE Cray EX supercomputer systems.
+PANKEGG is based on common, reliable metagenomic annotation tools with standardised, stable output, ensuring compatibility over a long time span. However, should the tools and their output evolve, we plan to update PANKEGG to match new standards and keep it current. 
 This unified approach reduces the barriers to integrative metagenomic analysis, enabling both specialists and non-specialists to make informed decisions based on large-scale, genome-resolved metagenomic data.
 
 
@@ -120,6 +126,7 @@ PANKEGG’s app is designed to make exploration intuitive. It features sortable 
 
 **Arnaud Vanbelle:** Conceptualisation, software co-development (current version), testing, review, and editing.
 
+**Tomas Klingström:** Advising on software development, testing, review, and editing.
 
 **Juliette Hayer:** Methodology, advising on software development, testing, review, and editing.
 
