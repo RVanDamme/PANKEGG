@@ -273,7 +273,7 @@ pixi run <pankegg_command>
 
 Substitube `<pankegg_command>` with the command you want to run.
 
-## Windows Subsystem for Linux
+### Windows Subsystem for Linux
 
 If you are using WSL, you should install Pankegg in the WSL itself and
 **NOT on your Windows drive**. This is required because of the disparity
@@ -284,6 +284,8 @@ Windows FS.
 We also recommend storing your database in the WSL rather than on your
 Windows drive. While this is not critical, it is a better practice and
 ensures that Pankegg will read the database properly.
+
+## Finish the installation and test PANKEGG
 
 Once the installation is complete, you need to generate the secret key to protect your Flask session:
 
