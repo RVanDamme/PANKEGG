@@ -8,3 +8,4 @@ setuptools==78.1.1
 click==8.2.1
 importlib-metadata==8.7.0
 pytest==8.4.0
+python-dotenv==1.2.1

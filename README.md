@@ -129,6 +129,13 @@ python pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sour
 
 ## Launch the Web Application
 
+First, generate the secret key to protect your Flask session:
+
+``` bash
+python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
+```
+This ".env" file needs to be in the PANKEGG dir.
+
 Start the web server using the database present in the repository:
 
 ``` bash
@@ -252,7 +259,7 @@ pip install .
 Or, install dependencies only:
 
 ``` bash
-pip install flask pandas numpy scikit-learn scipy jinja2 click setuptools importlib-metadata
+pip install flask pandas numpy scikit-learn scipy jinja2 click setuptools importlib-metadata python-dotenv
 ```
 
 ### Using pixi
@@ -266,7 +273,7 @@ pixi run <pankegg_command>
 
 Substitube `<pankegg_command>` with the command you want to run.
 
-## Windows Subsystem for Linux
+### Windows Subsystem for Linux
 
 If you are using WSL, you should install Pankegg in the WSL itself and
 **NOT on your Windows drive**. This is required because of the disparity
@@ -278,14 +285,24 @@ We also recommend storing your database in the WSL rather than on your
 Windows drive. While this is not critical, it is a better practice and
 ensures that Pankegg will read the database properly.
 
-Once the installation is complete, you can run Pankegg using:
+## Finish the installation and test PANKEGG
+
+Once the installation is complete, you need to generate the secret key to protect your Flask session:
+
+``` bash
+python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
+```
+This ".env" file needs to be in the PANKEGG dir, and once it's done, it doesn't need to be rerun.
+
+
+You can now run Pankegg using:
 
 ``` bash
 pankegg_make_db --help
 pankegg_app --help
 ```
 
-If the commands are not in your PATH then use the whole path to the
+If the commands are not in your PATH, then use the whole path to the
 executable.
 
 For more detailed instructions on how to use Pankegg, see the [Usage and
@@ -380,8 +397,11 @@ the following examples:
 
 ### Create the input file
 
-You can create this input CSV file automatically with a bash loop,
-depending on how your data are organized:
+You can create this input CSV file automatically with a bash loop. The loop will be different depending on the structure of your data and the names of the directories.
+Below are the loops for 2 data structures, adapted to whether you use Sourmash or GTDBTK.
+You will need to edit the loop to fit the names of your directories. 
+
+You can directly edit the bash files present in PANKEGG or copy the command on this page and paste and edit it in your terminal.
 
 #### If your results are grouped by sample:
 
@@ -399,7 +419,9 @@ Dir/
     └── checkm2_dir/
 ```
 
-Run the following script to include Sourmash annotation:
+The following script is to use with sourmash, where your data is grouped by samples.
+You can either copy and edit the script below or edit the "generate_input_sourmash_by_sample.sh" file.
+
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -412,7 +434,8 @@ for sample in Dir/*; do
 done
 ```
 
-Run the following script to include GTDBTK annotation:
+The following script is to use with GTDBTK, where your data is grouped by samples.
+You can either copy and edit the script below or edit the "generate_input_gtdbtk_by_sample.sh" file.
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -447,7 +470,8 @@ Dir/
    └── ...
 ```
 
-Run the following script to include Sourmash annotation:
+The following script is to use with sourmash, where your data is grouped by tools.
+You can either copy and edit the script below or edit the "generate_input_sourmash_by_tool.sh" file.
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -460,7 +484,8 @@ for sample in Dir/bin_annotation/*; do
 done
 ```
 
-Run the following script to include GTDBTK annotation:
+The following script is to use with GTDBTK, where your data is grouped by tools.
+You can either copy and edit the script below or edit the "generate_input_gtdbtk_by_tool.sh" file.
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
