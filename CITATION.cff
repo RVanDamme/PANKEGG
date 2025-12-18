@@ -1,0 +1,62 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Van Damme
+  given-names: Renaud
+  orcid: "https://orcid.org/0000-0002-7909-4868"
+- family-names: Vanbelle
+  given-names: Arnaud
+  orcid: "https://orcid.org/0009-0005-9472-6703"
+- family-names: Klingström
+  given-names: Tomas
+  orcid: "https://orcid.org/0000-0002-9504-1352"
+- family-names: Hayer
+  given-names: Juliette
+  orcid: "https://orcid.org/0000-0003-4899-9637"
+- family-names: Binzer-Panchal
+  given-names: Amrei
+  orcid: "https://orcid.org/0000-0002-0472-0609"
+- family-names: Bongcam-Rudloff
+  given-names: Erik
+  orcid: "https://orcid.org/0000-0002-1947-8288"
+contact:
+- family-names: Van Damme
+  given-names: Renaud
+  orcid: "https://orcid.org/0000-0002-7909-4868"
+doi: 10.5281/zenodo.17963072
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Van Damme
+    given-names: Renaud
+    orcid: "https://orcid.org/0000-0002-7909-4868"
+  - family-names: Vanbelle
+    given-names: Arnaud
+    orcid: "https://orcid.org/0009-0005-9472-6703"
+  - family-names: Klingström
+    given-names: Tomas
+    orcid: "https://orcid.org/0000-0002-9504-1352"
+  - family-names: Hayer
+    given-names: Juliette
+    orcid: "https://orcid.org/0000-0003-4899-9637"
+  - family-names: Binzer-Panchal
+    given-names: Amrei
+    orcid: "https://orcid.org/0000-0002-0472-0609"
+  - family-names: Bongcam-Rudloff
+    given-names: Erik
+    orcid: "https://orcid.org/0000-0002-1947-8288"
+  date-published: 2025-12-18
+  doi: 10.21105/joss.09188
+  issn: 2475-9066
+  issue: 116
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 9188
+  title: "PANKEGG: Integrative Visualisation and Comparison of
+    Metagenome-Assembled Genomes Annotation, Taxonomy, and Quality"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.09188"
+  volume: 10
+title: "PANKEGG: Integrative Visualisation and Comparison of
+  Metagenome-Assembled Genomes Annotation, Taxonomy, and Quality"
