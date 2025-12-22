@@ -7,8 +7,7 @@ tags:
   - Data visualisation
 authors:
   - given-names: Renaud
-    dropping-particle: Van
-    surname: Damme
+    surname: {Van Damme}
     orcid: 0000-0002-7909-4868
     affiliation: "1, 4"
     corresponding: true
