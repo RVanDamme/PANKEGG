@@ -88,6 +88,7 @@ Our goal is to facilitate research and understanding in the field of metagenomic
   - [PCA](#pca)
 - [Additional Information](#additional-information)
   - [Reporting Bugs & Contributing](#reporting-bugs--contributing)
+  - [Support](#support)
   - [Authors](#authors)
   - [AI and LLM](#ai-and-llm)
 
@@ -967,7 +968,7 @@ only if you have enough samples.*
 
 ## Reporting Bugs & Contributing
 
-Contributions from the community are welcome ! See the [Contributing
+Contributions from the community are welcome! See the [Contributing
 guidelines](CONTRIBUTING.md)
 
 ## Authors
@@ -975,6 +976,11 @@ guidelines](CONTRIBUTING.md)
 <a href="https://github.com/RVanDamme/PANKEGG/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=RVanDamme/PANKEGG" alt="contrib.rocks image" />
 </a>
+
+## Support
+
+The development of PANKEGG is supported by the Seydlitz MP Bolagen Foundation through the Seydlitz Laboratory at the Swedish University of Agricultural Sciences.
+The development of PANKEGG is supported by the Swedish University of Agricultural Sciences Bioinformatics Infrastructure (SLUBI).
 
 ## AI and LLM
 
