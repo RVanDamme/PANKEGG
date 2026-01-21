@@ -6,6 +6,9 @@
 
 Welcome to the Pankegg documentation. Here you will find all the information you need to get started with Pankegg.
 
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.09188/status.svg)](https://doi.org/10.21105/joss.09188)
+
+
 ## Overview
  
 *A powerful parser and visualizer for metagenome bin annotation, classification, and quality assessment.*
