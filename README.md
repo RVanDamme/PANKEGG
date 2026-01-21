@@ -6,8 +6,8 @@
 
 Welcome to the Pankegg documentation. Here you will find all the information you need to get started with Pankegg.
 
-[![DOI](https://joss.theoj.org/papers/10.21105/joss.09188/status.svg)](https://doi.org/10.21105/joss.09188)
-
+The paper: [![DOI](https://joss.theoj.org/papers/10.21105/joss.09188/status.svg)](https://doi.org/10.21105/joss.09188)
+The Zenodo archive: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17963072.svg)](https://doi.org/10.5281/zenodo.17963072)
 
 ## Overview
  
