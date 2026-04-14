@@ -17,7 +17,7 @@ setup(
         'click',
         'python-dotenv',
         'importlib-metadata; python_version<"3.8"',
-        'pytest==8.4.0',
+        'pytest==9.0.3',
     ],
     entry_points={
         'console_scripts': [
