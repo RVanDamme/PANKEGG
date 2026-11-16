@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Phase 2 (web app and summaries), step:** A10 — sample metadata
-- **Next action:** `--metadata` TSV (sample + any number of variables) → table `sample_metadata`; tests first; then colour and group by condition in the app.
+- **Phase 2 (web app and summaries), step:** A13 — docs, review, acceptance re-run
+- **Next action:** README/docs/CHANGELOG for the new pages, modules, metadata, KOs; independent review; final report.
 - Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
 ## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
@@ -21,7 +21,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] A8. Two-group comparison with statistics
 - [x] A12. make_db: keep KOs with no pathway (regression: 2.0.0 content must be a subset)
 - [x] A9. make_db: KEGG module completeness (new tables) + module displays and the two-measures explanation
-- [ ] A10. make_db: `--metadata` sample/condition TSV + colouring and grouping by condition
+- [x] A10. make_db: `--metadata` sample/condition TSV + colouring and grouping by condition
 - [ ] A13. Docs, CHANGELOG, screenshots check, independent review, acceptance re-run
 
 ## Steps (phase 1)
@@ -63,6 +63,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | Review (step 10, fresh subagent, no blocker/major): fixed C1 directories/binary files in a classification glob crashed the run → skipped with a warning; C2 a `classification_dir` whose directory does not exist exited 0 with all bins unclassified → error (an existing empty directory is still allowed); C3 empty input CSV gave `TypeError` → clear message; C4 per-sample log counted classified bins by status → by taxonomy; C5 UTF-8 BOM rejected → accepted in every input; doc fixes (stale repo layout in CONTRIBUTING/reporting_bugs, `.env` lookup wording, NULL `classification_method`, stdout for --help/--version, `.env` sentences added to the .qmd sources, SQLite-version caveat and per-sample staging in RELEASE.md). Added OSF regression in auto mode for GTDB-Tk. |
 | 2026-11-16 | A12 | KOs whose `KEGG_Pathway` is `-` are now added to `kegg` and linked through `bin_extra_kegg` (owner decision; content is added, nothing removed). OSF sourmash example: `kegg` 1,580 → 2,514 KOs; regression tests now assert that every 2.0.0 KO and KO link is still present and that all other tables are identical. |
 | 2026-11-16 | A9 | Module completeness is computed in `pankegg_make_db` from **all KOs of a bin** and the KEGG module definitions shipped in `pankegg/data/kegg_modules.tsv` (583 modules, KEGG REST, 2026-11-16). The eggNOG `KEGG_Module` column is not used: it lists the modules a KO belongs to, not whether the module's steps are satisfied. Score: KO present = 1; sequence/complex = mean of parts; alternatives = best part; optional (`-`) and KO-less (`--`) parts ignored; completeness = mean of the top-level steps; complete = 100%. Tables `module`, `bin_module` (rows with completeness > 0). The existing measure is kept and named "pathway per-ID completeness"; both are explained on every page that shows one. |
+| 2026-11-16 | A10 | `--metadata FILE`: the simple form is `sample<TAB>condition` (no header needed, free text, any number of conditions). Proposed extension, implemented because it costs nothing for the simple case: with a header line starting with `sample`, every further column is a variable (e.g. condition, site, timepoint). Table `sample_metadata(sample_id, variable, value)`. The app offers the variables wherever samples are grouped or coloured: sample PCA (colour), two-group comparison (groups), core/accessory (pool samples by value), overview and similarity (columns). **Owner to confirm** the multi-variable extension; the two-column file works either way. |
+| 2026-11-16 | — | Known and not changed: the Map and Kegg list pages still render everything at once (OSF example: Map 4.1 MB; Kegg 6.1 MB with 2.0.0 data, 9.2 MB now that KOs without a pathway are kept). Pagination of these two pages was not in the agreed scope. |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes

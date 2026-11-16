@@ -766,10 +766,15 @@ def compar_full():
 
 
             # Return JSON response for AJAX
+            from . import insights
+            meta_conn = get_db_connection()
+            conditions = insights.sample_conditions(meta_conn)
+            meta_conn.close()
             return jsonify({
                 'context': context,
                 'pca_data': pca_df.to_dict(orient='records'),
-                'explained_variance': explained_variance.tolist()
+                'explained_variance': explained_variance.tolist(),
+                'conditions': conditions
             })
 
         return render_template('compar_full.html')

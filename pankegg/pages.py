@@ -86,7 +86,9 @@ def register(app, get_db_connection, pathway_groups):
         conn = get_db_connection()
         try:
             level, levels = _level(conn)
-            data = insights.core_accessory(conn, level, _flag("unclassified"))
+            variables = sorted(insights.sample_conditions(conn))
+            variable = request.args.get("by") if request.args.get("by") in variables else None
+            data = insights.core_accessory(conn, level, _flag("unclassified"), variable)
         finally:
             conn.close()
         if request.args.get("format") == "csv":
@@ -95,7 +97,7 @@ def register(app, get_db_connection, pathway_groups):
                 [[r["id"], r["name"], r["category"], r["n_samples"], ";".join(r["samples"])] for r in data["rows"]]),
                 f"core_accessory_{level}.csv")
         return render_template("core_accessory.html", data=data, figs=insights.core_accessory_figures(data),
-                               levels=levels, unclassified=_flag("unclassified"))
+                               levels=levels, unclassified=_flag("unclassified"), variables=variables)
 
     # --- similarity -----------------------------------------------------------------------------
     @app.route("/similarity")

@@ -24,6 +24,10 @@
                 <option value="_kingdom_">Kingdom</option>
             </select>
         </div>
+        <div class="form-group" id="colourByForm" style="display: none;">
+            <label for="colourBy">Colour by:</label>
+            <select class="form-control" id="colourBy" name="colour_by"></select>
+        </div>
     </form>
     <div id="pcaPlot" class="mt-4"></div>
     <div id="varianceExplained" class="mt-4"></div>
@@ -44,6 +48,8 @@
             }
             fetchPcaData();
         });
+
+        document.getElementById('colourBy').addEventListener('change', fetchPcaData);
 
         taxonomyLevelSelect.addEventListener('change', function() {
             if (pcaTypeSelect.value === 'taxonomy') {
@@ -82,19 +88,39 @@
                     'Explained Variance: PC1 = ' + data.explained_variance[0].toFixed(2) +
                     ', PC2 = ' + data.explained_variance[1].toFixed(2);
 
-                var plotData = [{
-                    x: pcaData.map(d => d.PC1),
-                    y: pcaData.map(d => d.PC2),
-                    mode: 'markers',
-                    type: 'scatter',
-                    text: pcaData.map(d => d.sample_name),
-                    marker: { size: 12 }
-                }];
+                // One trace (colour) per value of the chosen sample variable, when the database has metadata
+                var conditions = data.conditions || {};
+                var colourSelect = document.getElementById('colourBy');
+                var variables = Object.keys(conditions).sort();
+                if (colourSelect.options.length !== variables.length) {
+                    colourSelect.innerHTML = '';
+                    variables.forEach(function (v) { colourSelect.add(new Option(v, v)); });
+                }
+                document.getElementById('colourByForm').style.display = variables.length ? 'block' : 'none';
+                var values = conditions[colourSelect.value] || {};
+                var groups = {};
+                pcaData.forEach(function (d) {
+                    var key = variables.length ? (values[d.sample_name] || 'not set') : 'samples';
+                    (groups[key] = groups[key] || []).push(d);
+                });
+                var plotData = Object.keys(groups).sort().map(function (key) {
+                    return {
+                        x: groups[key].map(d => d.PC1),
+                        y: groups[key].map(d => d.PC2),
+                        mode: 'markers+text',
+                        type: 'scatter',
+                        name: key,
+                        text: groups[key].map(d => d.sample_name),
+                        textposition: 'top center',
+                        marker: { size: 12 }
+                    };
+                });
 
                 var layout = {
                     title: data.context,
-                    xaxis: { title: 'PC1' },
-                    yaxis: { title: 'PC2' }
+                    showlegend: variables.length > 0,
+                    xaxis: { title: 'PC1 (' + (100 * data.explained_variance[0]).toFixed(0) + '%)' },
+                    yaxis: { title: 'PC2 (' + (100 * data.explained_variance[1]).toFixed(0) + '%)' }
                 };
 
                 Plotly.newPlot('pcaPlot', plotData, layout);

@@ -441,3 +441,56 @@ def test_module_pages_on_2_0_0_db(databases, client_for):
     assert "rebuild it" in client.get("/module").data.decode()
     assert client.get("/module/M00001").status_code == 404
     assert client.get("/core_accessory?level=module").status_code == 200      # falls back to pathways
+
+
+# --- phase 2, A10: sample metadata in the app ----------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def meta_db(tmp_path_factory):
+    """Four samples, two variables; D has no site and E-like 'not set' cases are covered by C."""
+    tmp = tmp_path_factory.mktemp("meta_db")
+    globs = {"A": "S1.bin*", "B": "S1.bin[12]", "C": "S1.bin[13]", "D": "S1.bin1"}
+    rows = "".join(f"{s},{FIX}/s1/eggnog/{g}.emapper.annotations,{FIX}/sourmash_lca/*.lca.csv,"
+                   f"{FIX}/s1/checkm2/S1_checkm2_report.tsv\n" for s, g in globs.items())
+    csv_path = write(tmp / "samples.csv", "Sample name,Annotation_dir,classification_dir,Checkm2_dir\n" + rows)
+    meta = write(tmp / "meta.tsv", "sample\tcondition\tsite\nA\tsick\tgut\nB\thealthy\tgut\nC\tsick\tskin\nD\thealthy\t\n")
+    run_make_db(csv_path, tmp, "meta", "--metadata", str(meta), "--quiet")
+    return tmp / "meta.db"
+
+
+def test_conditions_drive_groups(meta_db):
+    from pankegg import insights
+    con = _con(meta_db)
+    assert insights.sample_conditions(con) == {
+        "condition": {"A": "sick", "B": "healthy", "C": "sick", "D": "healthy"},
+        "site": {"A": "gut", "B": "gut", "C": "skin"}}
+    headings = dict(insights.group_options(con))
+    assert [v for v, _ in headings["Condition: condition"]] == ["condition:condition=healthy", "condition:condition=sick"]
+    res = insights.group_compare(con, "condition:condition=sick", "condition:condition=healthy", "ko")
+    assert res["error"] is None and (res["n_a"], res["n_b"]) == (5, 3)            # A(3)+C(2) vs B(2)+D(1)
+    by_site = insights.core_accessory(con, "ko", variable="site")
+    assert by_site["samples"] == ["gut", "not set", "skin"] and by_site["variable"] == "site"
+    by_sample = insights.core_accessory(con, "ko")
+    assert by_sample["samples"] == ["A", "B", "C", "D"] and by_sample["variable"] is None
+    assert insights.core_accessory(con, "ko", variable="no-such-variable")["samples"] == ["A", "B", "C", "D"]
+    con.close()
+
+
+def test_conditions_in_pages(meta_db, client_for):
+    client = client_for(meta_db)
+    home = client.get("/").data.decode()
+    assert "<th>condition</th>" in home and "<th>site</th>" in home and "healthy" in home
+    assert "across values of" in client.get("/core_accessory").data.decode()
+    assert "pooled by" in client.get("/core_accessory?by=condition&level=ko").data.decode()
+    assert "Condition: site" in client.get("/group_compare").data.decode()
+    res = client.get("/group_compare?a=condition:condition=sick&b=condition:condition=healthy&level=ko")
+    assert res.status_code == 200 and b"plot-prevalence" in res.data
+    assert "<th>condition</th>" in client.get("/similarity").data.decode()
+    pca = client.post("/compar_full", data={"pca_type": "kos"}).get_json()
+    assert pca["conditions"]["condition"]["A"] == "sick" and len(pca["pca_data"]) == 4
+
+
+def test_no_metadata_no_condition_controls(databases, client_for):
+    client = client_for(databases["two"])
+    assert "across values of" not in client.get("/core_accessory").data.decode()
+    assert "Condition:" not in client.get("/group_compare").data.decode()

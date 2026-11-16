@@ -420,7 +420,7 @@ def overview(conn):
                      for n, v in spread.items()), key=lambda p: (-p["n_bins"], p["number"]))
     all_kos = set().union(*kos.values()) if kos else set()
     return {
-        "bins": bins, "samples": samples, "info": db_info(conn),
+        "bins": bins, "samples": samples, "info": db_info(conn), "conditions": sample_conditions(conn),
         "counts": {
             "samples": len(samples), "bins": len(bins), "pathways": len(spread), "kos": len(all_kos),
             "classified": sum(1 for b in bins if b["classified"]),
@@ -523,7 +523,9 @@ def bin_report(conn, bin_id, map_groups=None):
     categories = sorted(({"category": c, "n_pathways": len(v), "mean": round(sum(v) / len(v), 2)}
                          for c, v in categories.items()), key=lambda c: c["category"])
     n_sample_bins = conn.execute("SELECT COUNT(*) FROM bin WHERE sample_id = ?", (b["sample_id"],)).fetchone()[0]
-    return {"bin": b, "pathways": pathways, "categories": categories,
+    conditions = {variable: values[b["sample"]] for variable, values in sorted(sample_conditions(conn).items())
+                  if b["sample"] in values}
+    return {"bin": b, "pathways": pathways, "categories": categories, "conditions": conditions,
             "n_kos": len(bin_kos_of(conn, bin_id)), "n_sample_bins": n_sample_bins}
 
 
@@ -662,14 +664,23 @@ def pathway_taxon_figures(data):
 
 # --- core and accessory ------------------------------------------------------------------------------
 
-def core_accessory(conn, level="pathway", include_unclassified=True):
-    """Features by the number of samples that carry them (in at least one bin)."""
+NOT_SET = "not set"
+
+
+def core_accessory(conn, level="pathway", include_unclassified=True, variable=None):
+    """Features by the number of samples that carry them (in at least one bin).
+
+    With ``variable`` (a sample metadata variable such as 'condition'), samples are pooled by
+    its value and the comparison is between conditions; samples without a value form 'not set'.
+    """
     bins = load_bins(conn, include_unclassified)
     sets, names = features(conn, level)
-    samples = sorted({b["sample"] for b in bins})
+    values = sample_conditions(conn).get(variable) if variable else None
+    group_of = (lambda sample: values.get(sample, NOT_SET)) if values is not None else (lambda sample: sample)
+    samples = sorted({group_of(b["sample"]) for b in bins}, key=str)
     by_sample = {s: set() for s in samples}
     for b in bins:
-        by_sample[b["sample"]] |= sets.get(b["id"], set())
+        by_sample[group_of(b["sample"])] |= sets.get(b["id"], set())
     where = defaultdict(list)
     for s in samples:
         for f in by_sample[s]:
@@ -686,7 +697,7 @@ def core_accessory(conn, level="pathway", include_unclassified=True):
                   key=lambda r: (-r["n_samples"], r["id"]))
     combos = Counter(" + ".join(r["samples"]) for r in rows)
     return {
-        "level": level, "samples": samples, "rows": rows,
+        "level": level, "samples": samples, "rows": rows, "variable": variable if values is not None else None,
         "counts": {c: sum(1 for r in rows if r["category"] == c) for c in ("core", "shared", "unique")},
         "by_n": {k: sum(1 for r in rows if r["n_samples"] == k) for k in range(1, n + 1)},
         "unique_per_sample": {s: sum(1 for r in rows if r["samples"] == [s]) for s in samples},

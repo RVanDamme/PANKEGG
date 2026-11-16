@@ -56,10 +56,10 @@
 
       <h5 class="mt-3">Samples</h5>
       <table class="table table-sm table-striped">
-        <thead><tr><th>Sample</th><th>Bins</th><th>Median compl. / cont.</th><th>Genera</th><th>Pathways</th><th>KOs</th></tr></thead>
+        <thead><tr><th>Sample</th>{% for v in data.conditions %}<th>{{ v }}</th>{% endfor %}<th>Bins</th><th>Median compl. / cont.</th><th>Genera</th><th>Pathways</th><th>KOs</th></tr></thead>
         <tbody>
           {% for s in data.samples %}
-          <tr><td>{{ s.name }}</td><td>{{ s.n_bins }}</td>
+          <tr><td>{{ s.name }}</td>{% for v, values in data.conditions.items() %}<td>{{ values.get(s.name, '–') }}</td>{% endfor %}<td>{{ s.n_bins }}</td>
               <td>{{ s.median_completeness if s.median_completeness is not none else '-' }} / {{ s.median_contamination if s.median_contamination is not none else '-' }}</td>
               <td>{{ s.n_genera }}</td><td>{{ s.n_pathways }}</td><td>{{ s.n_kos }}</td></tr>
           {% endfor %}

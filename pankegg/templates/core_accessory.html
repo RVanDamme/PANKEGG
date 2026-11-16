@@ -4,6 +4,8 @@
 {% block content %}
 <div class="container-fluid px-4 mt-4">
   <h2>Core and accessory functions</h2>
+  {% if data.variable %}<div class="alert alert-info py-2">Samples are pooled by “{{ data.variable }}”: below, “sample” means one value of it
+    ({{ data.samples|join(', ') }}).</div>{% endif %}
   <p class="text-muted">A function belongs to a sample when at least one of its bins carries it.
     <strong>Core</strong> = in every sample, <strong>shared</strong> = in several but not all, <strong>unique</strong> = in one sample only.
     {% if data.level == 'pathway' %}A pathway counts as carried when a bin has at least one of its KOs.{% endif %}
@@ -11,12 +13,17 @@
   <form method="get" class="row g-2 align-items-center mb-3">
     <div class="col-auto"><select name="level" class="form-select">
       {% for value, label in levels.items() %}<option value="{{ value }}" {% if value == data.level %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    {% if variables %}
+    <div class="col-auto"><select name="by" class="form-select">
+      <option value="">across samples</option>
+      {% for v in variables %}<option value="{{ v }}" {% if v == data.variable %}selected{% endif %}>across values of “{{ v }}”</option>{% endfor %}</select></div>
+    {% endif %}
     <div class="col-auto form-check form-switch ms-2">
       <input type="hidden" name="unclassified" value="0">
       <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1" {% if unclassified %}checked{% endif %}>
       <label class="form-check-label" for="unclassified">Include unclassified bins</label></div>
     <div class="col-auto"><button class="btn btn-primary" type="submit">Show</button></div>
-    <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('core_accessory', level=data.level, unclassified=1 if unclassified else 0, format='csv') }}">CSV (all {{ data.rows|length }})</a></div>
+    <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('core_accessory', level=data.level, by=data.variable or '', unclassified=1 if unclassified else 0, format='csv') }}">CSV (all {{ data.rows|length }})</a></div>
   </form>
 
   {% if data.samples|length < 2 %}

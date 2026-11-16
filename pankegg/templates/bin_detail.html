@@ -4,7 +4,7 @@
 {% block content %}
 {% set b = report.bin %}
 <div class="container-fluid px-4 mt-4">
-  <h2 class="mb-1">{{ b.name }} <small class="text-muted">sample {{ b.sample }}</small></h2>
+  <h2 class="mb-1">{{ b.name }} <small class="text-muted">sample {{ b.sample }}{% for v, value in report.conditions.items() %} · {{ v }}: {{ value }}{% endfor %}</small></h2>
   <p class="mb-3">
     <a class="btn btn-sm btn-info" href="{{ url_for('show_maps', bin_id=b.id) }}">Pathways with KO lists</a>
     <a class="btn btn-sm btn-warning" href="{{ url_for('kegg', bin_id=b.id) }}">KOs</a>
