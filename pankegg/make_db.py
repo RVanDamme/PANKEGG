@@ -5,12 +5,16 @@ Uses only the Python standard library.
 """
 
 import argparse
+import csv
+import logging
 import os
 import sys
-import csv
+import traceback
 
 from . import __version__, resource_path
 from .db_utils import *
+
+log = logging.getLogger("pankegg")
 
 default_pathway_file = resource_path('data', 'kegg_map_orthologs.tsv')
 default_ko_file = resource_path('data', 'ko.txt')
@@ -21,16 +25,48 @@ TABLES_TO_DROP = [
     'sample', 'pankegg_info'
 ]
 
-def parse_arguments():
+EPILOG = """\
+input CSV (-i), one row per sample:
+  Sample name,Annotation_dir,classification_dir,Checkm2_dir
+  Each path may be a glob pattern; relative paths are resolved from the
+  current directory.
+    Annotation_dir      eggNOG-mapper annotations, one file per bin
+                        (*.emapper.annotations raw from emapper, or the
+                        stripped *.annotations.tsv of earlier MUFFIN runs)
+    classification_dir  sourmash tax genome csv_summary files, sourmash lca
+                        classify CSVs, or GTDB-Tk *.summary.tsv
+    Checkm2_dir         CheckM2 quality report(s) (Name, Completeness,
+                        Contamination)
+
+bin names:
+  A bin has the same name in all three inputs after removing
+  .emapper.annotations / .annotations.tsv / .annotations from annotation file
+  names and .fa / .fna / .fasta (optionally .gz) from any identifier.
+  Bins without a classification are stored as unclassified.
+
+exit status: 0 on success, 1 on an input or processing error, 2 on a usage
+error. Messages go to stderr; no partial database is left on failure.
+"""
+
+
+class InputError(Exception):
+    """Inputs that cannot be used; the message explains which and why."""
+
+
+def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(
         prog='pankegg_make_db',
-        description='Process KEGG data and store it in a database.',
-        epilog='Format du fichier CSV attendu: Sample name, Annotation_dir, classification_dir, Checkm2_dir'
+        description='Build a PANKEGG SQLite database from eggNOG-mapper annotations, '
+                    'CheckM2 quality reports and bin classifications (sourmash or GTDB-Tk).',
+        epilog=EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument('--version', action='version', version=f'pankegg_make_db {__version__}')
-    parser.add_argument('-i', '--input', required=True, help='Path to the input CSV file.')
-    parser.add_argument('-o', '--output', default='pankegg', help='Name for the output database file (without extension).')
-    parser.add_argument('--output_dir', default='./db_output', help='Directory path for the output database file.')
+    parser.add_argument('-i', '--input', required=True, help='Path to the input CSV file (see below).')
+    parser.add_argument('-o', '--output', default='pankegg',
+                        help='Name of the output database, without extension (default: pankegg).')
+    parser.add_argument('--output_dir', default='./db_output',
+                        help='Directory for the output database (default: ./db_output).')
     parser.add_argument(
         '--classification', choices=('auto',) + CLASSIFICATION_METHODS, default='auto',
         help='Bin classification input: sourmash_tax (sourmash tax genome csv_summary), '
@@ -38,7 +74,10 @@ def parse_arguments():
              '(default: detected per sample from the file headers).')
     parser.add_argument('--gtdbtk', action='store_true',
                         help='Same as --classification gtdbtk (kept for compatibility).')
-    return parser.parse_args()
+    verbosity = parser.add_mutually_exclusive_group()
+    verbosity.add_argument('-q', '--quiet', action='store_true', help='Print only warnings and errors.')
+    verbosity.add_argument('-v', '--verbose', action='store_true', help='Print details for every input file.')
+    return parser.parse_args(argv)
 
 
 def classification_mode(args):
@@ -46,86 +85,71 @@ def classification_mode(args):
     mode = getattr(args, 'classification', 'auto') or 'auto'
     if getattr(args, 'gtdbtk', False):
         if mode not in ('auto', 'gtdbtk'):
-            raise ValueError(f"--gtdbtk conflicts with --classification {mode}")
+            raise InputError(f"--gtdbtk conflicts with --classification {mode}")
         mode = 'gtdbtk'
     return mode
 
-def main():
-    args = parse_arguments()
-    print("Starting...")
+
+def setup_logging(args):
+    level = logging.INFO
+    if getattr(args, 'quiet', False):
+        level = logging.WARNING
+    elif getattr(args, 'verbose', False):
+        level = logging.DEBUG
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+    log.handlers[:] = [handler]
+    log.setLevel(level)
+    log.propagate = False
+
+
+def _line_failures(title, failures):
+    return title + "\n" + "\n".join(f"  Line {line} (Sample {sample}): {msg}" for line, sample, msg in failures)
+
+
+def validate_inputs(args):
+    """Check the input CSV and every file it points to; read the classifications. No DB access."""
     csv_file_path = args.input
-    database_name = args.output
-    directory_output = args.output_dir
-
-    if not directory_output.endswith('/'):
-        directory_output += '/'
-    if not os.path.exists(directory_output):
-        os.makedirs(directory_output)
-    
-    # Test 1: Output path validation
-    database_path = os.path.join(directory_output, f'{database_name}.db')
-    print(f"[DEBUG] Output DB path: {os.path.abspath(database_path)}")  
-
-    # TEST 2: Input CSV validation
+    if not os.path.isfile(csv_file_path):
+        raise InputError(f"input CSV not found: {csv_file_path}")
     try:
         check_input_csv(csv_file_path)
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        sys.exit(1)
+    except ValueError as e:
+        raise InputError(f"{csv_file_path}: {e}") from None
 
-    # TEST 3: File existence and content
     failures = check_required_files_and_headers(csv_file_path)
     if failures:
-        print("[ERROR] File/existence/content issues detected:")
-        for line, sample, msg in failures:
-            print(f"  Line {line} (Sample {sample}): {msg}")
-        sys.exit(1)
+        raise InputError(_line_failures("File/existence/content issues detected:", failures))
 
-    # TEST 9: Classification inputs: pick the reader per sample and read the files
-    try:
-        mode = classification_mode(args)
-    except ValueError as e:
-        print(f"[ERROR] {e}")
-        sys.exit(1)
+    mode = classification_mode(args)
     plan, failures, notes = resolve_classifications(csv_file_path, mode)
     if failures:
-        print("[ERROR] Classification mode mismatch detected on these lines:")
-        for line, sample, msg in failures:
-            print(f"  Line {line} (Sample {sample}): {msg}")
-        sys.exit(1)
+        raise InputError(_line_failures("Classification input problems:", failures))
     for line, sample, msg in notes:
-        print(f"[WARN] Line {line} (Sample {sample}): {msg}")
+        log.warning(f"Line {line} (Sample {sample}): {msg}")
+    return mode, plan
 
-    # DB creation
-    conn = connect_db(database_path)
-    cur = conn.cursor()
+
+def build_database(cur, csv_file_path, plan):
     drop_all_tables(cur, TABLES_TO_DROP)
     create_tables(cur)
+    check_db_schema(cur)
 
-    # TEST 4: Schema check
-    try:
-        check_db_schema(cur)
-    except Exception as e:
-        print(f"[ERROR] {e}")
-        sys.exit(1)
-
-    # Load auxiliary data
     ko_translate_table = load_ko_descriptions(default_ko_file)
     map_translate_table = load_pathways(default_pathway_file)
 
-    # Main loading loop
     with open(csv_file_path, mode='r', newline='') as csvfile:
-        csvreader = csv.DictReader(csvfile)
-        for row in csvreader:
+        for row in csv.DictReader(csvfile):
             sample = row['Sample name']
             annotation_path = row['Annotation_dir']
             checkm2_dir = row['Checkm2_dir']
+            method, records = plan[sample]
 
-            print("Processing:", sample)
             sample_id = add_sample_in_db(cur, sample)
             sample_preliminary_process(cur, annotation_path, sample_id)
-            method, records = plan[sample]
-            process_classifications(cur, sample_id, method, records)
+            not_annotated = process_classifications(cur, sample_id, method, records)
+            if not_annotated:
+                log.debug(f"Sample {sample}: classified bins without annotation file, ignored: {not_annotated}")
             add_bin_quality_values(cur, checkm2_dir, sample_id)
             map_ko_dict = process_annotation_file(cur, annotation_path, map_translate_table, sample_id)
             set_ko(cur, ko_translate_table, map_ko_dict)
@@ -133,28 +157,67 @@ def main():
             set_full_annot_table(cur, annotation_path, sample_id)
             link_bin_to_map_keg(cur, annotation_path, sample_id)
 
-            # TEST 8: Per-sample duplicate bins
             duplicates = check_duplicate_bins(cur, sample_id)
             if duplicates:
-                print(f"[WARN] Duplicate bins for sample {sample}: {duplicates}")
+                log.warning(f"Duplicate bins for sample {sample}: {duplicates}")
+            n_bins, n_classified = cur.execute(
+                "SELECT COUNT(*), SUM(classification_status NOT IN ('absent','nomatch','unclassified')) "
+                "FROM bin WHERE sample_id = ?", (sample_id,)).fetchone()
+            log.info(f"Sample {sample}: {n_bins} bins, {n_classified or 0} classified ({method or 'none'})")
 
-    # TEST 5: Bin mapping consistency check (orphans)
     issues = check_bin_consistency(cur)
     if issues:
-        print(f"[WARN] Bin mapping issues: {issues}")
+        log.warning(f"Bin mapping issues: {issues}")
 
     methods = sorted({m for m, _ in plan.values() if m})
     for key, value in (('pankegg_version', __version__), ('schema_version', SCHEMA_VERSION),
                        ('classification_methods', ','.join(methods))):
         cur.execute(INSERT_INFO, (key, value))
 
-    conn.commit()
-    cur.close()
-    conn.close()
 
-    print("Programme successfully completed.")
-    print("Database:", database_name, "Created at directory:", database_path)
+def run(args):
+    mode, plan = validate_inputs(args)
+
+    os.makedirs(args.output_dir, exist_ok=True)
+    database_path = os.path.abspath(os.path.join(args.output_dir, f'{args.output}.db'))
+    log.info(f"Building {database_path} from {len(plan)} sample(s), classification: {mode}")
+
+    # Write to a temporary file and move it into place at the end, so a failed
+    # run never leaves a partial database (and keeps an existing one intact).
+    tmp_path = f"{database_path}.tmp-{os.getpid()}"
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+    try:
+        conn = connect_db(tmp_path)
+        try:
+            cur = conn.cursor()
+            build_database(cur, args.input, plan)
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
+        os.replace(tmp_path, database_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+    log.info(f"Database written: {database_path}")
+    return database_path
+
+
+def main(argv=None):
+    args = parse_arguments() if argv is None else parse_arguments(argv)
+    setup_logging(args)
+    try:
+        run(args)
+    except InputError as e:
+        log.error(str(e))
+        return 1
+    except Exception as e:  # report, do not dump a traceback unless --verbose
+        log.error(f"{type(e).__name__}: {e}")
+        log.debug(traceback.format_exc())
+        return 1
+    return 0
+
 
 if __name__ == "__main__":
-    main()
-
+    sys.exit(main())

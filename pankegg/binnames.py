@@ -6,8 +6,11 @@ CheckM2 ``Name`` column and the classification ID (sourmash ``ID`` /
 suffixes; dots inside a name are kept (``S3.439``, ``a.b.c``).
 """
 
+import logging
 import os
-import warnings
+
+log = logging.getLogger("pankegg")
+_warned = set()  # warn once per file name, not once per pass over the file
 
 # Longest first, so ".emapper.annotations" wins over ".annotations".
 ANNOTATION_SUFFIXES = (".emapper.annotations", ".annotations.tsv", ".annotations")
@@ -54,9 +57,9 @@ def bin_name_from_annotation_file(path):
         return normalise_bin_name(stem)
     parts = base.split(".")
     legacy = ".".join(parts[:2]) if len(parts) >= 2 else base
-    warnings.warn(
-        f"Annotation file {base!r} has no known suffix ({', '.join(ANNOTATION_SUFFIXES)}); "
-        f"using the PANKEGG 2.0.0 naming rule: bin name {normalise_bin_name(legacy)!r}",
-        stacklevel=2,
-    )
+    if base not in _warned:
+        _warned.add(base)
+        log.warning(
+            f"Annotation file {base!r} has no known suffix ({', '.join(ANNOTATION_SUFFIXES)}); "
+            f"using the PANKEGG 2.0.0 naming rule: bin name {normalise_bin_name(legacy)!r}")
     return normalise_bin_name(legacy)

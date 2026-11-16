@@ -44,13 +44,16 @@ def test_bin_name_from_annotation_file(filename, expected):
     assert bin_name_from_annotation_file(filename) == expected
 
 
-def test_unrecognised_annotation_suffix_keeps_2_0_0_rule():
+def test_unrecognised_annotation_suffix_keeps_2_0_0_rule(caplog):
     """Unknown suffix: keep the 2.0.0 result (first two dot parts) so existing DBs do not change."""
     from pankegg.binnames import bin_name_from_annotation_file
-    with pytest.warns(UserWarning, match="2.0.0 naming rule"):
+    with caplog.at_level("WARNING", logger="pankegg"):
         assert bin_name_from_annotation_file("x.y.z.tsv") == "x.y"
-    with pytest.warns(UserWarning):
+        assert bin_name_from_annotation_file("x.y.z.tsv") == "x.y"
         assert bin_name_from_annotation_file("nodots") == "nodots"
+    messages = [r.getMessage() for r in caplog.records]
+    assert sum("x.y.z.tsv" in m for m in messages) == 1, "warn once per file"
+    assert any("2.0.0 naming rule" in m and "nodots" in m for m in messages)
 
 
 def test_pipeline_bin_names_end_to_end(tmp_path):

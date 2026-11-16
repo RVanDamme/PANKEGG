@@ -3,11 +3,14 @@
 import sqlite3
 import csv
 import glob
+import logging
 import os
 from .sql_commands import *
 from .binnames import normalise_bin_name, bin_name_from_annotation_file
 from .classification import (METHODS as CLASSIFICATION_METHODS, ClassificationError,
                              apply_sample, detect_file_type, resolve_sample)
+
+log = logging.getLogger("pankegg")
 
 
 def connect_db(path):
@@ -136,7 +139,7 @@ def check_required_files_and_headers(csv_file):
         reader = csv.DictReader(f)
         for i, row in enumerate(reader, 2):
             sample = row['Sample name']
-            ann_files = glob.glob(row['Annotation_dir'])
+            ann_files = sorted(glob.glob(row['Annotation_dir']))
             if not ann_files:
                 failures.append((i, sample, f"No annotation files found for pattern: {row['Annotation_dir']}"))
             for annot in ann_files:
@@ -149,7 +152,7 @@ def check_required_files_and_headers(csv_file):
                         failures.append((i, sample, f"Annotation file {annot} missing columns: {required_annot_cols - set(header)}"))
                 except Exception as e:
                     failures.append((i, sample, f"Cannot read annotation file {annot}: {e}"))
-            q_files = glob.glob(row['Checkm2_dir'])
+            q_files = sorted(glob.glob(row['Checkm2_dir']))
             if not q_files:
                 failures.append((i, sample, f"No quality report files found for pattern: {row['Checkm2_dir']}"))
             for qfile in q_files:
@@ -328,22 +331,28 @@ def link_maps_to_kos(cur, maps_dict, map_translate_table):
 
 
 def add_bin_quality_values(cur, quality_report_path, sample_id):  # Include sample_id
-    with open(quality_report_path, 'r') as file:
-        reader = csv.DictReader(file, delimiter='\t')
-        for row in reader:
-            bin_name = normalise_bin_name(row['Name'])
-            completeness = float(row['Completeness'])
-            contamination = float(row['Contamination'])
+    """CheckM2 values; quality_report_path may be a glob pattern (all matching reports are read)."""
+    for path in sorted(glob.glob(quality_report_path)) or [quality_report_path]:
+        with open(path, 'r', newline='') as file:
+            reader = csv.DictReader(file, delimiter='\t')
+            for line, row in enumerate(reader, 2):
+                bin_name = normalise_bin_name(row['Name'])
+                try:
+                    completeness = float(row['Completeness'])
+                    contamination = float(row['Contamination'])
+                except (TypeError, ValueError):
+                    raise ValueError(f"{path} line {line}: Completeness and Contamination must be numbers "
+                                     f"(bin {bin_name!r})") from None
 
-            # Update with sample_id to ensure correct association
-            cur.execute(UPDATE_BIN_QUALITY, (completeness, contamination, bin_name, sample_id))
+                # Update with sample_id to ensure correct association
+                cur.execute(UPDATE_BIN_QUALITY, (completeness, contamination, bin_name, sample_id))
 
 
 def set_ko(cur, kegg_translate_table, maps_dict):
     unique_kos = set()
     for kos in maps_dict.values():
         unique_kos.update(kos)
-    unique_ko_list = list(unique_kos)
+    unique_ko_list = sorted(unique_kos)  # sorted: same kegg ids whatever the hash seed
     for ko in unique_ko_list:
         if not ko == "":
             ko_id = ko.split(":")[1]
@@ -363,7 +372,7 @@ def process_classifications(cur, sample_id, method, records):
 
 
 def sample_preliminary_process(cur, annotation_files_path, sample_id):
-    for filename in glob.glob(annotation_files_path):
+    for filename in sorted(glob.glob(annotation_files_path)):
         name_part = bin_name_from_annotation_file(filename)
 
         cur.execute(SELECT_BIN_ID, (name_part, sample_id))  # Ensure unique bins per sample
@@ -375,13 +384,13 @@ def sample_preliminary_process(cur, annotation_files_path, sample_id):
 def process_annotation_file(cur, annotation_files_path, pathways_dict, sample_id):
     maps_dict = {}
 
-    for filename in glob.glob(annotation_files_path):
+    for filename in sorted(glob.glob(annotation_files_path)):
         bin_name = bin_name_from_annotation_file(filename)
         fieldnames, rows = read_eggnog_annotations(filename)
 
         # Ensure 'KEGG_Pathway' exists
         if 'KEGG_Pathway' not in fieldnames:
-            print(f"Skipping {filename}: 'KEGG_Pathway' column not found!")
+            log.warning(f"Skipping {filename}: 'KEGG_Pathway' column not found")
             continue
 
         bin_map_list = []
@@ -430,7 +439,7 @@ def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
 
 
 def set_full_annot_table(cur, annotation_files_path, sample_id):
-    for filename in glob.glob(annotation_files_path):
+    for filename in sorted(glob.glob(annotation_files_path)):
         bin_name = bin_name_from_annotation_file(filename)
 
         cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
@@ -441,7 +450,7 @@ def set_full_annot_table(cur, annotation_files_path, sample_id):
 
         fieldnames, rows = read_eggnog_annotations(filename)
         if 'KEGG_ko' not in fieldnames:
-            print(f"Skipping {filename}: 'KEGG_ko' column not found!")
+            log.warning(f"Skipping {filename}: 'KEGG_ko' column not found")
             continue  # Skip this file instead of crashing
 
         for row in rows:
@@ -454,7 +463,7 @@ def set_full_annot_table(cur, annotation_files_path, sample_id):
                 link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc)
 
 # def link_bin_to_map_keg(cur, annotation_files_path):
-#     for filename in glob.glob(annotation_files_path):
+#     for filename in sorted(glob.glob(annotation_files_path)):
 #         with open(filename, 'r', newline='') as file:
 #             base_name = os.path.basename(filename)
 #             name_part = base_name.split('.')[0] + '.' + base_name.split('.')[1]
@@ -528,30 +537,30 @@ def link_kegg_to_map(cur, kos, map_id, bin_id):
 
 
 def link_bin_to_map_keg(cur, annotation_files_path, sample_id):
-    for filename in glob.glob(annotation_files_path):
+    for filename in sorted(glob.glob(annotation_files_path)):
         bin_name = bin_name_from_annotation_file(filename)
 
         cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
         bin_id = cur.fetchone()
         if not bin_id:
-            print(f"Warning: No bin_id found for {bin_name}")
+            log.warning(f"No bin found for {bin_name} ({filename})")
             continue
         bin_id = bin_id[0]
 
         fieldnames, rows = read_eggnog_annotations(filename)
-        print(f"Processing file: {filename}")
-        print(f"Detected headers: {fieldnames}")
+        log.debug(f"Reading {filename}: bin {bin_name}, {len(rows)} rows, columns {fieldnames}")
 
+        no_pathway = 0
         for row in rows:
             if 'KEGG_Pathway' not in row:
-                print(f"Skipping row due to missing KEGG_Pathway: {row}")
+                no_pathway += 1
                 continue  # Skip row if the column is missing
 
             kegg_pathways = row.get('KEGG_Pathway', '')  # Use .get() to avoid KeyError
             kegg_kos = row.get('KEGG_ko', '')
 
             if not kegg_pathways or kegg_pathways == '-':
-                print(f"Skipping row: No valid KEGG_Pathway found")
+                no_pathway += 1
                 continue  # Skip empty pathway rows
 
             kos = kegg_kos.split(',')
@@ -562,11 +571,14 @@ def link_bin_to_map_keg(cur, annotation_files_path, sample_id):
                     cur.execute(SELECT_MAP_ID, (pathway,))
                     map_id = cur.fetchone()
                     if not map_id:
-                        print(f"Warning: No map_id found for pathway {pathway}")
+                        log.debug(f"No map found for pathway {pathway} ({filename})")
                         continue
                     map_id = map_id[0]
 
                     link_kegg_to_map(cur, kos, map_id, bin_id)
+
+        if no_pathway:
+            log.debug(f"{filename}: {no_pathway} rows without a KEGG pathway")
 
 def add_sample_in_db(cur, name):
     cur.execute(INSERT_SAMPLE, (name,))

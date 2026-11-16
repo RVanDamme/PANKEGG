@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 6 — CLI behaviour
-- **Next action:** failing tests: errors on stderr with exit code ≠ 0, `--quiet`/`--verbose`, same DB content for shuffled glob order, English help text.
+- **Step:** 7 — App check
+- **Next action:** Flask test client: request the main pages against a new DB and the 2.0.0 DB fixture; fix only what the schema change broke.
 
 ## Steps
 
@@ -16,7 +16,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] 3. Bin-name normalisation (brief 3.4)
 - [x] 4. eggNOG reader: raw and legacy files (brief 3.5)
 - [x] 5. Classification modes, tax genome reader, lca all rows, unclassified everywhere, schema additions
-- [ ] 6. CLI behaviour: stderr/exit codes, `--quiet`/`--verbose`, deterministic output, English help
+- [x] 6. CLI behaviour: stderr/exit codes, `--quiet`/`--verbose`, deterministic output, English help
 - [ ] 7. App check against new and 2.0.0 databases
 - [ ] 8. Offline tests, optional OSF test, CI without `|| true`, clean-install job, no committed `__pycache__`
 - [ ] 9. Docs, tax genome helper script, CHANGELOG
@@ -40,6 +40,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | P4 | Schema 2.1 (additive): `bin.classification_method` (`sourmash_tax`/`sourmash_lca`/`gtdbtk`) and `bin.classification_status` (tool status verbatim: `match`, `below_threshold`, `nomatch`, `found`, `disagree`; GTDB-Tk `classified`/`unclassified`; `absent` = bin has no row in any classification file); table `pankegg_info(key, value)` with `pankegg_version`, `schema_version`, `classification_methods`. |
 | 2026-11-16 | P7 | Applied: lca `nomatch`, tax genome `nomatch`/empty lineage, GTDB-Tk `Unclassified …` labels and bins absent from every file all point to one shared taxonomy row with all ranks NULL. Taxonomy lookup uses `IS` so NULL-containing lineages are reused instead of duplicated (2.0.0 GTDB-Tk mode created one all-NULL row per unclassified bin). Non-empty ranks keep 2.0.0 values (lca empty ranks stay `''`, GTDB-Tk `s__` stays `s__`). |
 | 2026-11-16 | — | Classification inputs (step 5): `--classification auto` is the default, so an old command without `--gtdbtk` on GTDB-Tk files now works instead of failing. Errors (before the DB is opened): mixed types in a sample, an explicit mode contradicting the files, only unrecognised files, the same bin classified differently in two files. Warnings: unrecognised files next to recognised ones (2.0.0 ignored them silently), no classification file at all (every bin unclassified, the "all bins unmatched" case). Bins present in a classification file but not in the annotations are ignored, as in 2.0.0. |
+| 2026-11-16 | — | CLI (step 6): all messages via `logging` to stderr as `[LEVEL] message`; stdout stays empty. Default: one line per sample plus start/end (OSF example: 5 lines instead of 9,603); `-q/--quiet` warnings and errors only; `-v/--verbose` per-file details and tracebacks. Exit 0 / 1 (input or processing error) / 2 (usage). The DB is written to `<name>.db.tmp-<pid>` and moved into place at the end: no partial DB on failure, an existing DB survives a failed run. All globs sorted; KOs inserted in sorted order (2.0.0 iterated a `set`, so row ids depended on `PYTHONHASHSEED`). `Checkm2_dir` now accepts a glob like the other columns. |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes
@@ -64,6 +65,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - F2/F6 reproduced before the fix: `sourmash tax genome` file → `No recognizable classification files found.`;
   three-row lca file → only `S1.bin1` classified (others `'null'`); empty lca file → `StopIteration` (and a
   0-bin DB left on disk).
+- Determinism reproduced before the fix: same inputs, `PYTHONHASHSEED=1` vs `2` → 210 differing dump lines.
 - Python 3.9.25 (via uv): full dependency set resolves (numpy 2.0.2, scipy 1.13.1, flask 3.1.3); tests pass.
 
 - Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code
