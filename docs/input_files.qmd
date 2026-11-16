@@ -8,18 +8,29 @@ Pankegg was developed to integrate output files from a variety of metagenomics t
 
 | Tool      | Input File | Data Extracted |
 |-----------|--------------------------|---------------|
-| checkm2   | quality_report.tsv       | bin completeness and contamination              |
-| Sourmash  | *.txt                    | ID, Status and Taxonomic classification         |
-| GTDB-TK   | *.summary.tsv            | User genome and Taxonomic classification        |
-| EggNOG    | *.annotations.tsv        | KEGG Orthologs, KEGG Pathways, GO terms, Description  |
+| CheckM2   | quality_report.tsv       | Bin completeness and contamination              |
+| Sourmash `tax genome` | \*.classifications.csv (`--output-format csv_summary`) | Bin name (`query_name`), status and taxonomic lineage |
+| Sourmash `lca classify` | \*.csv or \*.txt     | ID, status and taxonomic classification         |
+| GTDB-TK   | \*.summary.tsv           | User genome and taxonomic classification        |
+| EggNOG    | \*.emapper.annotations (raw emapper output) or \*.annotations.tsv (stripped) | KEGG Orthologs, KEGG Pathways, GO terms, Description  |
 
 : Supported input files {.striped .hover}
 
+Each sample uses one classification tool. `pankegg_make_db` recognises the format from the file header, or you can name it with `--classification`. A bin that has no classification (for example because sourmash found no match and wrote no file for it) is stored as unclassified.
+
+## Bin names
+
+The same bin must have the same name in the annotation file name, the CheckM2 `Name` column and the classification file. PANKEGG removes these suffixes before comparing names:
+
+- from annotation file names: `.emapper.annotations`, `.annotations.tsv`, `.annotations`
+- from any bin identifier: `.fa`, `.fna`, `.fasta`, each optionally followed by `.gz`
+
+Dots inside a name are kept. For example `S3.439.emapper.annotations`, a CheckM2 `Name` of `S3.439` and a sourmash `query_name` of `S3.439` (or an ID of `S3.439.fa.gz`) all refer to the bin `S3.439`, and `SemiBin_12.emapper.annotations` is the bin `SemiBin_12`. Bin names only need to be unique within a sample.
 
 ## Additional Input Files Provided by Pankegg
 
 
-PANKEGG requires more input files. However, these are already provided and you don't need to worry about them. They are located in the `data` directory. 
+PANKEGG requires more input files. However, these are already provided and you don't need to worry about them. They are installed with the package, in the `pankegg/data` directory.
 
 | File Name               | Description                                                                   | Data Origin                             |
 |-------------------------|-------------------------------------------------------------------------------|-----------------------------------------|

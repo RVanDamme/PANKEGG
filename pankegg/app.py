@@ -18,8 +18,11 @@ from scipy.spatial.distance import pdist
 # Import your robust DB print function
 from . import __version__, resource_path
 from .db_utils import print_db_status
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
+# .env (FLASK_SECRET_KEY) in the directory pankegg_app is started from, then
+# next to the code (repository checkout, as in 2.0.0); the first one wins.
+load_dotenv(find_dotenv(usecwd=True))
 load_dotenv()
 
 app = Flask(__name__)

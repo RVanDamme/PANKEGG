@@ -3,34 +3,68 @@ title: "Pankegg_make_db.py"
 ---
 <br>
 
-Pankegg's data parser that constructs the SQL database that is later used in the web application. 
+Pankegg's data parser that constructs the SQL database that is later used in the web application. It is installed as the `pankegg_make_db` command (with both the `pankegg` and the light `pankegg-makedb` package) and needs only the Python standard library.
 
 ## Input file format
 
-To create the SQL database, you will need a CSV file listing all your samples and their corresponding input directories or files.  
+To create the SQL database, you will need a CSV file listing all your samples and their corresponding input directories or files.
 The expected CSV format uses the following header:
 
 ```
 Sample name,Annotation_dir,classification_dir,Checkm2_dir
 ```
 
-Each subsequent line represents a sample, and should look like one of the following examples:
+Each subsequent line represents a sample:
 
-- For Sourmash classification:
+- `Annotation_dir`: the eggNOG-mapper annotation files of the sample, one file per bin. Both the raw file written by emapper (`*.emapper.annotations`, with its `##` header and footer lines) and the stripped `*.annotations.tsv` files of earlier MUFFIN versions are accepted.
+- `classification_dir`: the bin classification files, in one of three formats (see below).
+- `Checkm2_dir`: the CheckM2 quality report (`quality_report.tsv`, columns `Name`, `Completeness`, `Contamination`).
+
+Every path may be a glob pattern (`*`). Relative paths are resolved from the directory where you run `pankegg_make_db`. See [Bin names](#bin-names) for how the same bin is recognised in the three inputs.
+
+### Classification inputs
+
+| Tool and command | `--classification` | Files | Notes |
+|------------------|--------------------|-------|-------|
+| `sourmash tax genome --output-format csv_summary` | `sourmash_tax` | `*.classifications.csv` | One or several bins per file. Bin name from `query_name`. `below_threshold` calls are stored with their (partial) lineage. |
+| `sourmash lca classify` | `sourmash_lca` | `*.csv`, `*.txt` | One or several bins per file. `nomatch` bins are unclassified. |
+| GTDB-Tk | `gtdbtk` | `gtdbtk.bac120.summary.tsv`, `gtdbtk.ar53.summary.tsv` | `Unclassified …` genomes are unclassified. |
+
+: Classification inputs {.striped .hover}
+
+By default (`--classification auto`) the format is recognised from the file header, separately for each sample; files of two different formats in one sample are an error. Every bin that appears in the annotations but in no classification file is stored as unclassified: this is the normal case for a bin without a `sourmash gather` match, for which sourmash writes no file at all.
+
+Examples:
+
+- `sourmash tax genome`:
+```bash
+    SAMPLE1,/Path/to/SAMPLE1/eggnog/*.emapper.annotations,/Path/to/SAMPLE1/sourmash/*.classifications.csv,/Path/to/SAMPLE1/checkm2/quality_report.tsv
+```
+
+- `sourmash lca classify`:
 ```bash
     SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/sourmash/*,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv
     SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/sourmash/*,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv
 ```
 
-- For GTDB-TK classification (when using the `--gtdbtk` flag):
+- GTDB-TK:
 ```bash
     SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/gtdb_results/*.summary.tsv,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv
     SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/gtdb_results/*.summary.tsv,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv
 ```
 
+### Bin names
+
+PANKEGG matches the same bin across the three inputs by name, after removing these suffixes:
+
+- from annotation file names: `.emapper.annotations`, `.annotations.tsv`, `.annotations`
+- from the CheckM2 `Name` and the classification ID: `.fa`, `.fna`, `.fasta`, each optionally followed by `.gz`
+
+Dots inside a name are kept: `S3.439.emapper.annotations`, CheckM2 `S3.439` and a sourmash ID `S3.439.fa.gz` are all the bin `S3.439`; `SemiBin_12.emapper.annotations` is the bin `SemiBin_12`. Bin names only need to be unique within a sample. An annotation file name without one of the suffixes above keeps the naming of PANKEGG 2.0.0 (the first two dot-separated parts) and a warning is printed.
+
 ### Create the input file
 
-You can create this input CSV file automatically with a bash loop, depending on how your data are organized:
+You can create this input CSV file automatically with a bash loop, depending on how your data are organized. The repository contains ready-made scripts that you can edit: `generate_input_sourmash_tax_by_sample.sh`, `generate_input_sourmash_tax_by_tool.sh` (`sourmash tax genome`), `generate_input_sourmash_by_sample.sh`, `generate_input_sourmash_by_tool.sh` (`sourmash lca classify`), `generate_input_gtdbtk_by_sample.sh` and `generate_input_gtdbtk_by_tool.sh`.
 
 
 #### If your results are grouped by sample:
@@ -49,7 +83,7 @@ Dir/
     └── checkm2_dir/
 ```
 
-Run the following script to include Sourmash annotation: 
+Run the following script to include Sourmash annotation:
 
 ```bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -61,6 +95,8 @@ for sample in Dir/*; do
     echo "$name,$ann_path,$class_path,$checkm2_path" >> samples.csv;
 done
 ```
+
+For `sourmash tax genome` results, use `class_path="$sample/sourmash/*.classifications.csv"` (and `*.emapper.annotations` for raw eggNOG-mapper files), or edit `generate_input_sourmash_tax_by_sample.sh`.
 
 Run the following script to include GTDBTK annotation:
 
@@ -97,7 +133,7 @@ Dir/
     └── ...
 ```
 
-Run the following script to include Sourmash annotation: 
+Run the following script to include Sourmash annotation:
 
 ```bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -109,6 +145,8 @@ for sample in Dir/bin_annotation/*; do
     echo "$name,$ann_path,$class_path,$checkm2_path" >> samples.csv;
 done
 ```
+
+For `sourmash tax genome` results, use `class_path="Dir/sourmash/$name/*.classifications.csv"`, or edit `generate_input_sourmash_tax_by_tool.sh`.
 
 Run the following script to include GTDBTK annotation:
 
@@ -125,21 +163,32 @@ done
 
 ## Parameters Make DB
 
-- `-i, --input`  
+- `-i, --input`
 Path to the CSV file listing all samples and their input files/directories (required).
 
-- `-o, --output`  
+- `-o, --output`
 Name of the output database file (**without the extension**). The default is `pankegg`. The `.db` extension is automatically added to the output name.
 
-- `--output_dir`  
+- `--output_dir`
 Directory the database will be written to. The default is `./db_output`.
 
-- `--gtdbtk`  
-Use this flag if your classification files were generated with GTDB-TK instead of Sourmash.
+- `--classification {auto,sourmash_tax,sourmash_lca,gtdbtk}`
+Format of the classification files. `auto` (default) recognises it from the file headers; an explicit value that does not match the files is an error that names the files.
+
+- `--gtdbtk`
+Same as `--classification gtdbtk`; kept so that existing commands keep working.
+
+- `-q, --quiet` / `-v, --verbose`
+Print only warnings and errors / print details for every input file.
+
+- `--version`
+Print the version and exit.
+
+All messages are written to the standard error. The exit status is 0 on success, 1 when an input or processing error occurred (no partial database is left behind, and an existing database with the same name is kept), and 2 for an invalid command line. The same inputs always give the same database.
 
 ## Output Make DB
 
-The output is an SQLite database (`*.db`) that can be opened with tools like `sqlite3`, but is best used with `pankegg_app.py` for interactive browsing.  
+The output is an SQLite database (`*.db`) that can be opened with tools like `sqlite3`, but is best used with `pankegg_app` for interactive browsing.
 
 The database contains the following tables:
 
@@ -153,8 +202,21 @@ The database contains the following tables:
 - `bin_extra`
 - `bin_extra_kegg`
 - `sample`
+- `pankegg_info` (from 2.1.0: `pankegg_version`, `schema_version`, `classification_methods`)
 
 Each table stores specific information related to bins, pathways, taxonomy, and annotation results for easy querying and visualization.
+
+From 2.1.0 the `bin` table also records how each bin was classified, in `classification_method` (`sourmash_tax`, `sourmash_lca` or `gtdbtk`) and `classification_status`: the status written by the tool (`match`, `below_threshold`, `nomatch` for `sourmash tax genome`; `found`, `disagree`, `nomatch` for `sourmash lca classify`; `classified` or `unclassified` for GTDB-Tk), or `absent` when the bin had no row in any classification file. Unclassified bins point to a taxonomy row whose ranks are all empty (NULL). Databases made by earlier versions do not have these columns and still open in `pankegg_app`.
+
+## Using pankegg_make_db in a pipeline
+
+The light `pankegg-makedb` package (or its BioContainers image) is enough. Give one CSV line per sample and choose the classification format explicitly:
+
+```bash
+pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification sourmash_tax --quiet
+pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification sourmash_lca --quiet
+pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification gtdbtk --quiet
+```
 
 ## Run with Testdata
 
@@ -183,20 +245,25 @@ unzip pankegg_test_data.zip
 ### Create a test database for Sourmash classification:
 
 ```bash
-python pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
+pankegg_make_db -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
 ```
 
 ### Create a test database for GTDB-TK classification:
 
 ```bash
-python pankegg_make_db.py -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_dir pankegg_test_data --gtdbtk
+pankegg_make_db -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_dir pankegg_test_data --gtdbtk
 ```
 After running these commands, you should find newly created `test_sourmash.db` and `test_gtdbtk.db` inside the `pankegg_test_data` directory. This is in addition to the already existing `sourmash_example.db` and `gtdbtk_example.db` files in the same directory.
 
-The existing and newly generated respective databases should be identical, so the validity of `pankegg_make_db.py` can be tested by comparing the two files.
+The existing and newly generated databases contain the same samples, bins, taxonomy, quality values and KEGG links. The files are not byte-identical, because 2.1.0 adds the classification columns and the `pankegg_info` table and processes the input files in sorted order. From a copy of the repository you can compare them by content:
+
+```bash
+python tests/regression/summarise_db.py pankegg_test_data/sourmash_example.db > old.json
+python tests/regression/summarise_db.py pankegg_test_data/test_sourmash.db > new.json
+diff old.json new.json && echo identical
+```
 
 
 ## Troubleshooting
 
 For more details or troubleshooting, please consult the [Reporting Bugs & Contributing](reporting_bugs.qmd) section.
-

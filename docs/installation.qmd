@@ -3,9 +3,30 @@ title: "Download and Install"
 ---
 <br>
 
-## Install PANKEGG
+## Install from PyPI or Bioconda
 
-Installing Pankegg is simple. You can either download the repository as a zip file, or clone it using git.
+From version 2.1.0, Pankegg is distributed as two packages. Install **one** of them:
+
+| Package | Contains | Dependencies |
+|---------|----------|--------------|
+| `pankegg` | `pankegg_make_db` and the web app `pankegg_app` | Flask, pandas, NumPy, scikit-learn, SciPy, … |
+| `pankegg-makedb` | `pankegg_make_db` only, for pipelines and containers | none (Python standard library) |
+
+: Pankegg packages {.striped .hover}
+
+```bash
+pip install pankegg                       # everything
+pip install pankegg-makedb                # database builder only
+
+conda install -c conda-forge -c bioconda pankegg          # everything
+conda install -c conda-forge -c bioconda pankegg-makedb   # database builder only
+```
+
+Both packages provide the same `pankegg` Python package, so do not install both in the same environment. Python 3.9 or newer is required; Python 3.13 is recommended.
+
+## Install PANKEGG from the repository
+
+Installing Pankegg from source is simple. You can either download the repository as a zip file, or clone it using git.
 
 ### Download via wget or curl
 
@@ -58,16 +79,25 @@ conda activate pankegg_env
 
 ### Using pip
 
-From within the repository folder, install all dependencies by running:
+From within the repository folder, install Pankegg with all dependencies by running:
 
 ```bash
 pip install .
 ```
 
-Or, install dependencies only:
+To build the light `pankegg-makedb` package (database builder only, no dependencies) from the repository instead:
 
 ```bash
-pip install flask pandas numpy scikit-learn scipy jinja2 click setuptools importlib-metadata
+python tools/build_makedb.py
+pip install dist/pankegg_makedb-*.whl
+```
+
+For development (editable install with the test dependencies):
+
+```bash
+pip install -e ".[dev]"
+pytest                 # offline tests
+pytest --run-osf       # also compare with the OSF example data (needs network)
 ```
 
 ### Using pixi

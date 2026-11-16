@@ -14,13 +14,13 @@ Pankegg_app.py is using the output of [pankegg_make_db.py](Pankegg_make_db.qmd).
 To start the Pankegg web server with your database, use the following command (replace with your actual database path):
 
 ```bash
-python /path/to/pankegg_app.py --d /Path/to/YOUR_PANKEGG.db
+pankegg_app --d /Path/to/YOUR_PANKEGG.db
 ```
-(Replace /path/to/pankegg_app.py and /Path/to/YOUR_PANKEGG.db with your actual paths.)
+(Replace /Path/to/YOUR_PANKEGG.db with your actual path. From a copy of the repository, `python pankegg_app.py --d ...` works too.)
 
 > **Note:**  
-> Before running the web application, it is highly recommended to **change the `app.secret_key`** (located around line 24 in `pankegg_app.py`) to a secure value of your choice.
-This key is used by Flask for session security. Leaving it as the default ('local') is fine for local or testing use, but for any real-world or multi-user deployment, you should generate and use a strong, unique secret key to prevent session tampering and increase security.
+> Before running the web application, it is highly recommended to **set your own Flask secret key**. Put `FLASK_SECRET_KEY=<a long random value>` in a `.env` file in the directory where you start `pankegg_app` (or in the repository folder), or export `FLASK_SECRET_KEY` in your shell. You can create the file with `python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env`.
+This key is used by Flask for session security. Leaving it as the default ('dev') is fine for local or testing use, but for any real-world or multi-user deployment, you should generate and use a strong, unique secret key to prevent session tampering and increase security.
 
 ## Parameters APP
 
@@ -46,34 +46,34 @@ You will be able to browse, filter, and visualize all results contained in your 
 You can test the web interface using either the database provided with the repository, example databases from the test data, or your own generated databases.  
 Here are example commands (replace BASH with the actual commands):
 
-- To run the app on the database shipped with the GitHub repository (`data/pankegg.db`):
+- To run the app on the example database installed with Pankegg (`pankegg/data/pankegg.db`, used when `--d` is not given):
 
 ```bash
-python pankegg_app.py --d data/pankegg.db
+pankegg_app
 ```
 
 - To run the app on the example Sourmash test database (`pankegg_test_data/sourmash_example.db`):
 
 ```bash
-python pankegg_app.py --d pankegg_test_data/sourmash_example.db
+pankegg_app --d pankegg_test_data/sourmash_example.db
 ```
 
 - To run the app on the example GTDB-TK test database (`pankegg_test_data/gtdbtk_example.db`):
 
 ```bash
-python pankegg_app.py --d pankegg_test_data/gtdbtk_example.db
+pankegg_app --d pankegg_test_data/gtdbtk_example.db
 ```
 
 - To run the app on the Sourmash database you created during the test (`pankegg_test_data/test_sourmash.db`):
 
 ```bash
-python pankegg_app.py --d pankegg_test_data/test_sourmash.db
+pankegg_app --d pankegg_test_data/test_sourmash.db
 ```
 
 - To run the app on the GTDB-TK database you created during the test (`pankegg_test_data/test_gtdbtk.db`):
 
 ```bash
-python pankegg_app.py --d pankegg_test_data/test_gtdbtk.db
+pankegg_app --d pankegg_test_data/test_gtdbtk.db
 ```
 
 ## Troubleshooting

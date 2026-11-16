@@ -11,6 +11,12 @@ Install Pankegg via pip, conda, or pixi.
 See the [Installation](#installation) section for detailed options.
 
 ```bash
+pip install pankegg
+```
+
+or, from a copy of the repository:
+
+```bash
 wget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip
 unzip master.zip
 cd PANKEGG-master
@@ -31,21 +37,21 @@ unzip pankegg_test_data.zip
 Generate a Pankegg database from the provided CSV using the included test data (for both Sourmash and GTDB-TK classification):
 
 ```bash
-python pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
+pankegg_make_db -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
 ```
 
 ## Launch the Web Application
 
-Start the web server using the database present in the repository:
+Start the web server using the example database installed with Pankegg:
 
 ```bash
-python pankegg_app.py --d data/pankegg.db
+pankegg_app
 ```
 
-or use the the database you generated in point 3:
+or use the database you generated in point 3:
 
 ```bash
-python pankegg_app.py --d pankegg_test_data/test_sourmash
+pankegg_app --d pankegg_test_data/test_sourmash.db
 ```
 
 ## Open web browser

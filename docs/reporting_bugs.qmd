@@ -18,7 +18,7 @@ Before contributing, take a moment to explore the repository:
 - `data/`: example files and a sample `pankegg.db`.
 - `setup.py` and `.github/workflows/`: packaging and CI configuration.
 
-We recommend inspecting `data/pankegg.db` with `sqlite3` and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server.
+We recommend inspecting `pankegg/data/pankegg.db` with `sqlite3` and reviewing the templates to see how queries render in the app. The README walks through building a database and starting the server.
 
 ## Did you find a bug?
 

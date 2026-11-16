@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 9 — Docs
-- **Next action:** README/docs: three classification inputs, `--classification`, install (`pankegg` vs `pankegg-makedb`), bin naming; tax genome helper script; CHANGELOG.
+- **Step:** 10 — Review and acceptance report
+- **Next action:** independent review of `git diff 2.0.0..HEAD` against brief §7 by a fresh subagent; fix findings; report every acceptance criterion with evidence; write release steps.
 
 ## Steps
 
@@ -19,7 +19,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] 6. CLI behaviour: stderr/exit codes, `--quiet`/`--verbose`, deterministic output, English help
 - [x] 7. App check against new and 2.0.0 databases
 - [x] 8. Offline tests, optional OSF test, CI without `|| true`, clean-install job, no committed `__pycache__`
-- [ ] 9. Docs, tax genome helper script, CHANGELOG
+- [x] 9. Docs, tax genome helper script, CHANGELOG
 - [ ] 10. Independent review against brief §7, fixes, acceptance report, release instructions
 
 ## Decisions
@@ -43,6 +43,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | CLI (step 6): all messages via `logging` to stderr as `[LEVEL] message`; stdout stays empty. Default: one line per sample plus start/end (OSF example: 5 lines instead of 9,603); `-q/--quiet` warnings and errors only; `-v/--verbose` per-file details and tracebacks. Exit 0 / 1 (input or processing error) / 2 (usage). The DB is written to `<name>.db.tmp-<pid>` and moved into place at the end: no partial DB on failure, an existing DB survives a failed run. All globs sorted; KOs inserted in sorted order (2.0.0 iterated a `set`, so row ids depended on `PYTHONHASHSEED`). `Checkm2_dir` now accepts a glob like the other columns. |
 | 2026-11-16 | — | App (step 7): one fix needed. Visualisation → taxonomy counted a bin as classified when it had any taxonomy row; with P7 unclassified bins have one (all NULL), so it now also requires a non-empty kingdom. This also corrects the count for 2.0.0 GTDB-Tk DBs. Composition charts now show lca `nomatch` bins as `Unknown` (as GTDB-Tk DBs already did) instead of leaving them out. All main pages serve 200 on 2.0.0 and new DBs (`tests/test_app.py`; real server checked with curl). |
 | 2026-11-16 | — | Tests (step 8): default `pytest` is offline (no network attempt) and uses `tests/fixtures`; OSF tests are marked `osf` and run with `pytest --run-osf`. The OSF fixture no longer changes the working directory for the whole session (it did, which made later tests depend on test order). CI: `test` (Python 3.9 + 3.13, offline), `osf-regression`, `clean-install` (`python -m build` + `tools/build_makedb.py`, fresh venvs, run from an empty directory), `test-conda` (conda-lock env); no `\|\| true` left. |
+| 2026-11-16 | — | Docs (step 9): `.qmd` sources and `README.md` edited together (README had drifted from the sources, so edits were made by hand, not regenerated). New: classification inputs table, bin-naming rule, the two packages, pipeline command lines, schema 2.1 columns, how to compare a new DB with a 2.0.0 one by content. Helper scripts `generate_input_sourmash_tax_by_{sample,tool}.sh` (tested). App also reads `.env` from the directory it is started from: after the move into `pankegg/`, installed users had no "PANKEGG dir" to put it in. `CHANGELOG.md` added. |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes

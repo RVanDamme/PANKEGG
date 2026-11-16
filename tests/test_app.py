@@ -83,3 +83,17 @@ def test_classified_bin_count(databases, client_for, db_kind):
     assert res.status_code == 200
     info = res.get_json()["S1"]["bins_info"]
     assert info == {"classified_bins": 2, "total_bins": 3}, info
+
+
+def test_dotenv_in_current_directory_is_used(tmp_path):
+    """Installed users keep .env (FLASK_SECRET_KEY) where they start pankegg_app."""
+    import subprocess
+    import sys
+    from tests.helpers import REPO
+    (tmp_path / ".env").write_text("FLASK_SECRET_KEY=from_cwd_env\n")
+    probe = write(tmp_path / "probe.py", f"import sys; sys.path.insert(0, {str(REPO)!r})\n"
+                                         "from pankegg.app import app; print(app.secret_key)\n")
+    env = {k: v for k, v in __import__("os").environ.items() if k != "FLASK_SECRET_KEY"}
+    out = subprocess.run([sys.executable, str(probe)], cwd=tmp_path, env=env,
+                         capture_output=True, text=True, check=True).stdout.strip()
+    assert out == "from_cwd_env"

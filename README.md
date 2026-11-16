@@ -42,10 +42,13 @@ Our goal is to facilitate research and understanding in the field of metagenomic
   - [Launch the Web Application](#launch-the-web-application)
   - [Open web browser](#open-web-browser)
   - [Input files](#input-files)
+  - [Bin names](#bin-names)
   - [Additional Input Files Provided by
     Pankegg](#additional-input-files-provided-by-pankegg)
 - [Installation](#installation)
-  - [Install PANKEGG](#install-pankegg)
+  - [Install from PyPI or Bioconda](#install-from-pypi-or-bioconda)
+  - [Install PANKEGG from the
+    repository](#install-pankegg-from-the-repository)
     - [Download via wget or curl](#download-via-wget-or-curl)
     - [Clone via git](#clone-via-git)
   - [Install dependencies](#install-dependencies)
@@ -57,9 +60,13 @@ Our goal is to facilitate research and understanding in the field of metagenomic
   - [Navigation and Search Pages](#navigation-and-search-pages)
   - [Feature Pages](#feature-pages)
   - [Input file format](#input-file-format)
+    - [Classification inputs](#classification-inputs)
+    - [Bin names](#bin-names-1)
     - [Create the input file](#create-the-input-file)
   - [Parameters Make DB](#parameters-make-db)
   - [Output Make DB](#output-make-db)
+  - [Using pankegg_make_db in a
+    pipeline](#using-pankegg_make_db-in-a-pipeline)
   - [Run with Testdata](#run-with-testdata)
     - [Download the test data archive from
       OSF:](#download-the-test-data-archive-from-osf)
@@ -107,6 +114,12 @@ Install Pankegg via pip, conda, or pixi.
 See the [Installation](#installation) section for detailed options.
 
 ``` bash
+pip install pankegg
+```
+
+or, from a copy of the repository:
+
+``` bash
 wget https://github.com/RVanDamme/PANKEGG/archive/refs/heads/master.zip
 unzip master.zip
 cd PANKEGG-master
@@ -128,7 +141,7 @@ Generate a Pankegg database from the provided CSV using the included
 test data (for both Sourmash and GTDB-TK classification):
 
 ``` bash
-python pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
+pankegg_make_db -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
 ```
 
 ## Launch the Web Application
@@ -138,18 +151,18 @@ First, generate the secret key to protect your Flask session:
 ``` bash
 python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
 ```
-This ".env" file needs to be in the PANKEGG dir.
+This ".env" file needs to be in the directory where you start `pankegg_app` (or in the PANKEGG dir).
 
-Start the web server using the database present in the repository:
+Start the web server using the example database installed with Pankegg:
 
 ``` bash
-python pankegg_app.py --d data/pankegg.db
+pankegg_app
 ```
 
-or use the the database you generated in point 3:
+or use the database you generated in point 3:
 
 ``` bash
-python pankegg_app.py --d pankegg_test_data/test_sourmash
+pankegg_app --d pankegg_test_data/test_sourmash.db
 ```
 
 ## Open web browser
@@ -158,34 +171,44 @@ Now, open your web browser and go to the IP address written in your
 terminal ( <http://0.0.0.0:5000>) to interactively explore your
 metagenomic data!
 
-<br> Pankegg was developed to integrate output files from a variety of
-metagenomics tools, such as CheckM2, Sourmash, GTDB-TK and EggNOG. You
-can combine them all, or only add the ones that are interesting for you.
+<br>
+Pankegg was developed to integrate output files from a variety of metagenomics tools, such as CheckM2, Sourmash, GTDB-TK and EggNOG. You can combine them all, or only add the ones that are interesting for you.
 
 ## Input files
 
-| Tool | Input File | Data Extracted |
-|----|----|----|
-| checkm2 | quality_report.tsv | bin completeness and contamination |
-| Sourmash | \*.txt | ID, Status and Taxonomic classification |
-| GTDB-TK | \*.summary.tsv | User genome and Taxonomic classification |
-| EggNOG | \*.annotations.tsv | KEGG Orthologs, KEGG Pathways, GO terms, Description |
+| Tool      | Input File | Data Extracted |
+|-----------|--------------------------|---------------|
+| CheckM2   | quality_report.tsv       | Bin completeness and contamination              |
+| Sourmash `tax genome` | \*.classifications.csv (`--output-format csv_summary`) | Bin name (`query_name`), status and taxonomic lineage |
+| Sourmash `lca classify` | \*.csv or \*.txt     | ID, status and taxonomic classification         |
+| GTDB-TK   | \*.summary.tsv           | User genome and taxonomic classification        |
+| EggNOG    | \*.emapper.annotations (raw emapper output) or \*.annotations.tsv (stripped) | KEGG Orthologs, KEGG Pathways, GO terms, Description  |
 
 Supported input files
 
+Each sample uses one classification tool. `pankegg_make_db` recognises the format from the file header, or you can name it with `--classification`. A bin that has no classification (for example because sourmash found no match and wrote no file for it) is stored as unclassified.
+
+## Bin names
+
+The same bin must have the same name in the annotation file name, the CheckM2 `Name` column and the classification file. PANKEGG removes these suffixes before comparing names:
+
+- from annotation file names: `.emapper.annotations`, `.annotations.tsv`, `.annotations`
+- from any bin identifier: `.fa`, `.fna`, `.fasta`, each optionally followed by `.gz`
+
+Dots inside a name are kept. For example `S3.439.emapper.annotations`, a CheckM2 `Name` of `S3.439` and a sourmash `query_name` of `S3.439` (or an ID of `S3.439.fa.gz`) all refer to the bin `S3.439`, and `SemiBin_12.emapper.annotations` is the bin `SemiBin_12`. Bin names only need to be unique within a sample.
+
 ## Additional Input Files Provided by Pankegg
 
-PANKEGG requires more input files. However, these are already provided
-and you don’t need to worry about them. They are located in the `data`
-directory.
 
-| File Name | Description | Data Origin |
-|----|----|----|
-| kegg_map_info.tsv | Contains mapID, pathway name, and total number of orthologs per pathway (map) | Extracted from KEGG pathway database |
-| kegg_map_orthologs.tsv | Contains mapID, pathway name, and list of orthologs per pathway (map) | Extracted from KEGG pathway database |
-| ko.txt | Contains the IDs and names of orthologs | Extracted from KEGG orthologs database |
-| pathway.txt | Contains map IDs (pathways) and their names | Extracted from KEGG pathway database |
-| pathway_groups.txt | Maps IDs grouped by KEGG sub-categories | Extracted from KEGG pathway database |
+PANKEGG requires more input files. However, these are already provided and you don't need to worry about them. They are installed with the package, in the `pankegg/data` directory.
+
+| File Name               | Description                                                                   | Data Origin                             |
+|-------------------------|-------------------------------------------------------------------------------|-----------------------------------------|
+| kegg_map_info.tsv       | Contains mapID, pathway name, and total number of orthologs per pathway (map) | Extracted from KEGG pathway database    |
+| kegg_map_orthologs.tsv  | Contains mapID, pathway name, and list of orthologs per pathway (map)         | Extracted from KEGG pathway database    |
+| ko.txt                  | Contains the IDs and names of orthologs                                       | Extracted from KEGG orthologs database  |
+| pathway.txt             | Contains map IDs (pathways) and their names                                   | Extracted from KEGG pathway database    |
+| pathway_groups.txt      | Maps IDs grouped by KEGG sub-categories                                       | Extracted from KEGG pathway database    |
 
 Additional input, built into PANKEGG
 
@@ -193,10 +216,34 @@ Additional input, built into PANKEGG
 
 <br>
 
-## Install PANKEGG
+## Install from PyPI or Bioconda
 
-Installing Pankegg is simple. You can either download the repository as
-a zip file, or clone it using git.
+From version 2.1.0, Pankegg is distributed as two packages. Install
+**one** of them:
+
+| Package | Contains | Dependencies |
+|----|----|----|
+| `pankegg` | `pankegg_make_db` and the web app `pankegg_app` | Flask, pandas, NumPy, scikit-learn, SciPy, … |
+| `pankegg-makedb` | `pankegg_make_db` only, for pipelines and containers | none (Python standard library) |
+
+Pankegg packages
+
+``` bash
+pip install pankegg                       # everything
+pip install pankegg-makedb                # database builder only
+
+conda install -c conda-forge -c bioconda pankegg          # everything
+conda install -c conda-forge -c bioconda pankegg-makedb   # database builder only
+```
+
+Both packages provide the same `pankegg` Python package, so do not
+install both in the same environment. Python 3.9 or newer is required;
+Python 3.13 is recommended.
+
+## Install PANKEGG from the repository
+
+Installing Pankegg from source is simple. You can either download the
+repository as a zip file, or clone it using git.
 
 ### Download via wget or curl
 
@@ -254,16 +301,27 @@ conda activate pankegg_env
 
 ### Using pip
 
-From within the repository folder, install all dependencies by running:
+From within the repository folder, install Pankegg with all
+dependencies by running:
 
 ``` bash
 pip install .
 ```
 
-Or, install dependencies only:
+To build the light `pankegg-makedb` package (database builder only, no
+dependencies) from the repository instead:
 
 ``` bash
-pip install flask pandas numpy scikit-learn scipy jinja2 click setuptools importlib-metadata python-dotenv
+python tools/build_makedb.py
+pip install dist/pankegg_makedb-*.whl
+```
+
+For development (editable install with the test dependencies):
+
+``` bash
+pip install -e ".[dev]"
+pytest                 # offline tests
+pytest --run-osf       # also compare with the OSF example data (needs network)
 ```
 
 ### Using pixi
@@ -296,18 +354,23 @@ Once the installation is complete, you need to generate the secret key to protec
 ``` bash
 python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
 ```
-This ".env" file needs to be in the PANKEGG dir, and once it's done, it doesn't need to be rerun.
+This ".env" file needs to be in the directory where you start `pankegg_app` (or in the PANKEGG dir), and once it's done, it doesn't need to be rerun.
 
 
 You can now run Pankegg using:
 
 ``` bash
+pankegg_make_db --version
 pankegg_make_db --help
 pankegg_app --help
 ```
 
+(`pankegg_app` is only installed with the full `pankegg` package, not
+with `pankegg-makedb`.)
+
 If the commands are not in your PATH, then use the whole path to the
-executable.
+executable. From a copy of the repository you can also run
+`python pankegg_make_db.py` and `python pankegg_app.py`.
 
 For more detailed instructions on how to use Pankegg, see the [Usage and
 Tests](#usage-and-tests) section.
@@ -371,41 +434,69 @@ Pankegg provides multiple interactive features:
 
 <br>
 
-Pankegg’s data parser that constructs the SQL database that is later
-used in the web application.
+Pankegg’s data parser that constructs the SQL database that is later used in the web application. It is installed as the `pankegg_make_db` command (with both the `pankegg` and the light `pankegg-makedb` package) and needs only the Python standard library.
 
 ## Input file format
 
-To create the SQL database, you will need a CSV file listing all your
-samples and their corresponding input directories or files.  
+To create the SQL database, you will need a CSV file listing all your samples and their corresponding input directories or files.
 The expected CSV format uses the following header:
 
-    Sample name,Annotation_dir,classification_dir,Checkm2_dir
+```
+Sample name,Annotation_dir,classification_dir,Checkm2_dir
+```
 
-Each subsequent line represents a sample, and should look like one of
-the following examples:
+Each subsequent line represents a sample:
 
-- For Sourmash classification:
+- `Annotation_dir`: the eggNOG-mapper annotation files of the sample, one file per bin. Both the raw file written by emapper (`*.emapper.annotations`, with its `##` header and footer lines) and the stripped `*.annotations.tsv` files of earlier MUFFIN versions are accepted.
+- `classification_dir`: the bin classification files, in one of three formats (see below).
+- `Checkm2_dir`: the CheckM2 quality report (`quality_report.tsv`, columns `Name`, `Completeness`, `Contamination`).
 
+Every path may be a glob pattern (`*`). Relative paths are resolved from the directory where you run `pankegg_make_db`. See [Bin names](#bin-names) for how the same bin is recognised in the three inputs.
+
+### Classification inputs
+
+| Tool and command | `--classification` | Files | Notes |
+|------------------|--------------------|-------|-------|
+| `sourmash tax genome --output-format csv_summary` | `sourmash_tax` | `*.classifications.csv` | One or several bins per file. Bin name from `query_name`. `below_threshold` calls are stored with their (partial) lineage. |
+| `sourmash lca classify` | `sourmash_lca` | `*.csv`, `*.txt` | One or several bins per file. `nomatch` bins are unclassified. |
+| GTDB-Tk | `gtdbtk` | `gtdbtk.bac120.summary.tsv`, `gtdbtk.ar53.summary.tsv` | `Unclassified …` genomes are unclassified. |
+
+Classification inputs
+
+By default (`--classification auto`) the format is recognised from the file header, separately for each sample; files of two different formats in one sample are an error. Every bin that appears in the annotations but in no classification file is stored as unclassified: this is the normal case for a bin without a `sourmash gather` match, for which sourmash writes no file at all.
+
+Examples:
+
+- `sourmash tax genome`:
+``` bash
+    SAMPLE1,/Path/to/SAMPLE1/eggnog/*.emapper.annotations,/Path/to/SAMPLE1/sourmash/*.classifications.csv,/Path/to/SAMPLE1/checkm2/quality_report.tsv
+```
+
+- `sourmash lca classify`:
 ``` bash
     SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/sourmash/*,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv
     SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/sourmash/*,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv
 ```
 
-- For GTDB-TK classification (when using the `--gtdbtk` flag):
-
+- GTDB-TK:
 ``` bash
     SAMPLE1,/Path/to/SAMPLE1/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE1/gtdb_results/*.summary.tsv,/Path/to/SAMPLE1/checkm2_dir/quality_report.tsv
     SAMPLE2,/Path/to/SAMPLE2/bin_annotation/*.annotations.tsv,/Path/to/SAMPLE2/gtdb_results/*.summary.tsv,/Path/to/SAMPLE2/checkm2_dir/quality_report.tsv
 ```
 
+### Bin names
+
+PANKEGG matches the same bin across the three inputs by name, after removing these suffixes:
+
+- from annotation file names: `.emapper.annotations`, `.annotations.tsv`, `.annotations`
+- from the CheckM2 `Name` and the classification ID: `.fa`, `.fna`, `.fasta`, each optionally followed by `.gz`
+
+Dots inside a name are kept: `S3.439.emapper.annotations`, CheckM2 `S3.439` and a sourmash ID `S3.439.fa.gz` are all the bin `S3.439`; `SemiBin_12.emapper.annotations` is the bin `SemiBin_12`. Bin names only need to be unique within a sample. An annotation file name without one of the suffixes above keeps the naming of PANKEGG 2.0.0 (the first two dot-separated parts) and a warning is printed.
+
 ### Create the input file
 
-You can create this input CSV file automatically with a bash loop. The loop will be different depending on the structure of your data and the names of the directories.
-Below are the loops for 2 data structures, adapted to whether you use Sourmash or GTDBTK.
-You will need to edit the loop to fit the names of your directories. 
+You can create this input CSV file automatically with a bash loop, depending on how your data are organized. The repository contains ready-made scripts that you can edit: `generate_input_sourmash_tax_by_sample.sh`, `generate_input_sourmash_tax_by_tool.sh` (`sourmash tax genome`), `generate_input_sourmash_by_sample.sh`, `generate_input_sourmash_by_tool.sh` (`sourmash lca classify`), `generate_input_gtdbtk_by_sample.sh` and `generate_input_gtdbtk_by_tool.sh`.
 
-You can directly edit the bash files present in PANKEGG or copy the command on this page and paste and edit it in your terminal.
 
 #### If your results are grouped by sample:
 
@@ -423,9 +514,7 @@ Dir/
     └── checkm2_dir/
 ```
 
-The following script is to use with sourmash, where your data is grouped by samples.
-You can either copy and edit the script below or edit the "generate_input_sourmash_by_sample.sh" file.
-
+Run the following script to include Sourmash annotation:
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -438,23 +527,24 @@ for sample in Dir/*; do
 done
 ```
 
-The following script is to use with GTDBTK, where your data is grouped by samples.
-You can either copy and edit the script below or edit the "generate_input_gtdbtk_by_sample.sh" file.
+For `sourmash tax genome` results, use `class_path="$sample/sourmash/*.classifications.csv"` (and `*.emapper.annotations` for raw eggNOG-mapper files), or edit `generate_input_sourmash_tax_by_sample.sh`.
 
-``` bash
+Run the following script to include GTDBTK annotation:
+
+ ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
 for sample in Dir/*; do
-   name=$(basename "$sample");
-   ann_path="$sample/bin_annotation/*.annotations.tsv";
-   class_path="$sample/gtdb_results/*.summary.tsv";
-   checkm2_path="$sample/checkm2_dir/quality_report.tsv";
-   echo "$name,$ann_path,$class_path,$checkm2_path" >> samples.csv;
+    name=$(basename "$sample");
+    ann_path="$sample/bin_annotation/*.annotations.tsv";
+    class_path="$sample/gtdb_results/*.summary.tsv";
+    checkm2_path="$sample/checkm2_dir/quality_report.tsv";
+    echo "$name,$ann_path,$class_path,$checkm2_path" >> samples.csv;
 done
 ```
 
 #### If your results are grouped by tool, then sample:
 
-``` bash
+ ``` bash
 Dir/
 ├── bin_annotation/
 │   ├── SAMPLEID1/
@@ -469,13 +559,12 @@ Dir/
 │   ├── SAMPLEID2/
 │   └── ...
 └── checkm2_dir/
-   ├── SAMPLEID1/
-   ├── SAMPLEID2/
-   └── ...
+    ├── SAMPLEID1/
+    ├── SAMPLEID2/
+    └── ...
 ```
 
-The following script is to use with sourmash, where your data is grouped by tools.
-You can either copy and edit the script below or edit the "generate_input_sourmash_by_tool.sh" file.
+Run the following script to include Sourmash annotation:
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -488,8 +577,9 @@ for sample in Dir/bin_annotation/*; do
 done
 ```
 
-The following script is to use with GTDBTK, where your data is grouped by tools.
-You can either copy and edit the script below or edit the "generate_input_gtdbtk_by_tool.sh" file.
+For `sourmash tax genome` results, use `class_path="Dir/sourmash/$name/*.classifications.csv"`, or edit `generate_input_sourmash_tax_by_tool.sh`.
+
+Run the following script to include GTDBTK annotation:
 
 ``` bash
 echo "Sample name,Annotation_dir,classification_dir,Checkm2_dir" > samples.csv
@@ -504,28 +594,32 @@ done
 
 ## Parameters Make DB
 
-- `-i, --input`  
-  Path to the CSV file listing all samples and their input
-  files/directories (required).
+- `-i, --input`
+Path to the CSV file listing all samples and their input files/directories (required).
 
-- `-o, --output`  
-  Name of the output database file (**without the extension**). The
-  default is `pankegg`. The `.db` extension is automatically added to
-  the output name.
+- `-o, --output`
+Name of the output database file (**without the extension**). The default is `pankegg`. The `.db` extension is automatically added to the output name.
 
-- `--output_dir`  
-  Directory the database will be written to. The default is
-  `./db_output`.
+- `--output_dir`
+Directory the database will be written to. The default is `./db_output`.
 
-- `--gtdbtk`  
-  Use this flag if your classification files were generated with GTDB-TK
-  instead of Sourmash.
+- `--classification {auto,sourmash_tax,sourmash_lca,gtdbtk}`
+Format of the classification files. `auto` (default) recognises it from the file headers; an explicit value that does not match the files is an error that names the files.
+
+- `--gtdbtk`
+Same as `--classification gtdbtk`; kept so that existing commands keep working.
+
+- `-q, --quiet` / `-v, --verbose`
+Print only warnings and errors / print details for every input file.
+
+- `--version`
+Print the version and exit.
+
+All messages are written to the standard error. The exit status is 0 on success, 1 when an input or processing error occurred (no partial database is left behind, and an existing database with the same name is kept), and 2 for an invalid command line. The same inputs always give the same database.
 
 ## Output Make DB
 
-The output is an SQLite database (`*.db`) that can be opened with tools
-like `sqlite3`, but is best used with `pankegg_app.py` for interactive
-browsing.
+The output is an SQLite database (`*.db`) that can be opened with tools like `sqlite3`, but is best used with `pankegg_app` for interactive browsing.
 
 The database contains the following tables:
 
@@ -539,15 +633,25 @@ The database contains the following tables:
 - `bin_extra`
 - `bin_extra_kegg`
 - `sample`
+- `pankegg_info` (from 2.1.0: `pankegg_version`, `schema_version`, `classification_methods`)
 
-Each table stores specific information related to bins, pathways,
-taxonomy, and annotation results for easy querying and visualization.
+Each table stores specific information related to bins, pathways, taxonomy, and annotation results for easy querying and visualization.
+
+From 2.1.0 the `bin` table also records how each bin was classified, in `classification_method` (`sourmash_tax`, `sourmash_lca` or `gtdbtk`) and `classification_status`: the status written by the tool (`match`, `below_threshold`, `nomatch` for `sourmash tax genome`; `found`, `disagree`, `nomatch` for `sourmash lca classify`; `classified` or `unclassified` for GTDB-Tk), or `absent` when the bin had no row in any classification file. Unclassified bins point to a taxonomy row whose ranks are all empty (NULL). Databases made by earlier versions do not have these columns and still open in `pankegg_app`.
+
+## Using pankegg_make_db in a pipeline
+
+The light `pankegg-makedb` package (or its BioContainers image) is enough. Give one CSV line per sample and choose the classification format explicitly:
+
+``` bash
+pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification sourmash_tax --quiet
+pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification sourmash_lca --quiet
+pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification gtdbtk --quiet
+```
 
 ## Run with Testdata
 
-To verify your installation and familiarize yourself with Pankegg, you
-can run a test using provided data. Download the example archive, unzip
-it, and generate test databases using the included CSV files:
+To verify your installation and familiarize yourself with Pankegg, you can run a test using provided data. Download the example archive, unzip it, and generate test databases using the included CSV files:
 
 ### Download the test data archive from [OSF](https://osf.io/wjuet):
 
@@ -572,29 +676,28 @@ unzip pankegg_test_data.zip
 ### Create a test database for Sourmash classification:
 
 ``` bash
-python pankegg_make_db.py -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
+pankegg_make_db -i pankegg_test_data/sourmash_example.csv -o test_sourmash --output_dir pankegg_test_data
 ```
 
 ### Create a test database for GTDB-TK classification:
 
 ``` bash
-python pankegg_make_db.py -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_dir pankegg_test_data --gtdbtk
+pankegg_make_db -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_dir pankegg_test_data --gtdbtk
+```
+After running these commands, you should find newly created `test_sourmash.db` and `test_gtdbtk.db` inside the `pankegg_test_data` directory. This is in addition to the already existing `sourmash_example.db` and `gtdbtk_example.db` files in the same directory.
+
+The existing and newly generated databases contain the same samples, bins, taxonomy, quality values and KEGG links. The files are not byte-identical, because 2.1.0 adds the classification columns and the `pankegg_info` table and processes the input files in sorted order. From a copy of the repository you can compare them by content:
+
+``` bash
+python tests/regression/summarise_db.py pankegg_test_data/sourmash_example.db > old.json
+python tests/regression/summarise_db.py pankegg_test_data/test_sourmash.db > new.json
+diff old.json new.json && echo identical
 ```
 
-After running these commands, you should find newly created
-`test_sourmash.db` and `test_gtdbtk.db` inside the `pankegg_test_data`
-directory. This is in addition to the already existing
-`sourmash_example.db` and `gtdbtk_example.db` files in the same
-directory.
-
-The existing and newly generated respective databases should be
-identical, so the validity of `pankegg_make_db.py` can be tested by
-comparing the two files.
 
 ## Troubleshooting
 
-For more details or troubleshooting, please consult the [Reporting Bugs
-& Contributing](reporting_bugs.qmd) section.
+For more details or troubleshooting, please consult the [Reporting Bugs & Contributing](reporting_bugs.qmd) section.
 
 <br>
 
@@ -611,17 +714,19 @@ To start the Pankegg web server with your database, use the following
 command (replace with your actual database path):
 
 ``` bash
-python /path/to/pankegg_app.py --d /Path/to/YOUR_PANKEGG.db
+pankegg_app --d /Path/to/YOUR_PANKEGG.db
 ```
 
-(Replace /path/to/pankegg_app.py and /Path/to/YOUR_PANKEGG.db with your
-actual paths.)
+(Replace /Path/to/YOUR_PANKEGG.db with your actual path. From a copy of
+the repository, `python pankegg_app.py --d ...` works too.)
 
 > **Note:**  
 > Before running the web application, it is highly recommended to
-> **change the `app.secret_key`** (located around line 24 in
-> `pankegg_app.py`) to a secure value of your choice. This key is used
-> by Flask for session security. Leaving it as the default (‘local’) is
+> **set your own Flask secret key**: put `FLASK_SECRET_KEY=<a long
+> random value>` in a `.env` file in the directory where you start
+> `pankegg_app` (or in the repository folder), or export
+> `FLASK_SECRET_KEY` in your shell. This key is used
+> by Flask for session security. Leaving it as the default (‘dev’) is
 > fine for local or testing use, but for any real-world or multi-user
 > deployment, you should generate and use a strong, unique secret key to
 > prevent session tampering and increase security.
@@ -654,39 +759,39 @@ the repository, example databases from the test data, or your own
 generated databases.  
 Here are example commands (replace BASH with the actual commands):
 
-- To run the app on the database shipped with the GitHub repository
-  (`data/pankegg.db`):
+- To run the app on the example database installed with Pankegg
+  (`pankegg/data/pankegg.db`, used when `--d` is not given):
 
 ``` bash
-python pankegg_app.py --d data/pankegg.db
+pankegg_app
 ```
 
 - To run the app on the example Sourmash test database
   (`pankegg_test_data/sourmash_example.db`):
 
 ``` bash
-python pankegg_app.py --d pankegg_test_data/sourmash_example.db
+pankegg_app --d pankegg_test_data/sourmash_example.db
 ```
 
 - To run the app on the example GTDB-TK test database
   (`pankegg_test_data/gtdbtk_example.db`):
 
 ``` bash
-python pankegg_app.py --d pankegg_test_data/gtdbtk_example.db
+pankegg_app --d pankegg_test_data/gtdbtk_example.db
 ```
 
 - To run the app on the Sourmash database you created during the test
   (`pankegg_test_data/test_sourmash.db`):
 
 ``` bash
-python pankegg_app.py --d pankegg_test_data/test_sourmash.db
+pankegg_app --d pankegg_test_data/test_sourmash.db
 ```
 
 - To run the app on the GTDB-TK database you created during the test
   (`pankegg_test_data/test_gtdbtk.db`):
 
 ``` bash
-python pankegg_app.py --d pankegg_test_data/test_gtdbtk.db
+pankegg_app --d pankegg_test_data/test_gtdbtk.db
 ```
 
 ## Troubleshooting
