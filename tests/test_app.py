@@ -250,3 +250,51 @@ def test_pathway_page_on_old_and_new_db(databases, client_for, db_kind):
     con.close()
     html = client_for(databases[db_kind]).get("/pathway_stat", query_string={"q": number}).data.decode()
     assert "S1.bin2" in html and "plot-distribution" in html
+
+
+# --- phase 2, A3/A4: overview and bin page ---------------------------------------------------
+
+def test_overview_numbers(databases):
+    import sqlite3
+    from pankegg import insights
+    con = sqlite3.connect(databases["two"])
+    data = insights.overview(con)
+    con.close()
+    assert data["counts"]["samples"] == 2 and data["counts"]["bins"] == 5
+    assert data["counts"]["classified"] == 3          # S1.bin2 is a lca nomatch in both samples
+    s1 = next(s for s in data["samples"] if s["name"] == "S1")
+    assert s1["n_bins"] == 3 and sum(s1["tiers"].values()) == 3 and sum(s1["confidence"].values()) == 3
+    assert s1["confidence"]["unclassified"] == 1
+    assert s1["tiers"] == {"high": 1, "medium": 2, "low": 0, "not assessed": 0}   # 91.08/0.34 is the high one
+    assert data["most_widespread"][0]["n_bins"] >= data["most_widespread"][-1]["n_bins"]
+    figs = insights.overview_figures(data)
+    sun = figs["taxonomy"]["data"][0]
+    roots = [v for i, v, p in zip(sun["ids"], sun["values"], sun["parents"]) if p == ""]
+    assert sum(roots) == 5, "every bin is counted once in the sunburst"
+
+
+def test_low_confidence_is_reported(databases):
+    import sqlite3
+    from pankegg import insights
+    con = sqlite3.connect(databases["new_tax"])
+    by_name = {b["name"]: b for b in insights.load_bins(con)}
+    con.close()
+    assert by_name["S1.bin1"]["confidence"] == "classified"
+    assert by_name["S1.bin3"]["confidence"] == "low confidence"     # below_threshold, domain only
+    assert by_name["S1.bin2"]["confidence"] == "unclassified"
+
+
+@pytest.mark.parametrize("db_kind", ["2.0.0", "new_tax", "two"])
+def test_overview_and_bin_pages(databases, client_for, db_kind):
+    import sqlite3
+    client = client_for(databases[db_kind])
+    html = client.get("/").data.decode()
+    assert "Overview" in html and "plot-quality" in html and "plot-taxonomy" in html
+    con = sqlite3.connect(databases[db_kind])
+    ids = [r[0] for r in con.execute("SELECT id FROM bin")]
+    con.close()
+    for bin_id in ids:
+        res = client.get(f"/bin/{bin_id}")
+        assert res.status_code == 200 and b"CheckM2 completeness" in res.data
+    assert client.get("/bin/99999").status_code == 404
+    assert f"/bin/{ids[0]}" in client.get("/bin").data.decode(), "bin list links to the bin page"

@@ -5,16 +5,16 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Phase 2 (web app and summaries), step:** A3 — Overview page
-- **Next action:** overview data (`insights.overview`) + new `index.html`; then A4 bin detail page.
+- **Phase 2 (web app and summaries), step:** A5–A8 — cross-module pages
+- **Next action:** pathway × taxon matrix, core/accessory, similarity heatmap, two-group Fisher test (data in `insights.py`, routes in `pages.py`, links in `comp_menu.html`).
 - Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
 ## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
 
 - [x] A1. "Both" = overlap; Bin vs Bin by sample; PCA/heatmap guards; Plotly and Bootstrap bundled in the package
 - [x] A2. Pathway Stats rework (name search, KO × bin matrix, distribution, who carries it, missing KOs, unclassified toggle, CSV)
-- [ ] A3. Overview page replaces the static home
-- [ ] A4. Bin detail page
+- [x] A3. Overview page replaces the static home
+- [x] A4. Bin detail page
 - [ ] A5. Pathway × taxon matrix
 - [ ] A6. Core vs accessory pathways and KOs
 - [ ] A7. Sample similarity heatmap

@@ -350,3 +350,214 @@ def pathway_csv(report, what="bins"):
         [[b["sample"], b["name"], *[b["lineage"][r] or "" for r in RANKS], b["confidence"],
           b["completeness"], b["contamination"], report["pathway"]["number"], b["pathway_completeness"],
           len(b["kos"]), ";".join(b["kos"])] for b in report["bins"]])
+
+
+# --- overview ---------------------------------------------------------------------------------
+
+TIERS = ["high", "medium", "low", "not assessed"]
+TIER_COLOURS = {"high": "#2ca02c", "medium": "#ff7f0e", "low": "#d62728", "not assessed": "#bbbbbb"}
+CONFIDENCES = ["classified", "low confidence", "unclassified"]
+CONFIDENCE_COLOURS = {"classified": "#1f77b4", "low confidence": "#aec7e8", "unclassified": "#bbbbbb"}
+
+
+def bin_pathways(conn):
+    """{bin_id: set(map_number)} for real KEGG maps."""
+    out = defaultdict(set)
+    for bin_id, number in conn.execute(
+            "SELECT bm.bin_id, m.map_number FROM bin_map bm JOIN map m ON m.id = bm.map_id "
+            "WHERE m.map_number LIKE 'map%'"):
+        out[bin_id].add(number)
+    return out
+
+
+def bin_kos(conn):
+    """{bin_id: set(KO)}: every KO annotated in a bin, with or without a pathway."""
+    out = defaultdict(set)
+    for bin_id, ko in conn.execute(
+            "SELECT bmk.bin_id, k.ko_id FROM bin_map_kegg bmk JOIN map_kegg mk ON mk.id = bmk.map_kegg_id "
+            "JOIN kegg k ON k.id = mk.kegg_id"):
+        out[bin_id].add(ko)
+    for bin_id, ko in conn.execute(
+            "SELECT e.bin_id, k.ko_id FROM bin_extra_kegg ek JOIN bin_extra e ON e.id = ek.extra_id "
+            "JOIN kegg k ON k.id = ek.kegg_id"):
+        out[bin_id].add(ko)
+    return out
+
+
+def _median(values):
+    values = sorted(v for v in values if v is not None)
+    if not values:
+        return None
+    mid = len(values) // 2
+    return values[mid] if len(values) % 2 else round((values[mid - 1] + values[mid]) / 2, 2)
+
+
+def overview(conn):
+    bins = load_bins(conn)
+    pathways = bin_pathways(conn)
+    kos = bin_kos(conn)
+    names = {n: name for n, name, _ in list_pathways(conn)}
+    samples = []
+    for sample in sorted({b["sample"] for b in bins}):
+        sb = [b for b in bins if b["sample"] == sample]
+        samples.append({
+            "name": sample, "n_bins": len(sb),
+            "tiers": {t: sum(1 for b in sb if b["tier"] == t) for t in TIERS},
+            "confidence": {c: sum(1 for b in sb if b["confidence"] == c) for c in CONFIDENCES},
+            "median_completeness": _median(b["completeness"] for b in sb),
+            "median_contamination": _median(b["contamination"] for b in sb),
+            "n_pathways": len(set().union(*(pathways.get(b["id"], set()) for b in sb))) if sb else 0,
+            "n_kos": len(set().union(*(kos.get(b["id"], set()) for b in sb))) if sb else 0,
+            "n_genera": len({b["lineage"]["genus"] for b in sb if b["lineage"]["genus"]}),
+        })
+    sample_of = {b["id"]: b["sample"] for b in bins}
+    spread = defaultdict(lambda: [set(), set()])
+    for bin_id, maps in pathways.items():
+        for number in maps:
+            spread[number][0].add(bin_id)
+            spread[number][1].add(sample_of.get(bin_id))
+    spread = sorted(({"number": n, "name": names.get(n, ""), "n_bins": len(v[0]), "n_samples": len(v[1])}
+                     for n, v in spread.items()), key=lambda p: (-p["n_bins"], p["number"]))
+    all_kos = set().union(*kos.values()) if kos else set()
+    return {
+        "bins": bins, "samples": samples, "info": db_info(conn),
+        "counts": {
+            "samples": len(samples), "bins": len(bins), "pathways": len(spread), "kos": len(all_kos),
+            "classified": sum(1 for b in bins if b["classified"]),
+            "high": sum(1 for b in bins if b["tier"] == "high"),
+            "medium": sum(1 for b in bins if b["tier"] == "medium"),
+            "genera": len({b["lineage"]["genus"] for b in bins if b["lineage"]["genus"]}),
+        },
+        "most_widespread": spread[:10],
+        "rarest": sorted(spread, key=lambda p: (p["n_bins"], p["number"]))[:10],
+    }
+
+
+def _stacked(samples, key, categories, colours, ytitle):
+    return {
+        "data": [{"type": "bar", "name": c, "x": [s["name"] for s in samples],
+                  "y": [s[key][c] for s in samples], "marker": {"color": colours[c]}}
+                 for c in categories if any(s[key][c] for s in samples)],
+        "layout": {"barmode": "stack", "height": 340, "margin": {"t": 30},
+                   "xaxis": {"type": "category"}, "yaxis": {"title": {"text": ytitle}, "dtick": None},
+                   "legend": {"orientation": "h", "y": -0.25}},
+    }
+
+
+def taxonomy_sunburst(bins, ranks=("kingdom", "phylum", "class", "order", "family", "genus")):
+    """Bins per lineage as a sunburst; a lineage stops at its last named rank."""
+    counts, labels, parents = Counter(), {}, {}
+    for b in bins:
+        path = []
+        for rank in ranks:
+            value = b["lineage"][rank]
+            if value is None:
+                break
+            path.append(value)
+        if not path:
+            path = [UNCLASSIFIED]
+        for depth in range(1, len(path) + 1):
+            node = "/".join(path[:depth])
+            counts[node] += 1
+            labels[node] = path[depth - 1]
+            parents[node] = "/".join(path[:depth - 1])
+    ids = sorted(counts)
+    return {
+        "data": [{"type": "sunburst", "ids": ids, "labels": [labels[i] for i in ids],
+                  "parents": [parents[i] for i in ids], "values": [counts[i] for i in ids],
+                  "branchvalues": "total", "maxdepth": 4,
+                  "hovertemplate": "%{label}<br>%{value} bins<extra></extra>"}],
+        "layout": {"height": 520, "margin": {"t": 10, "l": 10, "r": 10, "b": 10}},
+    }
+
+
+def overview_figures(data):
+    figs = {}
+    if data["samples"]:
+        figs["quality"] = _stacked(data["samples"], "tiers", TIERS, TIER_COLOURS, "Bins")
+        figs["classification"] = _stacked(data["samples"], "confidence", CONFIDENCES, CONFIDENCE_COLOURS, "Bins")
+        figs["taxonomy"] = taxonomy_sunburst(data["bins"])
+        colours = colour_map(b["sample"] for b in data["bins"])
+        figs["scatter"] = {
+            "data": [{"type": "scatter", "mode": "markers", "name": s["name"],
+                      "x": [b["completeness"] for b in data["bins"] if b["sample"] == s["name"]],
+                      "y": [b["contamination"] for b in data["bins"] if b["sample"] == s["name"]],
+                      "text": [b["name"] for b in data["bins"] if b["sample"] == s["name"]],
+                      "marker": {"size": 9, "color": colours[s["name"]]},
+                      "hovertemplate": "%{text}<br>completeness %{x}%<br>contamination %{y}%<extra>" + s["name"] + "</extra>"}
+                     for s in data["samples"]],
+            "layout": {"height": 340, "margin": {"t": 30},
+                       "xaxis": {"title": {"text": "CheckM2 completeness (%)"}},
+                       "yaxis": {"title": {"text": "CheckM2 contamination (%)"}},
+                       "shapes": [{"type": "line", "x0": 90, "x1": 90, "y0": 0, "y1": 5, "line": {"dash": "dot", "color": "#2ca02c"}},
+                                  {"type": "line", "x0": 90, "x1": 100, "y0": 5, "y1": 5, "line": {"dash": "dot", "color": "#2ca02c"}},
+                                  {"type": "line", "x0": 50, "x1": 50, "y0": 0, "y1": 10, "line": {"dash": "dot", "color": "#ff7f0e"}},
+                                  {"type": "line", "x0": 50, "x1": 100, "y0": 10, "y1": 10, "line": {"dash": "dot", "color": "#ff7f0e"}}],
+                       "legend": {"orientation": "h", "y": -0.3}},
+        }
+    return figs
+
+
+# --- one bin -----------------------------------------------------------------------------------
+
+def bin_report(conn, bin_id, map_groups=None):
+    """Quality, lineage and functional content of one bin. ``map_groups``: {map_number: KEGG category}."""
+    bins = [b for b in load_bins(conn) if b["id"] == bin_id]
+    if not bins:
+        return None
+    b = bins[0]
+    map_groups = map_groups or {}
+    pathways = []
+    for number, name, total, n in conn.execute(
+            """SELECT m.map_number, m.pathway_name, m.pathway_total_orthologs, COUNT(DISTINCT mk.kegg_id)
+               FROM bin_map_kegg bmk JOIN map_kegg mk ON mk.id = bmk.map_kegg_id AND mk.real_pathway_id = 1
+               JOIN map m ON m.id = mk.map_id
+               WHERE bmk.bin_id = ? AND m.map_number LIKE 'map%'
+               GROUP BY m.id ORDER BY m.map_number""", (bin_id,)):
+        pathways.append({"number": number, "name": name, "n_kos": n, "total": total,
+                         "completeness": round(100.0 * n / total, 2) if total else 0.0,
+                         "category": map_groups.get(number, "Not in a KEGG category")})
+    categories = defaultdict(list)
+    for p in pathways:
+        categories[p["category"]].append(p["completeness"])
+    categories = sorted(({"category": c, "n_pathways": len(v), "mean": round(sum(v) / len(v), 2)}
+                         for c, v in categories.items()), key=lambda c: c["category"])
+    n_sample_bins = conn.execute("SELECT COUNT(*) FROM bin WHERE sample_id = ?", (b["sample_id"],)).fetchone()[0]
+    return {"bin": b, "pathways": pathways, "categories": categories,
+            "n_kos": len(bin_kos_of(conn, bin_id)), "n_sample_bins": n_sample_bins}
+
+
+def bin_kos_of(conn, bin_id):
+    kos = {r[0] for r in conn.execute(
+        "SELECT k.ko_id FROM bin_map_kegg bmk JOIN map_kegg mk ON mk.id = bmk.map_kegg_id "
+        "JOIN kegg k ON k.id = mk.kegg_id WHERE bmk.bin_id = ?", (bin_id,))}
+    kos |= {r[0] for r in conn.execute(
+        "SELECT k.ko_id FROM bin_extra_kegg ek JOIN bin_extra e ON e.id = ek.extra_id "
+        "JOIN kegg k ON k.id = ek.kegg_id WHERE e.bin_id = ?", (bin_id,))}
+    return kos
+
+
+def bin_figures(report):
+    figs = {}
+    top = sorted(report["pathways"], key=lambda p: -p["completeness"])[:25]
+    if top:
+        top = list(reversed(top))
+        figs["pathways"] = {
+            "data": [{"type": "bar", "orientation": "h", "x": [p["completeness"] for p in top],
+                      "y": [f"{p['number']} {p['name']}"[:60] for p in top],
+                      "text": [f"{p['n_kos']}/{p['total']} KOs" for p in top], "textposition": "auto",
+                      "marker": {"color": "#1f77b4"}}],
+            "layout": {"height": 26 * len(top) + 120, "margin": {"l": 420, "t": 20},
+                       "xaxis": {"title": {"text": "Pathway per-ID completeness (%)"}}},
+        }
+    cats = list(reversed(report["categories"]))
+    if cats:
+        figs["categories"] = {
+            "data": [{"type": "bar", "orientation": "h", "x": [c["n_pathways"] for c in cats],
+                      "y": [c["category"][:55] for c in cats],
+                      "text": [f"mean {c['mean']}%" for c in cats], "textposition": "auto",
+                      "marker": {"color": "#9467bd"}}],
+            "layout": {"height": 24 * len(cats) + 120, "margin": {"l": 400, "t": 20},
+                       "xaxis": {"title": {"text": "Pathways with at least one KO"}}},
+        }
+    return figs

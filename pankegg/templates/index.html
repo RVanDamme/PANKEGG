@@ -1,150 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Home Page{% endblock %}
+{% import "_plots.html" as plots %}
+{% block title %}PANKEGG overview{% endblock %}
 {% block content %}
+{% set c = data.counts %}
+<div class="container-fluid px-4 mt-4">
+  <h2 class="mb-1">Overview</h2>
+  <p class="text-muted">
+    {% if data.info.pankegg_version %}Database built by PANKEGG {{ data.info.pankegg_version }}
+      {% if data.info.classification_methods %}· bin classification: {{ data.info.classification_methods }}{% endif %}
+    {% else %}Database built by PANKEGG 2.0.0 or earlier{% endif %}
+  </p>
 
-<!-- Hero Section -->
-<section class="hero-section text-center">
-    <div class="container">
-        <h1>Welcome to Pankegg</h1>
-        <p>Your comprehensive tool for metabolic pathway analysis</p>
-        <a href="#features" class="btn btn-light btn-lg">Learn More</a>
+  <div class="row g-3 mb-4">
+    {% for value, label, link in [
+        (c.samples, 'samples', None),
+        (c.bins, 'bins', url_for('show_bins')),
+        (c.high ~ ' / ' ~ c.medium, 'high / medium quality bins', url_for('show_bins')),
+        (c.classified ~ ' / ' ~ c.bins, 'bins classified', url_for('taxonomy', level='genus')),
+        (c.genera, 'genera', url_for('taxonomy', level='genus')),
+        (c.pathways, 'KEGG pathways', url_for('show_maps')),
+        (c.kos, 'KOs', url_for('kegg'))] %}
+    <div class="col-6 col-md-3 col-xl">
+      <div class="card h-100"><div class="card-body text-center py-3">
+        <div class="fs-3 fw-bold">{{ value }}</div>
+        <div class="small text-muted">{% if link %}<a href="{{ link }}" class="text-muted">{{ label }}</a>{% else %}{{ label }}{% endif %}</div>
+      </div></div>
     </div>
-</section>
+    {% endfor %}
+  </div>
 
-<!-- Navigation and Search Section -->
-<section id="navigation" class="py-5">
-    <div class="container">
-        <div class="row text-center mb-4">
-            <div class="col">
-                <h2>Navigation and Search</h2>
-                <p>Effortlessly navigate through the different results and quickly find the information you are looking for</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Bin Information</h5>
-                        <p class="card-text">View detailed information about each bin including completeness, contamination, and associated pathways.</p>
-                        <a href="./bin" class="btn btn-primary">View Bins</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Map Information</h5>
-                        <p class="card-text">Access all maps associated with various bins and pathways for a detailed understanding.</p>
-                        <a href="./map" class="btn btn-primary">View Maps</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">KEGG Identifiers</h5>
-                        <p class="card-text">Find detailed information and associated maps for each KEGG identifier.</p>
-                        <a href="./kegg" class="btn btn-primary">View KEGG IDs</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Taxonomy</h5>
-                        <p class="card-text">Find detailed information about the different Taxonomic rank.</p>
-                        <a href="./taxonomy" class="btn btn-primary">View Taxonomy</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+  {% if not data.bins %}
+  <div class="alert alert-warning">This database contains no bins.</div>
+  {% else %}
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <h5>Bin quality per sample</h5>
+      <p class="small text-muted mb-0">MIMAG tiers from CheckM2 values only: high = completeness ≥ 90% and contamination &lt; 5%;
+        medium = ≥ 50% and &lt; 10%. The rRNA and tRNA criteria of MIMAG are not in the database.</p>
+      <div id="plot-quality"></div>
     </div>
-</section>
-
-<!-- Features Section -->
-<section id="features" class="py-5">
-    <div class="container">
-        <div class="row text-center mb-4">
-            <div class="col">
-                <h2>Visualisation</h2>
-                <p>Explore the various functionalities of Pankegg</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Sample vs Sample</h5>
-                        <p class="card-text">Compare different samples based on various metrics and visualizations.</p>
-                        <a href="./sample_vs_sample" class="btn btn-primary">Explore</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Bin vs Bin</h5>
-                        <p class="card-text">Compare different bins within the selected samples to find common pathways and more.</p>
-                        <a href="./bin_vs_bin" class="btn btn-primary">Explore</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">Taxonomy Comparison</h5>
-                        <p class="card-text">Compare the taxonomic composition across samples with detailed visualizations.</p>
-                        <a href="./taxonomy_comparison" class="btn btn-primary">Explore</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card mb-4">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">PCA</h5>
-                        <p class="card-text">Get a PCA of all samples.</p>
-                        <a href="./compar_full" class="btn btn-primary">Explore</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="col-lg-6">
+      <h5>Completeness and contamination</h5>
+      <p class="small text-muted mb-0">One point per bin; dotted lines mark the high (green) and medium (orange) quality limits.</p>
+      <div id="plot-scatter"></div>
     </div>
-</section>
-
-<!-- About Section -->
-<section id="about" class="py-5 bg-light">
-    <div class="container">
-        <div class="row text-center mb-4">
-            <div class="col">
-                <h2>About Pankegg</h2>
-                <p>Learn more about the project and its objectives</p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6">
-                <h3>Our Mission</h3>
-                <p>Pankegg aims to provide a comprehensive tool for the analysis and visualization of metabolic pathways across various samples and bins. Our goal is to facilitate research and understanding in the field of metagenomics and bioinformatics.</p>
-            </div>
-            <div class="col-md-6">
-                <h3>Features and Benefits</h3>
-                <p>With Pankegg, you can:</p>
-                <ul>
-                    <li>Compare samples and bins with ease</li>
-                    <li>Visualize taxonomic compositions</li>
-                    <li>Analyze pathway completions</li>
-                    <li>Export data for further analysis</li>
-                </ul>
-            </div>
-        </div>
+    <div class="col-lg-6">
+      <h5>Taxonomy of the bins</h5>
+      <p class="small text-muted mb-0">Number of bins per lineage, not abundance. Click a sector to zoom in.</p>
+      <div id="plot-taxonomy"></div>
     </div>
-</section>
+    <div class="col-lg-6">
+      <h5>Classification per sample</h5>
+      <p class="small text-muted mb-0">“Low confidence” = sourmash call below its threshold (partial lineage kept).</p>
+      <div id="plot-classification"></div>
 
-<!-- Footer -->
-<footer class="py-4 bg-dark text-white text-center">
-    <div class="container">
-        <p>&copy; 2024 Pankegg NG. All rights reserved.</p>
+      <h5 class="mt-3">Samples</h5>
+      <table class="table table-sm table-striped">
+        <thead><tr><th>Sample</th><th>Bins</th><th>Median compl. / cont.</th><th>Genera</th><th>Pathways</th><th>KOs</th></tr></thead>
+        <tbody>
+          {% for s in data.samples %}
+          <tr><td>{{ s.name }}</td><td>{{ s.n_bins }}</td>
+              <td>{{ s.median_completeness if s.median_completeness is not none else '-' }} / {{ s.median_contamination if s.median_contamination is not none else '-' }}</td>
+              <td>{{ s.n_genera }}</td><td>{{ s.n_pathways }}</td><td>{{ s.n_kos }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-</footer>
+    <div class="col-lg-6">
+      <h5>Most widespread pathways</h5>
+      <table class="table table-sm table-striped">
+        <thead><tr><th>Pathway</th><th>Bins</th><th>Samples</th></tr></thead>
+        <tbody>{% for p in data.most_widespread %}
+          <tr><td><a href="{{ url_for('pathway_stat', q=p.number) }}">{{ p.number }}</a> {{ p.name }}</td><td>{{ p.n_bins }}</td><td>{{ p.n_samples }}</td></tr>
+        {% endfor %}</tbody>
+      </table>
+    </div>
+    <div class="col-lg-6">
+      <h5>Rarest pathways</h5>
+      <table class="table table-sm table-striped">
+        <thead><tr><th>Pathway</th><th>Bins</th><th>Samples</th></tr></thead>
+        <tbody>{% for p in data.rarest %}
+          <tr><td><a href="{{ url_for('pathway_stat', q=p.number) }}">{{ p.number }}</a> {{ p.name }}</td><td>{{ p.n_bins }}</td><td>{{ p.n_samples }}</td></tr>
+        {% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  {{ plots.draw(figs) }}
+  {% endif %}
 
-
+  <h5 class="mt-4">Explore</h5>
+  <div class="row g-3 mb-5">
+    {% for title, text, link in [
+        ('Bins', 'Quality, taxonomy and a detail page for every bin.', url_for('show_bins')),
+        ('Pathways', 'KEGG maps with their KOs; filter by sample, bin, taxon or KO.', url_for('show_maps')),
+        ('KOs', 'KEGG orthologs with the bins that carry them.', url_for('kegg')),
+        ('Taxonomy', 'Taxa at each rank and their bins.', url_for('taxonomy')),
+        ('Pathway statistics', 'One pathway in depth: who carries it, which KOs are missing.', url_for('pathway_stat')),
+        ('Comparisons', 'Samples, bins and taxa compared; similarity and statistics.', url_for('main_compare'))] %}
+    <div class="col-md-4 col-xl-2">
+      <div class="card h-100"><div class="card-body">
+        <h6 class="card-title"><a href="{{ link }}">{{ title }}</a></h6>
+        <p class="card-text small text-muted mb-0">{{ text }}</p>
+      </div></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
 {% endblock %}

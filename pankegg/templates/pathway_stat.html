@@ -113,7 +113,7 @@
             <tbody>
               {% for bin in sample.bins|sort(attribute='pathway_completeness', reverse=true) %}
               <tr>
-                <td>{{ bin.name }}{% if bin.confidence != 'classified' %} <span class="badge text-bg-secondary">{{ bin.confidence }}</span>{% endif %}</td>
+                <td><a href="{{ url_for('bin_detail', bin_id=bin.id) }}">{{ bin.name }}</a>{% if bin.confidence != 'classified' %} <span class="badge text-bg-secondary">{{ bin.confidence }}</span>{% endif %}</td>
                 <td>{{ bin.lineage.family or '-' }}</td>
                 <td>{{ bin.lineage.genus or '-' }}</td>
                 <td>{{ bin.lineage.species or '-' }}</td>

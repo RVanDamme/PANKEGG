@@ -1660,18 +1660,6 @@ def set_sort_option():
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
 
-@app.route('/')
-def home():
-    try:
-        if 'gtdb_filter' not in session:
-            session['gtdb_filter'] = False  # Default value
-        if 'selected_sort_option' not in session:
-            session['selected_sort_option'] = 'option1'  # Or any other default value
-        return render_template('index.html', content="Testing")
-    except Exception as e:
-        return handle_sql_error(e)
-
-
 def get_default_db_path():
     return resource_path('data', 'pankegg.db')
 

@@ -141,7 +141,7 @@
                             <tbody>
                                 {% for bin in bins if bin['sample_name'] == name %}
                                     <tr>
-                                        <td>{{ bin['bin_name'] }}</td>
+                                        <td><a href="{{ url_for('bin_detail', bin_id=bin['bin_id']) }}" title="Bin details">{{ bin['bin_name'] }}</a></td>
                                         <td>{{ taxon_unclassified(bin['genus']) }}</td>
                                         <td>{{ taxon_unclassified(bin['species']) }}</td>
                                         <td>{{ bin['completeness'] }}</td>

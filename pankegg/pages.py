@@ -1,6 +1,6 @@
 """Flask routes of the summary and cross-module pages. Data comes from pankegg.insights."""
 
-from flask import Response, abort, render_template, request
+from flask import Response, abort, render_template, request, session
 
 from . import insights
 
@@ -22,6 +22,33 @@ def register(app, get_db_connection, pathway_groups):
     def _rank():
         rank = request.args.get("rank", "genus")
         return rank if rank in insights.RANKS else "genus"
+
+    map_groups = {number: group for group, numbers in (pathway_groups or {}).items() for number in numbers}
+
+    # --- overview (home) --------------------------------------------------------------
+    @app.route("/")
+    def home():
+        session.setdefault('gtdb_filter', False)             # defaults of the bin list, as before
+        session.setdefault('selected_sort_option', 'option1')
+        conn = get_db_connection()
+        try:
+            data = insights.overview(conn)
+        finally:
+            conn.close()
+        return render_template("index.html", data=data, figs=insights.overview_figures(data))
+
+    # --- one bin ------------------------------------------------------------------------
+    @app.route("/bin/<int:bin_id>")
+    def bin_detail(bin_id):
+        conn = get_db_connection()
+        try:
+            report = insights.bin_report(conn, bin_id, map_groups)
+        finally:
+            conn.close()
+        if report is None:
+            abort(404, description=f"No bin with id {bin_id}")
+        return render_template("bin_detail.html", report=report, figs=insights.bin_figures(report),
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     @app.route("/favicon.ico")
     def favicon():

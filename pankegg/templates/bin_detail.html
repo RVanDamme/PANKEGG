@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}{{ report.bin.name }}{% endblock %}
+{% block content %}
+{% set b = report.bin %}
+<div class="container-fluid px-4 mt-4">
+  <h2 class="mb-1">{{ b.name }} <small class="text-muted">sample {{ b.sample }}</small></h2>
+  <p class="mb-3">
+    <a class="btn btn-sm btn-info" href="{{ url_for('show_maps', bin_id=b.id) }}">Pathways with KO lists</a>
+    <a class="btn btn-sm btn-warning" href="{{ url_for('kegg', bin_id=b.id) }}">KOs</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('show_bins') }}">All bins</a>
+  </p>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ b.completeness if b.completeness is not none else '–' }}%</div>
+      <div class="small text-muted">CheckM2 completeness</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ b.contamination if b.contamination is not none else '–' }}%</div>
+      <div class="small text-muted">CheckM2 contamination</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
+      <div class="fs-3 fw-bold text-capitalize">{{ b.tier }}</div>
+      <div class="small text-muted">quality tier (MIMAG, CheckM2 values only)</div></div></div></div>
+    <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ report.pathways|length }} / {{ report.n_kos }}</div>
+      <div class="small text-muted">pathways / KOs</div></div></div></div>
+  </div>
+
+  <h5>Taxonomy</h5>
+  <table class="table table-sm table-bordered w-auto">
+    <tbody>
+      <tr>{% for rank in ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] %}<th class="text-capitalize">{{ rank }}</th>{% endfor %}<th>Classification</th></tr>
+      <tr>
+        {% for rank in ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'] %}
+        <td>{% if b.lineage[rank] %}<a href="{{ url_for('show_bins', taxon=b.lineage[rank]) }}">{{ b.lineage[rank] }}</a>{% else %}–{% endif %}</td>
+        {% endfor %}
+        <td>{{ b.confidence }}{% if b.method %} ({{ b.method }}{% if b.status %}: {{ b.status }}{% endif %}){% endif %}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  {{ plots.measures_help(per_id_help, module_help, false) }}
+
+  {% if report.pathways %}
+  <div class="row g-4">
+    <div class="col-xl-7">
+      <h5>Most complete pathways</h5>
+      <div id="plot-pathways"></div>
+    </div>
+    <div class="col-xl-5">
+      <h5>Pathways by KEGG category</h5>
+      <div id="plot-categories"></div>
+    </div>
+  </div>
+
+  <h5 class="mt-3">All pathways of this bin</h5>
+  <table class="table table-sm table-striped">
+    <thead><tr><th>Pathway</th><th>Name</th><th>KEGG category</th><th>KOs found / on the map</th><th>Per-ID completeness</th></tr></thead>
+    <tbody>
+      {% for p in report.pathways|sort(attribute='completeness', reverse=true) %}
+      <tr><td><a href="{{ url_for('pathway_stat', q=p.number) }}">{{ p.number }}</a></td><td>{{ p.name }}</td>
+          <td>{{ p.category }}</td><td>{{ p.n_kos }} / {{ p.total }}</td><td>{{ '%.2f'|format(p.completeness) }}%</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {{ plots.draw(figs) }}
+  {% else %}
+  <div class="alert alert-info">No KEGG pathway annotation was found for this bin.</div>
+  {% endif %}
+</div>
+{% endblock %}
