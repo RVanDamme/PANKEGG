@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(shutil.which("bash") is None, reason="needs bash
 def layout(root, by_tool):
     def d(kind):
         p = root / "Dir" / kind / "S1" if by_tool else root / "Dir" / "S1" / kind
-        p.mkdir(parents=True)
+        p.mkdir(parents=True, exist_ok=True)
         return p
     for f in (FIX / "s1" / "eggnog").iterdir():
         shutil.copy(f, d("eggnog") / f.name)

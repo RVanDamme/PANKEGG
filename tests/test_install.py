@@ -6,7 +6,8 @@ scripts. Nothing from the repository checkout may be importable there.
 
 Runs offline: wheels are built without build isolation and installed with
 --no-deps; the full package reuses the web stack of the test interpreter
-through --system-site-packages.
+through a .pth file placed after the new environment's own site-packages.
+Every check asserts that ``pankegg`` is imported from the new environment.
 """
 
 import os
@@ -14,7 +15,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-import venv
+import sysconfig
 from pathlib import Path
 
 import pytest
@@ -61,10 +62,25 @@ def build_wheel(dist, kind):
     return wheels[0]
 
 
-def make_venv(path, system_site_packages):
-    venv.EnvBuilder(with_pip=True, system_site_packages=system_site_packages, clear=True).create(path)
+def make_venv(path, reuse_test_packages):
+    """Fresh venv from the base interpreter (a venv created from inside a venv is broken on
+    Python < 3.11). With reuse_test_packages, the test interpreter's site-packages are
+    appended to its path, so the web stack is available without network."""
+    base = os.path.realpath(sys.executable)
+    run([base, "-m", "venv", "--clear", path], env=clean_env())
     bindir = path / ("Scripts" if os.name == "nt" else "bin")
+    if reuse_test_packages:
+        site = run([bindir / "python", "-c", "import sysconfig; print(sysconfig.get_paths()['purelib'])"],
+                   env=clean_env()).stdout.strip()
+        outer = sorted({sysconfig.get_paths()["purelib"], sysconfig.get_paths()["platlib"]})
+        Path(site, "zz_test_interpreter_packages.pth").write_text("\n".join(outer) + "\n")
     return bindir
+
+
+def assert_imported_from(bindir, venv_dir, work, env):
+    where = run([bindir / "python", "-c", "import pankegg, os; print(os.path.realpath(pankegg.__file__))"],
+                cwd=work, env=env).stdout.strip()
+    assert where.startswith(os.path.realpath(venv_dir)), f"pankegg imported from {where}, not the new venv"
 
 
 def prepare_inputs(work):
@@ -93,11 +109,12 @@ def check_make_db(bindir, work, env):
 
 def test_full_wheel_clean_install(tmp_path):
     wheel = build_wheel(tmp_path / "dist", "full")
-    bindir = make_venv(tmp_path / "venv", system_site_packages=True)
+    bindir = make_venv(tmp_path / "venv", reuse_test_packages=True)
     env = clean_env()
     run([bindir / "python", "-m", "pip", "install", "--no-deps", "--no-index", wheel], env=env)
     work = tmp_path / "work"
     prepare_inputs(work)
+    assert_imported_from(bindir, tmp_path / "venv", work, env)
     check_make_db(bindir, work, env)
     # The web app is part of the full package: entry point, templates and bundled DB resolve.
     run([bindir / "pankegg_app", "--help"], cwd=work, env=env)
@@ -113,11 +130,12 @@ def test_full_wheel_clean_install(tmp_path):
 
 def test_makedb_wheel_clean_install(tmp_path):
     wheel = build_wheel(tmp_path / "dist", "makedb")
-    bindir = make_venv(tmp_path / "venv", system_site_packages=False)
+    bindir = make_venv(tmp_path / "venv", reuse_test_packages=False)
     env = clean_env()
     run([bindir / "python", "-m", "pip", "install", "--no-index", wheel], env=env)
     work = tmp_path / "work"
     prepare_inputs(work)
+    assert_imported_from(bindir, tmp_path / "venv", work, env)
     check_make_db(bindir, work, env)
     # Light distribution: standard library only, no web app.
     assert not (bindir / "pankegg_app").exists()
