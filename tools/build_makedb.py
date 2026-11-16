@@ -24,7 +24,7 @@ PKG = REPO / "pankegg"
 TEMPLATE = Path(__file__).resolve().parent / "makedb"
 
 # Web-app parts of the package that the light distribution leaves out.
-APP_ONLY_MODULES = {"app.py"}
+APP_ONLY_MODULES = {"app.py", "pages.py", "insights.py"}
 APP_ONLY_DATA = {"pankegg.db", "pathway_groups.txt"}
 
 

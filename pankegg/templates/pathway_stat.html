@@ -1,91 +1,125 @@
 {% extends "base.html" %}
+{% import "_plots.html" as plots %}
 {% block title %}Pathway Statistics{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-  <!-- Search Form -->
-  <form method="get" action="" class="mb-4 form-inline">
-    <div class="form-group">
-      <label for="pathway_query" class="sr-only">Map ID</label>
-      <input type="text" name="q" id="pathway_query" value="{{ request.args.get('q','') }}" placeholder="e.g. map00010"
-             class="form-control" style="width:200px;">
+<div class="container-fluid px-4 mt-4">
+  <form method="get" action="{{ url_for('pathway_stat') }}" class="row g-2 align-items-center mb-3">
+    <div class="col-auto" style="min-width: 420px;">
+      <input type="text" name="q" id="pathway_query" value="{{ q }}" list="pathway-list" class="form-control"
+             placeholder="Pathway name or map ID, e.g. Glycolysis or map00010" autocomplete="off">
+      <datalist id="pathway-list">
+        {% for number, name, total in pathways %}<option value="{{ number }} {{ name }}"></option>{% endfor %}
+      </datalist>
     </div>
-    <button type="submit" class="btn btn-primary ml-2">Search</button>
+    <div class="col-auto">
+      <select name="rank" class="form-select" title="Rank used in 'Who carries it'">
+        {% for r in ranks %}<option value="{{ r }}" {% if (report.rank if report else 'genus') == r %}selected{% endif %}>by {{ r }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-auto form-check form-switch ms-2">
+      <input type="hidden" name="unclassified" value="0">
+      <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1"
+             {% if not report or report.include_unclassified %}checked{% endif %}>
+      <label class="form-check-label" for="unclassified">Include unclassified bins</label>
+    </div>
+    <div class="col-auto"><button type="submit" class="btn btn-primary">Show</button></div>
   </form>
 
-  {% if pathway %}
-  <h1 class="mb-2">Pathway Statistics: {{ pathway.number }} - {{ pathway.name }}</h1>
-  <div class="alert alert-info" role="alert">
-    <h5 class="d-inline">
-      Overall DB completeness: <strong>{{ '%.2f'|format(total_completeness) }}%</strong>
-    </h5>
-    <button type="button"
-            class="btn btn-sm btn-secondary ml-3"
-            data-kos="{{ db_kos|join('\n') }}"
-            data-map="{{ pathway.number }}"
-            onclick="openKoPanel(this)">
-      List KOs
-    </button>
+  {% if not_found %}
+  <div class="alert alert-warning">No pathway matches “{{ not_found }}”. Type part of a name or a map ID.</div>
+  {% elif matches %}
+  <div class="alert alert-info">Several pathways match “{{ q }}”:</div>
+  <ul>
+    {% for number, name, total in matches %}
+    <li><a href="{{ url_for('pathway_stat', q=number) }}">{{ number }} — {{ name }}</a></li>
+    {% endfor %}
+  </ul>
+  {% elif report %}
+  {% set p = report.pathway %}
+  {% set qargs = {'q': p.number, 'unclassified': 1 if report.include_unclassified else 0, 'rank': report.rank} %}
+  <h2 class="mb-1">{{ p.number }} — {{ p.name }}</h2>
+  <p class="text-muted mb-2">
+    {{ report.found_kos|length }} of {{ p.total_orthologs }} KOs of this map found in {{ report.bins|length }} bins
+    ({{ report.samples|length }} samples).
+    {% if report.n_hidden %}{{ report.n_hidden }} unclassified bins are hidden.{% endif %}
+    <a href="https://www.kegg.jp/pathway/{{ p.number }}" target="_blank" rel="noopener">Open in KEGG</a>
+  </p>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ '%.1f'|format(report.total_completeness) }}%</div>
+      <div class="small text-muted">per-ID completeness, all bins together</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ report.bins|selectattr('pathway_completeness', 'gt', 0)|list|length }} / {{ report.bins|length }}</div>
+      <div class="small text-muted">bins with at least one KO</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ '%.1f'|format(report.bins|map(attribute='pathway_completeness')|max if report.bins else 0) }}%</div>
+      <div class="small text-muted">best single bin</div></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ report.missing_kos|length }}</div>
+      <div class="small text-muted">KOs of the map found in no bin</div></div></div></div>
   </div>
 
-  <!-- Samples Table -->
-  <table class="table table-bordered">
-    <thead class="bg-dark text-white">
-      <tr>
-        <th>Sample</th>
-        <th>Completeness</th>
-        <th>Action</th>
-      </tr>
+  {{ plots.measures_help(per_id_help, module_help, false) }}
+
+  <div class="mb-3">
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('pathway_stat_export', what='bins', **qargs) }}">CSV: bins</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('pathway_stat_export', what='matrix', **qargs) }}">CSV: KO × bin matrix</a>
+    <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('pathway_stat_export', what='missing', **qargs) }}">CSV: missing KOs</a>
+  </div>
+
+  <h4>Completeness per sample</h4>
+  <p class="small text-muted">One point per bin. Hover a point for the bin, its genus and its CheckM2 completeness:
+    a pathway that looks incomplete in an incomplete genome may simply not have been assembled.</p>
+  <div id="plot-distribution"></div>
+
+  <h4 class="mt-4">KO × bin matrix</h4>
+  <p class="small text-muted">Rows are the KOs found, the most widespread at the top; columns are bins, grouped by sample.
+    {% if report.matrix.n_kos_total > report.matrix.kos|length %}
+    Showing the {{ report.matrix.kos|length }} most widespread of {{ report.matrix.n_kos_total }} KOs; the CSV has them all.
+    {% endif %}</p>
+  {% if figs.matrix %}<div id="plot-matrix"></div>{% else %}<p>No KO of this pathway was found in these bins.</p>{% endif %}
+
+  <h4 class="mt-4">Who carries it (by {{ report.rank }})</h4>
+  <p class="small text-muted">Mean per-ID completeness of the bins of each taxon, with the number of bins that carry at least one KO.</p>
+  <div id="plot-carriers"></div>
+
+  <h4 class="mt-4">Samples and bins</h4>
+  <table class="table table-bordered table-sm align-middle">
+    <thead class="table-dark">
+      <tr><th>Sample</th><th>Per-ID completeness (bins together)</th><th>Bins with ≥ 1 KO</th><th></th></tr>
     </thead>
     <tbody>
-      {% for sample in samples %}
+      {% for sample in report.samples %}
       <tr>
         <td>{{ sample.name }}</td>
-        <td class="text-center">
-          <div class="progress-circle"
-               style="background: conic-gradient(#17ECFD {{ '%.2f'|format(sample.completeness) }}%, #d3d3d3 {{ '%.2f'|format(sample.completeness) }}%);">
-            <span>{{ '%.2f'|format(sample.completeness) }}%</span>
+        <td>
+          <div class="progress" style="height: 20px;">
+            <div class="progress-bar" style="width: {{ sample.completeness }}%">{{ '%.1f'|format(sample.completeness) }}%</div>
           </div>
         </td>
-        <td class="text-center">
-          <button class="btn btn-sm btn-info toggle-btn" data-target="#bins-{{ loop.index0 }}">Show bins</button>
-          <button class="btn btn-sm btn-secondary ml-1"
-                  data-kos="{{ sample.kos|join('\n') }}"
-                  data-map="{{ pathway.number }}"
-                  onclick="openKoPanel(this)">
-            List KOs
-          </button>
+        <td>{{ sample.bins|selectattr('pathway_completeness', 'gt', 0)|list|length }} / {{ sample.bins|length }}</td>
+        <td>
+          <button class="btn btn-sm btn-info" data-bs-toggle="collapse" data-bs-target="#bins-{{ loop.index0 }}">Bins</button>
+          <button class="btn btn-sm btn-secondary" data-kos="{{ sample.kos|join(' ') }}" onclick="openKoPanel(this, '{{ sample.name }}')">KOs</button>
         </td>
       </tr>
-      <tr id="bins-{{ loop.index0 }}" class="d-none">
-        <td colspan="3">
-          <table class="table table-bordered mb-0">
-            <thead class="bg-dark text-white">
-              <tr>
-                <th>Bin</th>
-                <th>Family</th>
-                <th>Genus</th>
-                <th>Species</th>
-                <th>Completeness</th>
-                <th>Action</th>
-              </tr>
-            </thead>
+      <tr class="collapse" id="bins-{{ loop.index0 }}">
+        <td colspan="4">
+          <table class="table table-sm table-striped mb-0">
+            <thead><tr><th>Bin</th><th>Family</th><th>Genus</th><th>Species</th><th>CheckM2 compl. / cont.</th>
+              <th>Pathway per-ID completeness</th><th></th></tr></thead>
             <tbody>
-              {% for bin in sample.bins %}
+              {% for bin in sample.bins|sort(attribute='pathway_completeness', reverse=true) %}
               <tr>
-                <td>{{ bin.name }}</td>
-                <td>{{ bin.taxonomy.family or '-' }}</td>
-                <td>{{ bin.taxonomy.genus or '-' }}</td>
-                <td>{{ bin.taxonomy.species or '-' }}</td>
-                <td>{{ '%.2f'|format(bin.completeness) }}%</td>
-                <td>
-                  <button class="btn btn-sm btn-secondary"
-                          data-kos="{{ bin.kos|join('\n') }}"
-                          data-map="{{ pathway.number }}"
-                          onclick="openKoPanel(this)">
-                    List KOs
-                  </button>
-                </td>
+                <td>{{ bin.name }}{% if bin.confidence != 'classified' %} <span class="badge text-bg-secondary">{{ bin.confidence }}</span>{% endif %}</td>
+                <td>{{ bin.lineage.family or '-' }}</td>
+                <td>{{ bin.lineage.genus or '-' }}</td>
+                <td>{{ bin.lineage.species or '-' }}</td>
+                <td>{{ bin.completeness if bin.completeness is not none else '-' }} / {{ bin.contamination if bin.contamination is not none else '-' }}</td>
+                <td>{{ '%.2f'|format(bin.pathway_completeness) }}% ({{ bin.kos|length }} KOs)</td>
+                <td><button class="btn btn-sm btn-secondary" data-kos="{{ bin.kos|join(' ') }}" onclick="openKoPanel(this, '{{ bin.label }}')">KOs</button></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -96,59 +130,54 @@
     </tbody>
   </table>
 
-  <!-- KO List Panel -->
-  <div class="offcanvas offcanvas-end" tabindex="-1" id="koPanel" aria-labelledby="koPanelLabel">
+  <h4 class="mt-4">Missing KOs
+    <button class="btn btn-sm btn-outline-primary ms-2" data-bs-toggle="collapse" data-bs-target="#missing-kos">
+      Show {{ report.missing_kos|length }}</button></h4>
+  <p class="small text-muted">KOs drawn on the KEGG map that were found in none of these bins.</p>
+  <div class="collapse" id="missing-kos">
+    <table class="table table-sm table-striped">
+      <thead><tr><th>KO</th><th>Name</th></tr></thead>
+      <tbody>
+        {% for ko in report.missing_kos %}
+        <tr><td><a href="https://www.kegg.jp/entry/{{ ko }}" target="_blank" rel="noopener">{{ ko }}</a></td>
+            <td>{{ report.ko_names.get(ko, '') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="koPanel" style="width: 520px;">
     <div class="offcanvas-header">
-      <h5 id="koPanelLabel">KEGG Orthologs (KOs)</h5>
-      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      <h5 id="koPanelLabel">KOs</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body">
-      <textarea id="koTextarea" class="form-control mb-3" rows="10" readonly></textarea>
-      <button class="btn btn-secondary" onclick="copyTextarea()">Copy to clipboard</button>
-      <a id="koPanelKeggLink" href="#" target="_blank" class="btn btn-primary ms-2">Go to KEGG</a>
+      <button class="btn btn-sm btn-secondary mb-2" onclick="copyKos()">Copy IDs</button>
+      <table class="table table-sm"><tbody id="koPanelBody"></tbody></table>
     </div>
   </div>
 
-  <!-- Scripts -->
   <script>
-    document.querySelectorAll('.toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tgt = document.querySelector(btn.dataset.target);
-        if (tgt.classList.contains('d-none')) {
-          tgt.classList.remove('d-none'); btn.textContent = 'Hide bins';
-        } else {
-          tgt.classList.add('d-none'); btn.textContent = 'Show bins';
-        }
+    var KO_NAMES = {{ report.ko_names|tojson }};
+    var panelKos = [];
+    function openKoPanel(el, label) {
+      panelKos = el.dataset.kos ? el.dataset.kos.split(' ') : [];
+      document.getElementById('koPanelLabel').textContent = panelKos.length + ' KOs — ' + label;
+      var body = document.getElementById('koPanelBody');
+      body.innerHTML = '';
+      panelKos.forEach(function (ko) {
+        var tr = document.createElement('tr');
+        var a = document.createElement('td'); a.textContent = ko;
+        var b = document.createElement('td'); b.textContent = KO_NAMES[ko] || '';
+        tr.appendChild(a); tr.appendChild(b); body.appendChild(tr);
       });
-    });
-
-    function openKoPanel(el) {
-      const kos = el.dataset.kos;
-      const map = el.dataset.map;
-      document.getElementById('koTextarea').value = kos;
-      document.getElementById('koPanelKeggLink').href = `https://www.kegg.jp/kegg-bin/show_pathway?${map}`;
-      var offcanvas = new bootstrap.Offcanvas(document.getElementById('koPanel'));
-      offcanvas.show();
+      new bootstrap.Offcanvas(document.getElementById('koPanel')).show();
     }
-
-    function copyTextarea() {
-      const ta = document.getElementById('koTextarea');
-      navigator.clipboard.writeText(ta.value).then(
-        () => alert('KO list copied!'), err => console.error(err)
-      );
-    }
+    function copyKos() { navigator.clipboard.writeText(panelKos.join('\n')); }
   </script>
-
-  <style>
-    .progress-circle {
-      width:50px; height:50px; border-radius:50%;
-      display:inline-flex; align-items:center; justify-content:center;
-      font-size:0.9em; color:#222; font-weight:bold;
-      background: conic-gradient(#17ECFD 0%,#d3d3d3 0%);
-      position:relative; margin:0 auto;
-    }
-    .progress-circle span {position:absolute; width:100%; text-align:center;}
-  </style>
+  {{ plots.draw(figs) }}
+  {% else %}
+  <p class="text-muted">Choose a pathway to see which bins and taxa carry it, which KOs were found and which are missing.</p>
   {% endif %}
 </div>
 {% endblock %}

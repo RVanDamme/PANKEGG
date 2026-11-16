@@ -161,3 +161,92 @@ def test_assets_are_served_locally(databases, client_for):
     for asset in ("plotly.min.js", "bootstrap.min.css", "bootstrap.bundle.min.js"):
         res = client.get(f"/static/vendor/{asset}")
         assert res.status_code == 200 and len(res.data) > 50_000, asset
+
+
+# --- phase 2, A2: pathway page -------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def a_pathway(databases):
+    """A pathway carried by some but not all bins of the two-sample database."""
+    import sqlite3
+    from pankegg import insights
+    con = sqlite3.connect(databases["two"])
+    best = None
+    for number, name, total in insights.list_pathways(con):
+        rep = insights.pathway_report(con, number)
+        n = sum(1 for b in rep["bins"] if b["kos"])
+        if 0 < n < len(rep["bins"]) and (best is None or len(rep["found_kos"]) > best[2]):
+            best = (number, name, len(rep["found_kos"]))
+    con.close()
+    return best
+
+
+def test_pathway_report_numbers(databases, a_pathway):
+    import sqlite3
+    from pankegg import insights
+    number, name, n_found = a_pathway
+    con = sqlite3.connect(databases["two"])
+    rep = insights.pathway_report(con, number)
+    reference = insights.reference_pathway_kos()[number]
+    assert set(rep["found_kos"]) <= set(reference)
+    assert set(rep["missing_kos"]) == set(reference) - set(rep["found_kos"])
+    assert len(rep["bins"]) == 5 and {b["sample"] for b in rep["bins"]} == {"S1", "S2"}
+    for b in rep["bins"]:
+        assert b["pathway_completeness"] == round(100 * len(b["kos"]) / rep["pathway"]["total_orthologs"], 2)
+    assert all(rep["ko_names"][k] for k in rep["found_kos"])
+    # unclassified toggle: S1.bin2 (lca nomatch) exists in both samples
+    hidden = insights.pathway_report(con, number, include_unclassified=False)
+    assert len(hidden["bins"]) == 3 and hidden["n_hidden"] == 2
+    assert all(b["classified"] for b in hidden["bins"])
+    con.close()
+
+
+def test_pathway_search_by_name_and_id(databases, client_for, a_pathway):
+    number, name, _ = a_pathway
+    client = client_for(databases["two"])
+    for q in (number, number[3:], name, name.upper(), f"{number} {name}"):
+        html = client.get("/pathway_stat", query_string={"q": q}).data.decode()
+        assert f"{number} — " in html and "plot-matrix" in html, q
+    assert client.get("/pathway_stat?q=zzzz-no-such-pathway").status_code == 404
+    several = client.get("/pathway_stat?q=metabolism").data.decode()
+    assert "Several pathways match" in several
+
+
+def test_pathway_page_unclassified_toggle(databases, client_for, a_pathway):
+    client = client_for(databases["two"])
+    shown = client.get("/pathway_stat", query_string={"q": a_pathway[0]}).data.decode()
+    hidden = client.get("/pathway_stat", query_string={"q": a_pathway[0], "unclassified": "0"}).data.decode()
+    assert "S1.bin2" in shown and "S1.bin2" not in hidden
+    assert "2 unclassified bins are hidden" in hidden
+
+
+def test_pathway_csv_exports(databases, client_for, a_pathway):
+    import csv as csvmod
+    import io
+    client = client_for(databases["two"])
+    q = {"q": a_pathway[0]}
+    res = client.get("/pathway_stat/export", query_string={**q, "what": "bins"})
+    assert res.status_code == 200 and res.mimetype == "text/csv"
+    rows = list(csvmod.DictReader(io.StringIO(res.data.decode())))
+    assert len(rows) == 5 and {"sample", "bin", "genus", "pathway_per_id_completeness_percent", "kos"} <= set(rows[0])
+    matrix = list(csvmod.reader(io.StringIO(client.get("/pathway_stat/export",
+                                                       query_string={**q, "what": "matrix"}).data.decode())))
+    assert matrix[0][:2] == ["ko", "ko_name"] and len(matrix[0]) == 2 + 5
+    assert len(matrix) - 1 == a_pathway[2]
+    assert all(set(r[2:]) <= {"0", "1"} for r in matrix[1:])
+    missing = client.get("/pathway_stat/export", query_string={**q, "what": "missing"}).data.decode()
+    assert missing.startswith("ko,ko_name")
+    assert len(client.get("/pathway_stat/export",
+                          query_string={**q, "what": "bins", "unclassified": "0"}).data.decode().splitlines()) == 4
+
+
+@pytest.mark.parametrize("db_kind", ["2.0.0", "new_tax"])
+def test_pathway_page_on_old_and_new_db(databases, client_for, db_kind):
+    """2.0.0 databases have no classification columns and a dangling taxonomic_id for S1.bin2."""
+    import sqlite3
+    from pankegg import insights
+    con = sqlite3.connect(databases[db_kind])
+    number = next(n for n, _, _ in insights.list_pathways(con) if insights.pathway_report(con, n)["found_kos"])
+    con.close()
+    html = client_for(databases[db_kind]).get("/pathway_stat", query_string={"q": number}).data.decode()
+    assert "S1.bin2" in html and "plot-distribution" in html

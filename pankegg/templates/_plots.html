@@ -1,0 +1,20 @@
+{# Draw the Plotly figures built on the server: {id: {data, layout}} -> <div id="plot-<id>"> #}
+{% macro draw(figs) %}
+<script>
+  (function () {
+    var figs = {{ figs|tojson }};
+    Object.keys(figs).forEach(function (key) {
+      var el = document.getElementById('plot-' + key);
+      if (el) { Plotly.newPlot(el, figs[key].data, figs[key].layout, {responsive: true, displaylogo: false}); }
+    });
+  })();
+</script>
+{% endmacro %}
+
+{% macro measures_help(per_id_help, module_help, show_module=true) %}
+<details class="alert alert-light border small mb-3">
+  <summary><strong>How to read the completeness values</strong></summary>
+  <p class="mb-1 mt-2"><strong>Pathway per-ID completeness.</strong> {{ per_id_help }}</p>
+  {% if show_module %}<p class="mb-0"><strong>Module completeness.</strong> {{ module_help }}</p>{% endif %}
+</details>
+{% endmacro %}
