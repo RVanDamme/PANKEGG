@@ -141,6 +141,8 @@ def test_same_inputs_same_database(tmp_path):
         dumps.append(dump(tmp_path / "out" / f"db{i}.db"))
     assert dumps[0] == dumps[1], "hash seed changed the database"
     assert dumps[0] == dumps[2], "glob order changed the database"
+    files = [(tmp_path / "out" / f"db{i}.db").read_bytes() for i in range(3)]
+    assert files[0] == files[1] == files[2], "same content but different bytes (snapshot tests need bytes)"
 
 
 def test_checkm2_dir_accepts_a_glob(tmp_path):
