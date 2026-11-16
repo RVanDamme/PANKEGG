@@ -1,0 +1,2 @@
+Sample name,Annotation_dir,classification_dir,Checkm2_dir
+S1,tests/fixtures/s1/eggnog/*.emapper.annotations,tests/fixtures/sourmash_lca/*.lca.csv,tests/fixtures/s1/checkm2/S1_checkm2_report.tsv

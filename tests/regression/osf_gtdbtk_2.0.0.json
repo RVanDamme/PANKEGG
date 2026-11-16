@@ -1,0 +1,210 @@
+{
+ "global": {
+  "counts": {
+   "kegg": 1580,
+   "map": 266,
+   "map_kegg": 5449
+  },
+  "digests": {
+   "kegg": "e797fc6526d4203bc6955b739f9b95692988d3b03098d6632751687b99d73a6c",
+   "map": "9d56c7a7f341671b9bebe8f033879b4ab310f8b977ae479741b314df69fbd563",
+   "map_kegg": "36c6ef1a3b372d2f4e5ed0d27f1f25462451ab0050a16250507d21e7881d7e96"
+  }
+ },
+ "samples": {
+  "Sample1": {
+   "bins": {
+    "metabat_bins.189": {
+     "completeness": 73.01,
+     "contamination": 1.2,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Lachnospirales",
+      "f__Lachnospiraceae",
+      "g__G11",
+      "s__G11 sp017619295"
+     ]
+    },
+    "metabat_bins.347": {
+     "completeness": 91.08,
+     "contamination": 0.34,
+     "taxonomy": [
+      "d__Archaea",
+      "p__Halobacteriota",
+      "c__Methanosarcinia",
+      "o__Methanosarcinales",
+      "f__Methanosarcinaceae",
+      "g__Methanosarcina",
+      "s__Methanosarcina mazei"
+     ]
+    },
+    "metabat_bins.385": {
+     "completeness": 75.75,
+     "contamination": 3.53,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Lachnospirales",
+      "f__Lachnospiraceae",
+      "g__Pseudobutyrivibrio",
+      "s__"
+     ]
+    },
+    "metabat_bins.78": {
+     "completeness": 64.5,
+     "contamination": 2.39,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Lachnospirales",
+      "f__Lachnospiraceae",
+      "g__CAG-791",
+      "s__"
+     ]
+    },
+    "metabat_bins.91": {
+     "completeness": 81.48,
+     "contamination": 1.58,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Oscillospirales",
+      "f__Acutalibacteraceae",
+      "g__Ruminococcoides",
+      "s__Ruminococcoides sp017433905"
+     ]
+    }
+   },
+   "counts": {
+    "bin_extra": 8291,
+    "bin_extra_kegg": 3513,
+    "bin_map": 856,
+    "bin_map_kegg": 9224
+   },
+   "digests": {
+    "bin_extra": "61477e68ef9efe9aadabe572194a5e5dc780bc8b693629487f3c1b67462de14b",
+    "bin_extra_kegg": "366425d02f0cd7e350fd5d17decd994acb647e6ff6ebb4c607c445cc37ab867e",
+    "bin_map": "00dac9e594886eb4c19eb997322f45f5e1267c0f7999e1ee74bd7b4fadeca492",
+    "bin_map_kegg": "074587b43b410de8b462c54dbc7e463d71e386bdd576442de29005b67923ef10"
+   },
+   "n_bins": 5
+  },
+  "Sample2": {
+   "bins": {
+    "metabat_bins.184": {
+     "completeness": 97.43,
+     "contamination": 0.32,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Lachnospirales",
+      "f__Lachnospiraceae",
+      "g__UBA1201",
+      "s__UBA1201 sp017615545"
+     ]
+    },
+    "metabat_bins.279": {
+     "completeness": 56.13,
+     "contamination": 1.01,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Oscillospirales",
+      "f__Acutalibacteraceae",
+      "g__Ruminococcoides",
+      "s__Ruminococcoides sp017433905"
+     ]
+    },
+    "metabat_bins.78": {
+     "completeness": 77.05,
+     "contamination": 2.08,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacteroidota",
+      "c__Bacteroidia",
+      "o__Bacteroidales",
+      "f__Bacteroidaceae",
+      "g__Prevotella",
+      "s__Prevotella sp900110895"
+     ]
+    }
+   },
+   "counts": {
+    "bin_extra": 3886,
+    "bin_extra_kegg": 1745,
+    "bin_map": 486,
+    "bin_map_kegg": 5001
+   },
+   "digests": {
+    "bin_extra": "4caa2664efad4b2311e09f8dd5ce1209b558b06fd967c19c890fd29a4921ab67",
+    "bin_extra_kegg": "e5b20f8e740441a3dad6966b0835b1c9e9d36a95f68cd4d8ca771d5c74b0a024",
+    "bin_map": "b23a4490a351758e6a71305c597b429649668a661ad876975af1af4683339eb7",
+    "bin_map_kegg": "a7b7f257cd31b7f8d12385441647f5e5591463b4f28d704a52d4cace37fb087d"
+   },
+   "n_bins": 3
+  },
+  "Sample3": {
+   "bins": {
+    "metabat_bins.127": {
+     "completeness": 81.34,
+     "contamination": 0.15,
+     "taxonomy": [
+      "d__Archaea",
+      "p__Thermoplasmatota",
+      "c__Thermoplasmata",
+      "o__Methanomassiliicoccales",
+      "f__Methanomethylophilaceae",
+      "g__Methanoprimaticola",
+      "s__Methanoprimaticola sp015063165"
+     ]
+    },
+    "metabat_bins.213": {
+     "completeness": 76.65,
+     "contamination": 1.71,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacteroidota",
+      "c__Bacteroidia",
+      "o__Bacteroidales",
+      "f__Bacteroidaceae",
+      "g__Prevotella",
+      "s__Prevotella sp946403615"
+     ]
+    },
+    "metabat_bins.439": {
+     "completeness": 72.39,
+     "contamination": 0.69,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Clostridia",
+      "o__Oscillospirales",
+      "f__Acutalibacteraceae",
+      "g__Ruminococcoides",
+      "s__Ruminococcoides sp017433905"
+     ]
+    }
+   },
+   "counts": {
+    "bin_extra": 3342,
+    "bin_extra_kegg": 1678,
+    "bin_map": 483,
+    "bin_map_kegg": 4738
+   },
+   "digests": {
+    "bin_extra": "fa4bc207beb0ffc31d5b161df6a202eb213b80aac77be762ada3bff606bc043e",
+    "bin_extra_kegg": "096aa6c12b7fe4d211cc3d1ea24e2930dd1e8e4852410f855d6b009d16a31962",
+    "bin_map": "782afec82a7e7d0f504dc28c3ef1c424c4a7984f9d6ddbc5b3e8f1865ac17262",
+    "bin_map_kegg": "cb61957b42cea502e75c27518e2424f2549aba1b8fe04095d15cea60689aed4d"
+   },
+   "n_bins": 3
+  }
+ }
+}

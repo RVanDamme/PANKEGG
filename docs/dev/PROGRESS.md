@@ -5,13 +5,13 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 1 — Baseline
-- **Next action:** build both OSF example databases with the 2.0.0 code and write the regression summary.
+- **Step:** 2 — Packaging
+- **Next action:** write the failing clean-install test (wheel → fresh venv → empty dir), then move code into the `pankegg/` package.
 
 ## Steps
 
 - [x] 0. Progress file, CI runs on this branch
-- [ ] 1. Baseline from OSF example CSVs (regression reference)
+- [x] 1. Baseline from OSF example CSVs (regression reference)
 - [ ] 2. Packaging: `pankegg` (full) + `pankegg-makedb` (light), single version, console scripts, `--version`, clean-install test
 - [ ] 3. Bin-name normalisation (brief 3.4)
 - [ ] 4. eggNOG reader: raw and legacy files (brief 3.5)
@@ -39,6 +39,13 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes
+
+- Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code
+  (`git diff 2.0.0 HEAD -- pankegg_make_db.py lib data` is empty). Summaries of the rebuilt DBs are byte-identical
+  to summaries of the DBs shipped in the OSF archive. Sample3 has 4,738 bin↔map↔KO links, as in the brief.
+- Small 2.0.0 DB for app/back-compat tests: `tests/fixtures/db_2.0.0/s1_lca_2.0.0.db` (S1.bin2 has the old text
+  `'null'` taxonomic_id). Its eggNOG inputs in `tests/fixtures/s1/` are the first 30 rows of OSF Sample1 bins
+  189, 347, 385 in legacy (one `##` line) format.
 
 - `README.md` is rendered from `docs/README.qmd` by `publish_and_render.yml` (master only): edit both.
 - No `static/` directory exists in the repo; only `data/` and `templates/` move into the package.

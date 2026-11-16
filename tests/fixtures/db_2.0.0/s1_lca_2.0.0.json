@@ -1,0 +1,64 @@
+{
+ "global": {
+  "counts": {
+   "kegg": 38,
+   "map": 56,
+   "map_kegg": 149
+  },
+  "digests": {
+   "kegg": "78793d9ceb22a2607a178e3ab2fb4b5cc2576030c3254995818d38f2f4b291dc",
+   "map": "d7851c21fdc3d257e36a6291213d8a87358c83e85a8a4c00841ecc1ffa3a2e42",
+   "map_kegg": "8b4e639c3d0132f4b8386a4f7f0d31713738261a3a9ffc3854ab302cbc62f24e"
+  }
+ },
+ "samples": {
+  "S1": {
+   "bins": {
+    "S1.bin1": {
+     "completeness": 73.01,
+     "contamination": 1.2,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Pseudomonadota",
+      "c__Gammaproteobacteria",
+      "o__Enterobacterales",
+      "f__Enterobacteriaceae",
+      "g__Escherichia",
+      "s__Escherichia coli"
+     ]
+    },
+    "S1.bin2": {
+     "completeness": 91.08,
+     "contamination": 0.34,
+     "taxonomy": null
+    },
+    "S1.bin3": {
+     "completeness": 75.75,
+     "contamination": 3.53,
+     "taxonomy": [
+      "d__Bacteria",
+      "p__Bacillota",
+      "c__Bacilli",
+      "o__Bacillales",
+      "f__Bacillaceae",
+      "g__Bacillus",
+      "s__Bacillus subtilis"
+     ]
+    }
+   },
+   "counts": {
+    "bin_extra": 90,
+    "bin_extra_kegg": 38,
+    "bin_map": 69,
+    "bin_map_kegg": 149
+   },
+   "digests": {
+    "bin_extra": "19b86b6b7c84e5f2f9ad4d1938c2421e2029accb93ed39d27062b1a3f45d2867",
+    "bin_extra_kegg": "6c12d28c8e8dc5703933f0497a177c1e0dd221601186822be2b94951d61bbf75",
+    "bin_map": "170bcb4b3ed2d0218c44c70a5bbe7c8ed71f0097502bbfc34d48cb69802e250e",
+    "bin_map_kegg": "48a2bcee7fb87a9104e9bfeac0cb144132c2041f40ef5b918be217797d7be970"
+   },
+   "n_bins": 3
+  }
+ }
+}

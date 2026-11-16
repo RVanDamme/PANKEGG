@@ -1,0 +1,4 @@
+Name	Completeness	Contamination	Completeness_Model_Used	Translation_Table_Used
+S1.bin1	73.01	1.2	Neural Network (Specific Model)	11
+S1.bin2	91.08	0.34	Neural Network (Specific Model)	11
+S1.bin3	75.75	3.53	Neural Network (Specific Model)	11

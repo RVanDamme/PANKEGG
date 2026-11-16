@@ -34,3 +34,7 @@ def test_data_dir(tmp_path_factory):
     finally:
         if "original_cwd" in locals():
             os.chdir(original_cwd)
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "osf: needs the OSF example archive (network); skipped when unavailable")
