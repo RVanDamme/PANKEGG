@@ -1,0 +1,5 @@
+##
+#query	seed_ortholog	evalue	score	eggNOG_OGs	max_annot_lvl	COG_category	Description	Preferred_name	GOs	EC	KEGG_ko	KEGG_Pathway	KEGG_Module	KEGG_Reaction	KEGG_rclass	BRITE	KEGG_TC	CAZy	BiGG_Reaction	PFAMs
+NODE_1164_length_53623_cov_28.194090_3	556261.HMPREF0240_01134	5.49e-244	766.0	COG2217@1|root,COG2217@2|Bacteria,1TPB8@1239|Firmicutes,247RZ@186801|Clostridia,36EQP@31979|Clostridiaceae	186801|Clostridia	P	E1-E2 ATPase	copA_1	-	-	ko:K12950	-	-	-	-	ko00000,ko01000	3.A.3.32	-	-	E1-E2_ATPase,Hydrolase
+NODE_1164_length_53623_cov_28.194090_26	1232453.BAIF02000051_gene1059	4.18e-22	103.0	2E5VW@1|root,330JY@2|Bacteria,1VEZ5@1239|Firmicutes,24R14@186801|Clostridia,26BRR@186813|unclassified Clostridiales	186801|Clostridia	S	H( )-transporting two-sector ATPase subunit H.a (A-type ATP synthase) K02121	-	-	-	-	-	-	-	-	-	-	-	-	-
+NODE_1164_length_53623_cov_28.194090_19	1298920.KI911353_gene4272	1.14e-53	195.0	COG0716@1|root,COG0716@2|Bacteria,1V6D7@1239|Firmicutes,24J7W@186801|Clostridia,220D1@1506553|Lachnoclostridium	186801|Clostridia	C	Flavodoxin	-	-	-	-	-	-	-	-	-	-	-	-	Flavodoxin_1

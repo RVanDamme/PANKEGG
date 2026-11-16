@@ -75,6 +75,25 @@ def load_ko_descriptions(ko_file):
             ko_dict[ko_id] = description
     return ko_dict
 
+def read_eggnog_annotations(path):
+    """Read an eggNOG-mapper annotation file (brief §3.5).
+
+    Accepts the raw file written by emapper (several '##' lines, a header line
+    starting with '#query', '##' footer lines) and the legacy stripped file
+    (one '##' line, then the header). Every line starting with '##' is ignored;
+    the header is the line starting with '#query' (or, failing that, the first
+    remaining line).
+
+    Returns (fieldnames, rows) with rows as dicts keyed by the header.
+    """
+    with open(path, 'r', newline='', encoding='utf-8') as fh:
+        lines = [line for line in fh if not line.startswith('##')]
+    start = next((i for i, line in enumerate(lines) if line.startswith('#query')), 0)
+    reader = csv.DictReader(lines[start:], delimiter='\t')
+    rows = list(reader)
+    return list(reader.fieldnames or []), rows
+
+
 # Tests
 
 # Input CSV Validation
@@ -109,14 +128,12 @@ def check_required_files_and_headers(csv_file):
                 failures.append((i, sample, f"No annotation files found for pattern: {row['Annotation_dir']}"))
             for annot in ann_files:
                 try:
-                    with open(annot, 'r', encoding='utf-8') as af:
-                        lines = af.readlines()
-                        if not lines:
-                            failures.append((i, sample, f"Annotation file {annot} is empty"))
-                            continue
-                        header = lines[1 if lines[0].startswith('##') else 0].strip().split('\t')
-                        if not required_annot_cols.issubset(header):
-                            failures.append((i, sample, f"Annotation file {annot} missing columns: {required_annot_cols - set(header)}"))
+                    header, _ = read_eggnog_annotations(annot)
+                    if not header:
+                        failures.append((i, sample, f"Annotation file {annot} is empty"))
+                        continue
+                    if not required_annot_cols.issubset(header):
+                        failures.append((i, sample, f"Annotation file {annot} missing columns: {required_annot_cols - set(header)}"))
                 except Exception as e:
                     failures.append((i, sample, f"Cannot read annotation file {annot}: {e}"))
             q_files = glob.glob(row['Checkm2_dir'])
@@ -393,46 +410,32 @@ def process_annotation_file(cur, annotation_files_path, pathways_dict, sample_id
     maps_dict = {}
 
     for filename in glob.glob(annotation_files_path):
-        with open(filename, 'r', newline='', encoding='utf-8') as file:
-            name_part = bin_name_from_annotation_file(filename)
+        bin_name = bin_name_from_annotation_file(filename)
+        fieldnames, rows = read_eggnog_annotations(filename)
 
-            # Read the file, skipping the first line (##)
-            lines = file.readlines()
-            lines = lines[1:]  # Skip first line (##) to use the correct header
+        # Ensure 'KEGG_Pathway' exists
+        if 'KEGG_Pathway' not in fieldnames:
+            print(f"Skipping {filename}: 'KEGG_Pathway' column not found!")
+            continue
 
-            # Create a DictReader with the corrected header
-            reader = csv.DictReader(lines, delimiter='\t')
+        bin_map_list = []
+        for row in rows:
+            kegg_pathways = row.get('KEGG_Pathway', '')  # Use get() to avoid KeyError
+            kegg_kos = row.get('KEGG_ko', '')
 
-            # Print detected headers for debugging
-            #print(f"Processing file: {filename}")
-            #print(f"Detected headers: {reader.fieldnames}")
+            kos = kegg_kos.split(',')
+            if kegg_pathways:
+                for pathway in kegg_pathways.split(','):
+                    pathway = pathway.strip()
+                    if pathway.startswith('map'):
+                        process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list)
+            else:
+                pathway = bin_name + "_not_mapped"
+                process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list)
 
-            # Ensure 'KEGG_Pathway' exists
-            if 'KEGG_Pathway' not in reader.fieldnames:
-                print(f"Skipping {filename}: 'KEGG_Pathway' column not found!")
-                continue
-
-            bin_map_list = []
-            for row in reader:
-                #print(f"Row data: {row}")  # Debugging
-                kegg_pathways = row.get('KEGG_Pathway', '')  # Use get() to avoid KeyError
-                kegg_kos = row.get('KEGG_ko', '')
-
-                kos = kegg_kos.split(',')
-                if kegg_pathways:
-                    for pathway in kegg_pathways.split(','):
-                        pathway = pathway.strip()
-                        if pathway.startswith('map'):
-                            process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list)
-                else:
-                    pathway = name_part + "_not_mapped"
-                    process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list)
-
-            bin_name = name_part
-            link_bins_to_pathways(cur, bin_name, bin_map_list, sample_id)
+        link_bins_to_pathways(cur, bin_name, bin_map_list, sample_id)
 
     return maps_dict
-
 
 def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
     # Insert the full annotation line
@@ -462,39 +465,27 @@ def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
 
 def set_full_annot_table(cur, annotation_files_path, sample_id):
     for filename in glob.glob(annotation_files_path):
-        with open(filename, 'r', newline='', encoding='utf-8') as file:
-            bin_name = bin_name_from_annotation_file(filename)
+        bin_name = bin_name_from_annotation_file(filename)
 
-            cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
-            bin_id = cur.fetchone()
-            if bin_id:
-                bin_id = bin_id[0]
+        cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
+        bin_id = cur.fetchone()
+        if not bin_id:
+            continue
+        bin_id = bin_id[0]
 
-                # Read file and skip first line
-                lines = file.readlines()
-                lines = lines[1:]  # Skip first line (##)
+        fieldnames, rows = read_eggnog_annotations(filename)
+        if 'KEGG_ko' not in fieldnames:
+            print(f"Skipping {filename}: 'KEGG_ko' column not found!")
+            continue  # Skip this file instead of crashing
 
-                reader = csv.DictReader(lines, delimiter='\t')
+        for row in rows:
+            # Use get() to avoid crashing
+            kegg_kos = row.get('KEGG_ko', None)
+            kegg_gos = row.get('GOs', None)
+            kegg_free_desc = row.get('eggNOG free text desc.', None)
 
-                # Debugging: Print the actual column names detected
-                #print(f"Processing file: {filename}")
-                #print(f"Detected headers: {reader.fieldnames}")
-
-                if 'KEGG_ko' not in reader.fieldnames:
-                    print(f"Skipping {filename}: 'KEGG_ko' column not found!")
-                    continue  # Skip this file instead of crashing
-
-                for row in reader:
-                    #print(f"Row data: {row}")  # Debugging
-
-                    # Use get() to avoid crashing
-                    kegg_kos = row.get('KEGG_ko', None)
-                    kegg_gos = row.get('GOs', None)
-                    kegg_free_desc = row.get('eggNOG free text desc.', None)
-
-                    if kegg_kos:
-                        link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc)
-
+            if kegg_kos:
+                link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc)
 
 # def link_bin_to_map_keg(cur, annotation_files_path):
 #     for filename in glob.glob(annotation_files_path):
@@ -572,50 +563,44 @@ def link_kegg_to_map(cur, kos, map_id, bin_id):
 
 def link_bin_to_map_keg(cur, annotation_files_path, sample_id):
     for filename in glob.glob(annotation_files_path):
-        with open(filename, 'r', newline='', encoding='utf-8') as file:
-            bin_name = bin_name_from_annotation_file(filename)
+        bin_name = bin_name_from_annotation_file(filename)
 
-            cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
-            bin_id = cur.fetchone()
-            if not bin_id:
-                print(f"Warning: No bin_id found for {bin_name}")
-                continue
-            bin_id = bin_id[0]
+        cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
+        bin_id = cur.fetchone()
+        if not bin_id:
+            print(f"Warning: No bin_id found for {bin_name}")
+            continue
+        bin_id = bin_id[0]
 
-            # Skip first line (##) and parse as CSV
-            lines = file.readlines()
-            lines = lines[1:]  # Skip header comment
-            reader = csv.DictReader(lines, delimiter='\t')
+        fieldnames, rows = read_eggnog_annotations(filename)
+        print(f"Processing file: {filename}")
+        print(f"Detected headers: {fieldnames}")
 
-            print(f"Processing file: {filename}")
-            print(f"Detected headers: {reader.fieldnames}")
+        for row in rows:
+            if 'KEGG_Pathway' not in row:
+                print(f"Skipping row due to missing KEGG_Pathway: {row}")
+                continue  # Skip row if the column is missing
 
-            for row in reader:
-                if 'KEGG_Pathway' not in row:
-                    print(f"Skipping row due to missing KEGG_Pathway: {row}")
-                    continue  # Skip row if the column is missing
+            kegg_pathways = row.get('KEGG_Pathway', '')  # Use .get() to avoid KeyError
+            kegg_kos = row.get('KEGG_ko', '')
 
-                kegg_pathways = row.get('KEGG_Pathway', '')  # Use .get() to avoid KeyError
-                kegg_kos = row.get('KEGG_ko', '')
+            if not kegg_pathways or kegg_pathways == '-':
+                print(f"Skipping row: No valid KEGG_Pathway found")
+                continue  # Skip empty pathway rows
 
-                if not kegg_pathways or kegg_pathways == '-':
-                    print(f"Skipping row: No valid KEGG_Pathway found")
-                    continue  # Skip empty pathway rows
+            kos = kegg_kos.split(',')
 
-                kos = kegg_kos.split(',')
+            for pathway in kegg_pathways.split(','):
+                pathway = pathway.strip()
+                if pathway.startswith('map'):
+                    cur.execute(SELECT_MAP_ID, (pathway,))
+                    map_id = cur.fetchone()
+                    if not map_id:
+                        print(f"Warning: No map_id found for pathway {pathway}")
+                        continue
+                    map_id = map_id[0]
 
-                for pathway in kegg_pathways.split(','):
-                    pathway = pathway.strip()
-                    if pathway.startswith('map'):
-                        cur.execute(SELECT_MAP_ID, (pathway,))
-                        map_id = cur.fetchone()
-                        if not map_id:
-                            print(f"Warning: No map_id found for pathway {pathway}")
-                            continue
-                        map_id = map_id[0]
-
-                        link_kegg_to_map(cur, kos, map_id, bin_id)
-
+                    link_kegg_to_map(cur, kos, map_id, bin_id)
 
 def add_sample_in_db(cur, name):
     cur.execute(INSERT_SAMPLE, (name,))

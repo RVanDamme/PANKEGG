@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 4 — eggNOG reader
-- **Next action:** failing test: raw emapper file (several `##` lines before `#query`, `##` footer) vs legacy file must give identical DB content.
+- **Step:** 5 — Classification
+- **Next action:** failing tests for `sourmash tax genome` (match, below_threshold truncated, missing bin, several bins per file), lca all rows / empty file, `--classification` option.
 
 ## Steps
 
@@ -14,7 +14,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] 1. Baseline from OSF example CSVs (regression reference)
 - [x] 2. Packaging: `pankegg` (full) + `pankegg-makedb` (light), single version, console scripts, `--version`, clean-install test
 - [x] 3. Bin-name normalisation (brief 3.4)
-- [ ] 4. eggNOG reader: raw and legacy files (brief 3.5)
+- [x] 4. eggNOG reader: raw and legacy files (brief 3.5)
 - [ ] 5. Classification modes, tax genome reader, lca all rows, unclassified everywhere, schema additions
 - [ ] 6. CLI behaviour: stderr/exit codes, `--quiet`/`--verbose`, deterministic output, English help
 - [ ] 7. App check against new and 2.0.0 databases
@@ -53,6 +53,11 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
   The install test builds from a clean copy; release builds must use `python -m build` from a clean checkout.
 - F4/F5 reproduced before the fix (`tests/test_binnames.py::test_pipeline_bin_names_end_to_end`): 2.0.0 created bins
   `SemiBin_12.emapper` and `a.b` with no quality values and no taxonomy.
+- F3 reproduced before the fix (`tests/test_eggnog.py`): raw emapper file rejected with
+  `missing columns: {'KEGG_Pathway', 'KEGG_ko'}`. Now `read_eggnog_annotations` ignores every `##` line.
+- **Open for the owner (not changed, would alter DB content):** a KO whose `KEGG_Pathway` is `-` never reaches the
+  `kegg` table, so it has no `bin_extra_kegg` link; the `<bin>_not_mapped` branch only fires on an empty
+  `KEGG_Pathway`, which emapper never writes (it writes `-`).
 - Python 3.9.25 (via uv): full dependency set resolves (numpy 2.0.2, scipy 1.13.1, flask 3.1.3); tests pass.
 
 - Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code
