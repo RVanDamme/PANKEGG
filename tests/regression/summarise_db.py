@@ -113,3 +113,42 @@ def summarise(db_path):
 if __name__ == "__main__":
     json.dump(summarise(sys.argv[1]), sys.stdout, indent=1, sort_keys=True)
     sys.stdout.write("\n")
+
+
+# --- comparing with a 2.0.0 database when content was added on purpose ----------------------
+# Since 2.1.0, KOs whose KEGG_Pathway is '-' are kept: the kegg table and the bin_extra_kegg
+# links grow. Everything else must be identical, and nothing that 2.0.0 stored may disappear.
+
+GROWING = ("kegg", "bin_extra_kegg")
+
+
+def unchanged_part(summary):
+    """The summary without the tables that are allowed to grow."""
+    out = json.loads(json.dumps(summary))
+    for key in GROWING:
+        out["global"]["counts"].pop(key, None)
+        out["global"]["digests"].pop(key, None)
+        for sample in out["samples"].values():
+            sample["counts"].pop(key, None)
+            sample["digests"].pop(key, None)
+    return out
+
+
+def _growing_rows(db_path):
+    con = sqlite3.connect(db_path)
+    kegg = set(con.execute("SELECT ko_id, kegg_name, kegg_full_name FROM kegg"))
+    links = set(con.execute(
+        """SELECT s.sample_name, b.bin_name, e.ko, e.go, e.eggnog_desc, k.ko_id FROM bin_extra_kegg ek
+           JOIN bin_extra e ON e.id=ek.extra_id JOIN bin b ON b.id=e.bin_id
+           JOIN sample s ON s.id=b.sample_id JOIN kegg k ON k.id=ek.kegg_id"""))
+    con.close()
+    return kegg, links
+
+
+def added_since_2_0_0(old_db, new_db):
+    """Assert that the 2.0.0 KOs and KO links are all still there; return what was added."""
+    old_kegg, old_links = _growing_rows(old_db)
+    new_kegg, new_links = _growing_rows(new_db)
+    assert old_kegg <= new_kegg, f"KOs lost: {sorted(old_kegg - new_kegg)[:5]}"
+    assert old_links <= new_links, f"KO links lost: {sorted(old_links - new_links)[:5]}"
+    return {"kegg": len(new_kegg - old_kegg), "bin_extra_kegg": len(new_links - old_links)}

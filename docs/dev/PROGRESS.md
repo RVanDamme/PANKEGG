@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Phase 2 (web app and summaries), step:** A12 — keep KOs with no pathway (make_db)
-- **Next action:** failing test (a KO whose KEGG_Pathway is `-` must be in `kegg` and linked in `bin_extra_kegg`); regression becomes "2.0.0 content is a subset"; then A9 modules, A10 metadata.
+- **Phase 2 (web app and summaries), step:** A9 — KEGG module completeness
+- **Next action:** fetch KEGG module definitions into `pankegg/data/kegg_modules.tsv`, definition parser + tests, tables `module` and `bin_module`, then the module pages.
 - Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
 ## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
@@ -19,7 +19,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] A6. Core vs accessory pathways and KOs
 - [x] A7. Sample similarity heatmap
 - [x] A8. Two-group comparison with statistics
-- [ ] A12. make_db: keep KOs with no pathway (regression: 2.0.0 content must be a subset)
+- [x] A12. make_db: keep KOs with no pathway (regression: 2.0.0 content must be a subset)
 - [ ] A9. make_db: KEGG module completeness (new tables) + module displays and the two-measures explanation
 - [ ] A10. make_db: `--metadata` sample/condition TSV + colouring and grouping by condition
 - [ ] A13. Docs, CHANGELOG, screenshots check, independent review, acceptance re-run
@@ -61,6 +61,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | Tests (step 8): default `pytest` is offline (no network attempt) and uses `tests/fixtures`; OSF tests are marked `osf` and run with `pytest --run-osf`. The OSF fixture no longer changes the working directory for the whole session (it did, which made later tests depend on test order). CI: `test` (Python 3.9 + 3.13, offline), `osf-regression`, `clean-install` (`python -m build` + `tools/build_makedb.py`, fresh venvs, run from an empty directory), `test-conda` (conda-lock env); no `\|\| true` left. |
 | 2026-11-16 | — | Docs (step 9): `.qmd` sources and `README.md` edited together (README had drifted from the sources, so edits were made by hand, not regenerated). New: classification inputs table, bin-naming rule, the two packages, pipeline command lines, schema 2.1 columns, how to compare a new DB with a 2.0.0 one by content. Helper scripts `generate_input_sourmash_tax_by_{sample,tool}.sh` (tested). App also reads `.env` from the directory it is started from: after the move into `pankegg/`, installed users had no "PANKEGG dir" to put it in. `CHANGELOG.md` added. |
 | 2026-11-16 | — | Review (step 10, fresh subagent, no blocker/major): fixed C1 directories/binary files in a classification glob crashed the run → skipped with a warning; C2 a `classification_dir` whose directory does not exist exited 0 with all bins unclassified → error (an existing empty directory is still allowed); C3 empty input CSV gave `TypeError` → clear message; C4 per-sample log counted classified bins by status → by taxonomy; C5 UTF-8 BOM rejected → accepted in every input; doc fixes (stale repo layout in CONTRIBUTING/reporting_bugs, `.env` lookup wording, NULL `classification_method`, stdout for --help/--version, `.env` sentences added to the .qmd sources, SQLite-version caveat and per-sample staging in RELEASE.md). Added OSF regression in auto mode for GTDB-Tk. |
+| 2026-11-16 | A12 | KOs whose `KEGG_Pathway` is `-` are now added to `kegg` and linked through `bin_extra_kegg` (owner decision; content is added, nothing removed). OSF sourmash example: `kegg` 1,580 → 2,514 KOs; regression tests now assert that every 2.0.0 KO and KO link is still present and that all other tables are identical. |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes

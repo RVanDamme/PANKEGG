@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.regression.summarise_db import summarise
+from tests.regression.summarise_db import added_since_2_0_0, summarise, unchanged_part
 
 REPO = Path(__file__).resolve().parent.parent
 REG = REPO / "tests" / "regression"
@@ -29,7 +29,9 @@ def build(csv_path, out_dir, name, *extra, cwd=REPO):
 def test_s1_lca_matches_2_0_0(tmp_path):
     db = build(FIX / "db_2.0.0" / "s1_lca_input.csv", tmp_path, "s1")
     expected = json.loads((FIX / "db_2.0.0" / "s1_lca_2.0.0.json").read_text())
-    assert summarise(db) == expected
+    assert unchanged_part(summarise(db)) == unchanged_part(expected)
+    added = added_since_2_0_0(FIX / "db_2.0.0" / "s1_lca_2.0.0.db", db)
+    assert added["kegg"] > 0 and added["bin_extra_kegg"] > 0, "KOs without a pathway are kept since 2.1.0"
 
 
 @pytest.mark.osf
@@ -43,4 +45,7 @@ def test_osf_example_matches_2_0_0(tmp_path, test_data_dir, mode, extra):
     db = build(test_data_dir / f"{mode}_example.csv", tmp_path, mode, *extra,
                cwd=test_data_dir.parent)
     expected = json.loads((REG / f"osf_{mode}_2.0.0.json").read_text())
-    assert summarise(db) == expected
+    assert unchanged_part(summarise(db)) == unchanged_part(expected)
+    # nothing the published 2.0.0 database holds may be lost; KOs without a pathway are added
+    added = added_since_2_0_0(test_data_dir / f"{mode}_example.db", db)
+    assert added["kegg"] > 0 and added["bin_extra_kegg"] > 0

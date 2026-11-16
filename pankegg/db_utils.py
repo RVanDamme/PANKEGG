@@ -369,6 +369,21 @@ def set_ko(cur, kegg_translate_table, maps_dict):
                 cur.execute(INSERT_KEGG, (ko_id, "null", "null", ko_id))
 
 
+def add_all_kos(cur, kegg_translate_table, annotation_files_path):
+    """Add every KO of the annotation files to the kegg table, including KOs that have no
+    KEGG pathway (KEGG_Pathway '-'), which 2.0.0 dropped. Returns the number of distinct KOs."""
+    kos = set()
+    for filename in sorted(glob.glob(annotation_files_path)):
+        _, rows = read_eggnog_annotations(filename)
+        for row in rows:
+            for ko in (row.get('KEGG_ko') or '').split(','):
+                ko = ko.strip()
+                if ko.startswith('ko:') and len(ko) > 3:
+                    kos.add(ko)
+    set_ko(cur, kegg_translate_table, {'all': sorted(kos)})
+    return len(kos)
+
+
 def process_classifications(cur, sample_id, method, records):
     """Store bin classifications for one sample (every mode); bins without one become unclassified."""
     return apply_sample(cur, sample_id, method, records, get_or_create_taxonomy)

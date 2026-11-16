@@ -153,6 +153,7 @@ def build_database(cur, csv_file_path, plan):
             add_bin_quality_values(cur, checkm2_dir, sample_id)
             map_ko_dict = process_annotation_file(cur, annotation_path, map_translate_table, sample_id)
             set_ko(cur, ko_translate_table, map_ko_dict)
+            add_all_kos(cur, ko_translate_table, annotation_path)  # also KOs without a pathway
             link_maps_to_kos(cur, map_ko_dict, map_translate_table)
             set_full_annot_table(cur, annotation_path, sample_id)
             link_bin_to_map_keg(cur, annotation_path, sample_id)

@@ -8,7 +8,7 @@ identical database content.
 from pathlib import Path
 
 from tests.helpers import FIX, run_make_db, write
-from tests.regression.summarise_db import summarise
+from tests.regression.summarise_db import summarise, unchanged_part
 
 RAW = FIX / "raw_eggnog_header" / "S3.439.emapper.annotations"
 LEGACY = FIX / "legacy_eggnog" / "S3.439.emapper.annotations"
@@ -54,10 +54,11 @@ def test_raw_and_legacy_fixture_give_identical_db(tmp_path):
     legacy = build_s3(tmp_path, LEGACY)
     assert raw == legacy
     assert raw["samples"]["S3"]["bins"]["S3.439"]["taxonomy"][5] == "g__Bacillus"
-    # 2.0.0 behaviour kept: every data row is stored in bin_extra ('-' included). The one KO
-    # (K12950) has KEGG_Pathway '-', so 2.0.0 never adds it to the kegg table: no bin_extra_kegg.
+    # Every data row is stored in bin_extra ('-' included). The one KO (K12950) has KEGG_Pathway
+    # '-': 2.0.0 dropped it, since 2.1.0 it is in the kegg table and linked to its bin.
     assert raw["samples"]["S3"]["counts"]["bin_extra"] == 3
-    assert raw["samples"]["S3"]["counts"]["bin_extra_kegg"] == 0
+    assert raw["samples"]["S3"]["counts"]["bin_extra_kegg"] == 1
+    assert raw["global"]["counts"]["kegg"] == 1
 
 
 def test_raw_emapper_s1_matches_2_0_0_db(tmp_path):
@@ -71,4 +72,4 @@ def test_raw_emapper_s1_matches_2_0_0_db(tmp_path):
     run_make_db(csv_path, tmp_path / "out")
     import json
     expected = json.loads((FIX / "db_2.0.0" / "s1_lca_2.0.0.json").read_text())
-    assert summarise(tmp_path / "out" / "test.db") == expected
+    assert unchanged_part(summarise(tmp_path / "out" / "test.db")) == unchanged_part(expected)
