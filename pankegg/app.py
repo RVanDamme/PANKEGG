@@ -217,7 +217,8 @@ def get_taxonomy_data():
         # Query to get the count of bins with and without classification
         bins_count_query = """
         SELECT s.sample_name, 
-            COUNT(CASE WHEN t.id IS NOT NULL THEN 1 END) AS classified_bins,
+            -- unclassified bins point to no row (2.0.0 sourmash DBs) or to a row with no kingdom
+            COUNT(CASE WHEN t.id IS NOT NULL AND COALESCE(t._kingdom_, '') != '' THEN 1 END) AS classified_bins,
             COUNT(*) AS total_bins
         FROM bin b
         JOIN sample s ON b.sample_id = s.id

@@ -116,7 +116,7 @@ def test_help_is_english_and_documents_inputs():
 # --- determinism ------------------------------------------------------------------
 
 REVERSED_GLOB = (
-    "import glob, sys, runpy; _g = glob.glob;"
+    f"import glob, sys, runpy; sys.path.insert(0, {str(REPO)!r}); _g = glob.glob;"
     "glob.glob = lambda *a, **k: list(reversed(sorted(_g(*a, **k))));"
     f"sys.argv = ['pankegg_make_db'] + sys.argv[1:]; runpy.run_path({SCRIPT!r}, run_name='__main__')"
 )
