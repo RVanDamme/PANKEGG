@@ -1,0 +1,27 @@
+{# Page navigation for long lists. pager: {page, pages, per_page, total, first, last}; params: filters to keep. #}
+{% macro pager_nav(endpoint, pager, params, noun='rows') %}
+{% if pager %}
+<nav class="d-flex flex-wrap align-items-center gap-3 my-3" aria-label="Pages">
+  <span class="text-muted">{% if pager.total %}{{ pager.first }}–{{ pager.last }} of {{ pager.total }}</span>{% else %}0 of 0</span>{% endif %}
+  <span class="text-muted small">{{ noun }}</span>
+  {% if pager.pages > 1 %}
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item {% if pager.page <= 1 %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for(endpoint, page=pager.page - 1, per_page=pager.per_page, **params) }}">Previous</a></li>
+    {% for n in pager.window %}
+      {% if n is none %}<li class="page-item disabled"><span class="page-link">…</span></li>
+      {% else %}<li class="page-item {% if n == pager.page %}active{% endif %}">
+        <a class="page-link" href="{{ url_for(endpoint, page=n, per_page=pager.per_page, **params) }}">{{ n }}</a></li>{% endif %}
+    {% endfor %}
+    <li class="page-item {% if pager.page >= pager.pages %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for(endpoint, page=pager.page + 1, per_page=pager.per_page, **params) }}">Next</a></li>
+  </ul>
+  {% endif %}
+  <span class="small">Per page:
+    {% for size in pager.sizes %}
+      {% if size == pager.per_page %}<strong>{{ size }}</strong>{% else %}<a href="{{ url_for(endpoint, page=1, per_page=size, **params) }}">{{ size }}</a>{% endif %}{{ ' · ' if not loop.last }}
+    {% endfor %}
+  </span>
+</nav>
+{% endif %}
+{% endmacro %}

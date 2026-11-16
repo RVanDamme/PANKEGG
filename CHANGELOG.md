@@ -79,6 +79,12 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
   lines to one per sample. Help text in English.
 
 ### Changed
+- **`pankegg_app` listens on `127.0.0.1` with the Flask debugger off** (it was `0.0.0.0` with the
+  debugger on, which let anyone on the network run code on the computer). New options `--host`,
+  `--port` and `--debug`; use `--host 0.0.0.0` to serve other computers.
+- The Map and Kegg pages are **paginated** (25 pathways or 100 KOs per page by default; 25, 50, 100
+  or 250 selectable) and sorted by ID. Filters are kept across pages and exports still contain
+  everything. On the OSF example the Kegg page went from 9.2 MB to 0.4 MB.
 - Code moved from `lib/` and the top-level scripts into the `pankegg` package
   (`pankegg.make_db`, `pankegg.app`, …). `python pankegg_make_db.py` and
   `python pankegg_app.py` still work from a copy of the repository. The top-level `lib`

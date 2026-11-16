@@ -572,3 +572,73 @@ def test_one_rule_for_carrying_a_pathway(databases):
 def test_unknown_ranks_are_not_server_errors(databases, client_for, page, method, data):
     res = getattr(client_for(databases["two"]), method)(page, data=data)
     assert res.status_code in (200, 400), res.status_code
+
+
+# --- owner decisions after phase 2: local-only server by default, paginated Map and Kegg pages -------------
+
+def test_server_defaults_to_localhost_without_debugger(monkeypatch):
+    from click.testing import CliRunner
+    from pankegg import app as app_module
+    calls = []
+    monkeypatch.setattr(app_module.app, "run", lambda **kw: calls.append(kw))
+    runner = CliRunner()
+    assert runner.invoke(app_module.start_server, []).exit_code == 0
+    assert calls[-1] == {"host": "127.0.0.1", "port": 5000, "debug": False}
+    res = runner.invoke(app_module.start_server, ["--host", "0.0.0.0", "--port", "8080", "--debug"])
+    assert res.exit_code == 0 and calls[-1] == {"host": "0.0.0.0", "port": 8080, "debug": True}
+    assert "debugger" in res.output.lower(), "exposing the debugger on the network is warned about"
+    help_text = runner.invoke(app_module.start_server, ["--help"]).output
+    assert "--host" in help_text and "--port" in help_text and "--d" in help_text
+
+
+ROW = {"/map": r"<tr>\s*<td>(map\d{5})</td>", "/kegg": r"<tr>\s*<td>(K\d{5})</td>"}   # first cell of a row
+
+
+def _rows(html, page):
+    import re
+    return len(re.findall(ROW[page], html))
+
+
+@pytest.mark.parametrize("page, default", [("/map", 25), ("/kegg", 100)])
+def test_list_pages_are_paginated(databases, client_for, page, default):
+    import re
+    marker = page
+    client = client_for(databases["two"])
+    first = client.get(page).data.decode()
+    total = int(re.search(r"of (\d+)</", first).group(1))
+    assert total > 10
+    assert _rows(first, marker) == min(default, total)
+    small = client.get(page, query_string={"per_page": 5}).data.decode()
+    assert _rows(small, marker) == 5 and "page=2" in small
+    last_page = -(-total // 5)
+    seen = set()
+    for n in range(1, last_page + 1):
+        html = client.get(page, query_string={"per_page": 5, "page": n}).data.decode()
+        ids = re.findall(ROW[page], html)
+        assert 1 <= len(ids) <= 5 and not seen & set(ids)
+        seen |= set(ids)
+    assert len(seen) == total, "every row appears on exactly one page"
+    # out-of-range and malformed values fall back to a valid page
+    for bad in ({"page": 9999, "per_page": 5}, {"page": "abc"}, {"page": 0}, {"per_page": -3}, {"per_page": 10**9}):
+        assert client.get(page, query_string=bad).status_code == 200
+
+
+def test_pagination_keeps_filters(databases, client_for):
+    client = client_for(databases["two"])
+    html = client.post("/map", data={"filter_mode": "sample", "active_filters": ["S1"], "search_query": "metabolism",
+                                     "per_page": "5"}).data.decode()
+    link = next(h for h in __import__("re").findall(r'href="([^"]+)"', html) if "page=2" in h).replace("&amp;", "&")
+    assert "active_filters=S1" in link and "search_query=metabolism" in link and "filter_mode=sample" in link
+    page2 = client.get(link).data.decode()
+    assert _rows(page2, "/map") >= 1 and "metabolism" in page2.lower()
+    kegg = client.post("/kegg", data={"search_query": "kinase", "per_page": "5"}).data.decode()
+    assert "kinase" in kegg.lower()
+    assert _rows(client.get("/kegg", query_string={"search_query": "kinase", "per_page": 5}).data.decode(), "/kegg") \
+        == _rows(kegg, "/kegg") > 0
+
+
+def test_search_terms_in_titles_are_escaped(databases, client_for):
+    client = client_for(databases["two"])
+    for page, data in (("/map", {"search_query": "<b>x</b>"}), ("/map", {"taxon": "<b>x</b>"}),
+                       ("/map", {"active_filters": "<b>x</b>"}), ("/kegg", {"search_query": "<b>x</b>"})):
+        assert "<b>x</b>" not in client.post(page, data=data).data.decode(), (page, data)

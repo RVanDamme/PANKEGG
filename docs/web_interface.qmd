@@ -44,7 +44,7 @@ These features make it easy to explore, filter, and compare bin quality and taxo
 
 ## Map
 
-The `Map` information page gives you an overview of all metabolic pathways (KEGG maps) present in your dataset. Each pathway is listed with its map number, pathway name, and a completion percentage, which indicates the proportion of KEGG orthologs (KOs) found in your data relative to the total number of KOs for that pathway.
+The `Map` information page gives you an overview of all metabolic pathways (KEGG maps) present in your dataset. Each pathway is listed with its map number, pathway name, and a completion percentage, which indicates the proportion of KEGG orthologs (KOs) found in your data relative to the total number of KOs for that pathway. The list is shown 25 pathways at a time (you can choose 25, 50, 100 or 250 per page); the page links keep your filters, and the export always contains every pathway of the current filter.
 
 At the top of the page, you’ll find options to toggle all map details and export your current view. The legend explains how KOs are visualized:
 
@@ -81,7 +81,7 @@ For examples the (Carbon Metabolism pathway)[https://www.kegg.jp/pathway/map0120
 
 ## KEGG
 
-The `KEGG` page provides an overview of all KEGG orthologs (KO IDs) detected in your dataset. The main table displays, for each KEGG ortholog (KO), its ID, KO name, and a full name/description. You can use the search bar at the top to filter the KEGG IDs.
+The `KEGG` page provides an overview of all KEGG orthologs (KO IDs) detected in your dataset. The main table displays, for each KEGG ortholog (KO), its ID, KO name, and a full name/description. You can use the search bar at the top to filter the KEGG IDs. The list is shown 100 KOs at a time (you can choose 25, 50, 100 or 250 per page); the page links keep your filters, and the export always contains every KO of the current filter.
 
 You see the complete list of KOs across your entire project, with quick-access buttons to:
 

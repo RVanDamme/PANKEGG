@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Home Page{% endblock %}
+{% import "_pagination.html" as pagination %}
 {% block content %}
 
 <div class="container mt-5">
@@ -82,6 +83,7 @@
     </form>
 
 
+    {{ pagination.pager_nav('show_maps', pager, page_params, 'pathways') }}
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
@@ -173,6 +175,8 @@
             {% endfor %}
         </tbody>
     </table>
+    {{ pagination.pager_nav('show_maps', pager, page_params, 'pathways') }}
+    <p class="small text-muted">The export contains every pathway of the current filter, not only this page.</p>
     <form action="{{ url_for('export_maps') }}" method="post">
         <input type="hidden" name="bin_id" value="{{ request.values.get('bin_id', '') }}">
         <input type="hidden" name="ko_id" value="{{ ko_id or request.values.get('ko_id', '') }}">

@@ -177,8 +177,8 @@ pankegg_app --d pankegg_test_data/test_sourmash.db
 
 ## Open web browser
 
-Now, open your web browser and go to the IP address written in your
-terminal ( <http://0.0.0.0:5000>) to interactively explore your
+Now, open your web browser and go to the address written in your
+terminal (<http://127.0.0.1:5000>) to interactively explore your
 metagenomic data!
 
 <br>
@@ -776,24 +776,32 @@ the repository, `python pankegg_app.py --d ...` works too.)
 
 ## Parameters APP
 
-- `--d` or `--db`  
-  Path to the SQLite database you want to browse.  
-  Example: `--d /Path/to/YOUR_PANKEGG.db`
+- `--d` or `--database`  
+Path to the SQLite database you want to browse.  
+Example: `--d /Path/to/YOUR_PANKEGG.db`
 
-- `--help`  
-  Display a help message with all available options.
+- `--host`  
+Address the web server listens on. The default, `127.0.0.1`, is reachable from your own computer only. Use `--host 0.0.0.0` to make the app reachable from other computers on your network (for example when it runs on a server).
+
+- `--port`  
+Port the web server listens on (default `5000`).
+
+- `--debug`  
+Flask debug mode, for development only. Do not combine it with `--host 0.0.0.0`: the debugger lets anyone who can reach the port run code on your computer.
+
+- `--version`, `--help`  
+Print the version, or a help message with all available options.
 
 ## Output APP
 
-By default, the web server will start on your local IP address (host
-`0.0.0.0`) and port `5000`.  
-Once started, you can access the Pankegg interface in your browser by
-navigating to:
+By default, the web server starts on your own computer (host `127.0.0.1`) and port `5000`.  
+Once started, you can access the Pankegg interface in your browser by navigating to:
 
-<http://0.0.0.0:5000>
+[http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-You will be able to browse, filter, and visualize all results contained
-in your selected database.
+You will be able to browse, filter, and visualize all results contained in your selected database.
+
+> Up to version 2.0.0 the app listened on every network interface (`0.0.0.0`) with the Flask debugger switched on. From 2.1.0 it is local and the debugger is off unless you ask for it. If you run Pankegg on a remote server, either start it with `--host 0.0.0.0` on a trusted network, or keep the default and forward the port over SSH: `ssh -L 5000:127.0.0.1:5000 user@server`.
 
 ## Run with Testdata
 
@@ -887,7 +895,7 @@ These features make it easy to explore, filter, and compare bin quality and taxo
 
 ## Map
 
-The `Map` information page gives you an overview of all metabolic pathways (KEGG maps) present in your dataset. Each pathway is listed with its map number, pathway name, and a completion percentage, which indicates the proportion of KEGG orthologs (KOs) found in your data relative to the total number of KOs for that pathway.
+The `Map` information page gives you an overview of all metabolic pathways (KEGG maps) present in your dataset. Each pathway is listed with its map number, pathway name, and a completion percentage, which indicates the proportion of KEGG orthologs (KOs) found in your data relative to the total number of KOs for that pathway. The list is shown 25 pathways at a time (you can choose 25, 50, 100 or 250 per page); the page links keep your filters, and the export always contains every pathway of the current filter.
 
 At the top of the page, you’ll find options to toggle all map details and export your current view. The legend explains how KOs are visualized:
 
@@ -924,7 +932,7 @@ For examples the (Carbon Metabolism pathway)[https://www.kegg.jp/pathway/map0120
 
 ## KEGG
 
-The `KEGG` page provides an overview of all KEGG orthologs (KO IDs) detected in your dataset. The main table displays, for each KEGG ortholog (KO), its ID, KO name, and a full name/description. You can use the search bar at the top to filter the KEGG IDs.
+The `KEGG` page provides an overview of all KEGG orthologs (KO IDs) detected in your dataset. The main table displays, for each KEGG ortholog (KO), its ID, KO name, and a full name/description. You can use the search bar at the top to filter the KEGG IDs. The list is shown 100 KOs at a time (you can choose 25, 50, 100 or 250 per page); the page links keep your filters, and the export always contains every KO of the current filter.
 
 You see the complete list of KOs across your entire project, with quick-access buttons to:
 

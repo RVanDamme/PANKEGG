@@ -24,21 +24,32 @@ This key is used by Flask for session security. Leaving it as the default ('dev'
 
 ## Parameters APP
 
-- `--d` or `--db`  
+- `--d` or `--database`  
 Path to the SQLite database you want to browse.  
 Example: `--d /Path/to/YOUR_PANKEGG.db`
 
-- `--help`  
-Display a help message with all available options.
+- `--host`  
+Address the web server listens on. The default, `127.0.0.1`, is reachable from your own computer only. Use `--host 0.0.0.0` to make the app reachable from other computers on your network (for example when it runs on a server).
+
+- `--port`  
+Port the web server listens on (default `5000`).
+
+- `--debug`  
+Flask debug mode, for development only. Do not combine it with `--host 0.0.0.0`: the debugger lets anyone who can reach the port run code on your computer.
+
+- `--version`, `--help`  
+Print the version, or a help message with all available options.
 
 ## Output APP
 
-By default, the web server will start on your local IP address (host `0.0.0.0`) and port `5000`.  
+By default, the web server starts on your own computer (host `127.0.0.1`) and port `5000`.  
 Once started, you can access the Pankegg interface in your browser by navigating to:
 
-[http://0.0.0.0:5000](http://0.0.0.0:5000)
+[http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 You will be able to browse, filter, and visualize all results contained in your selected database.
+
+> Up to version 2.0.0 the app listened on every network interface (`0.0.0.0`) with the Flask debugger switched on. From 2.1.0 it is local and the debugger is off unless you ask for it. If you run Pankegg on a remote server, either start it with `--host 0.0.0.0` on a trusted network, or keep the default and forward the port over SSH: `ssh -L 5000:127.0.0.1:5000 user@server`.
 
 ## Run with Testdata
 

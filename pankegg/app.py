@@ -871,7 +871,7 @@ def export_bins():
             conditions.append(search_condition)
             search_pattern = f"%{search_query}%"
             params.extend([search_pattern, search_pattern])
-            context += f" with search pattern: {search_query}"
+            context += f" with search pattern: {escape(search_query)}"
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -992,7 +992,7 @@ def export_maps():
             conditions.append(search_condition)
             search_pattern = f"%{search_query}%"
             params.extend([search_pattern, search_pattern])
-            context += f" with search pattern: {search_query}"
+            context += f" with search pattern: {escape(search_query)}"
 
         if conditions:
             base_query += " WHERE " + " AND ".join(conditions)
@@ -1078,7 +1078,7 @@ def export_kegg():
             conditions.append(search_condition)
             search_pattern = f"%{search_query}%"
             params.extend([search_pattern, search_pattern, search_pattern])
-            context += f" with search pattern: {search_query}"
+            context += f" with search pattern: {escape(search_query)}"
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -1149,6 +1149,38 @@ def taxonomy():
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
 
+PAGE_SIZES = (25, 50, 100, 250)
+
+
+def paginate(items, default_per_page):
+    """Slice a list for the page asked in the request (?page=N&per_page=M); returns (items, pager).
+
+    Malformed or out-of-range values fall back to the nearest valid page.
+    """
+    def number(name, default):
+        try:
+            return int(request.values.get(name, default))
+        except (TypeError, ValueError):
+            return default
+
+    per_page = min(max(number('per_page', default_per_page), 1), max(PAGE_SIZES))
+    total = len(items)
+    pages = max(1, -(-total // per_page))
+    page = min(max(number('page', 1), 1), pages)
+    start = (page - 1) * per_page
+    window, previous = [], 0
+    for n in sorted({1, pages, *range(page - 2, page + 3)}):
+        if 1 <= n <= pages:
+            if n - previous > 1:
+                window.append(None)          # gap
+            window.append(n)
+            previous = n
+    pager = {'page': page, 'pages': pages, 'per_page': per_page, 'total': total,
+             'first': start + 1 if total else 0, 'last': min(start + per_page, total),
+             'window': window, 'sizes': PAGE_SIZES}
+    return items[start:start + per_page], pager
+
+
 @app.route('/kegg', methods=['GET', 'POST'])
 def kegg():
     def normalize_taxon_case(taxon):
@@ -1164,7 +1196,7 @@ def kegg():
         ko_id = request.values.get('ko_id')
         bin_id = request.values.get('bin_id')
         taxon = request.values.get('taxon')
-        search_query = request.form.get('search_query', '')
+        search_query = request.values.get('search_query', '')
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1253,7 +1285,7 @@ def kegg():
             conditions.append(search_condition)
             search_pattern = f"%{search_query}%"
             params.extend([search_pattern, search_pattern, search_pattern])
-            context += f" with search pattern: <strong>{search_query}</strong>"
+            context += f" with search pattern: <strong>{escape(search_query)}</strong>"
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -1275,11 +1307,17 @@ def kegg():
 
         cur.close()
         conn.close()
+        # One page of KOs at a time: the full list is several MB of HTML on a real dataset.
+        entries, pager = paginate(sorted(kegg_entries.items(), key=lambda kv: kv[0][0]), 100)
+        page_params = {k: v for k, v in (('ko_id', ko_id), ('bin_id', bin_id), ('taxon', taxon),
+                                         ('search_query', search_query)) if v}
         return render_template(
             'kegg.html',
             context=context,
-            kegg_entries=kegg_entries.items(),
-            ko_id=ko_id
+            kegg_entries=entries,
+            ko_id=ko_id,
+            pager=pager,
+            page_params=page_params
         )
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
@@ -1327,14 +1365,14 @@ def show_maps():
                 "OR LOWER(_order_) = LOWER(?) OR LOWER(_family_) = LOWER(?) OR LOWER(_genus_) = LOWER(?) OR LOWER(_species_) = LOWER(?))))"
             )
             params.extend([taxon]*7)
-            context_tags.append(f"<span class='tag-chip'>{taxon}</span>")
+            context_tags.append(f"<span class='tag-chip'>{escape(taxon)}</span>")
 
         # Tag filtering (sample/bin)
         if active_filters:
             if filter_mode == "sample":
                 filters_clause.append('s.sample_name IN ({})'.format(','.join('?' for _ in active_filters)))
                 params.extend(active_filters)
-                context_tags += [f"<span class='tag-chip'>{x}</span>" for x in active_filters]
+                context_tags += [f"<span class='tag-chip'>{escape(x)}</span>" for x in active_filters]
             elif filter_mode == "bin":
                 parsed_bins = []
                 for entry in active_filters:
@@ -1352,15 +1390,15 @@ def show_maps():
                         sub_clauses.append('(b.bin_name = ? AND s.sample_name = ?)')
                         params.extend([bin_name, sample_name])
                     filters_clause.append('(' + ' OR '.join(sub_clauses) + ')')
-                    context_tags += [f"<span class='tag-chip'>{bin_name} [{sample_name}]</span>" for bin_name, sample_name in parsed_bins]
+                    context_tags += [f"<span class='tag-chip'>{escape(bin_name)} [{escape(sample_name)}]</span>" for bin_name, sample_name in parsed_bins]
         elif bin_id:
             cur.execute("SELECT bin_name, sample_name FROM bin JOIN sample ON bin.sample_id = sample.id WHERE bin.id = ?", (bin_id,))
             bin_row = cur.fetchone()
             if bin_row:
                 bin_name, sample_name = bin_row
-                context_tags.append(f"<span class='tag-chip'>{bin_name} [{sample_name}]</span>")
+                context_tags.append(f"<span class='tag-chip'>{escape(bin_name)} [{escape(sample_name)}]</span>")
             else:
-                context_tags.append(f"<span class='tag-chip'>Bin id: {bin_id}</span>")
+                context_tags.append(f"<span class='tag-chip'>Bin id: {escape(bin_id)}</span>")
             filters_clause.append("b.id = ?")
             params.append(bin_id)
 
@@ -1368,7 +1406,7 @@ def show_maps():
         if search_query:
             filters_clause.append("(m.map_number LIKE ? OR m.pathway_name LIKE ?)")
             params.extend([f"%{search_query}%", f"%{search_query}%"])
-            context_tags.append(f"<span class='tag-chip'>{search_query}</span>")
+            context_tags.append(f"<span class='tag-chip'>{escape(search_query)}</span>")
 
         # ---- KO Filter Logic ----
         maps_to_show = None
@@ -1381,7 +1419,7 @@ def show_maps():
                 ko_query += " WHERE " + " AND ".join(ko_filters)
             cur.execute(ko_query, ko_params)
             maps_to_show = [row[0] for row in cur.fetchall()]
-            context_tags.append(f"<span class='tag-chip'>{ko_id}</span>")
+            context_tags.append(f"<span class='tag-chip'>{escape(ko_id)}</span>")
             if maps_to_show:
                 filters_clause.append("m.map_number IN ({})".format(','.join(['?']*len(maps_to_show))))
                 params.extend(maps_to_show)
@@ -1439,16 +1477,23 @@ def show_maps():
         cur.close()
         conn.close()
 
+        # One page of pathways at a time: every row carries its full KO list.
+        map_items, pager = paginate(sorted(maps.items(), key=lambda kv: kv[0][0]), 25)
+        page_params = {k: v for k, v in (('filter_mode', filter_mode), ('active_filters', active_filters),
+                                         ('bin_id', None if active_filters else bin_id), ('ko_id', ko_id),
+                                         ('taxon', taxon), ('search_query', search_query)) if v}
         return render_template(
             'maps.html',
-            maps=maps.items(),
+            maps=map_items,
             context=context,
             filter_mode=filter_mode,
             active_filters=active_filters or [],
             search_query=search_query,
             ko_id=ko_id,
             taxon=taxon,
-            bin_id=bin_id
+            bin_id=bin_id,
+            pager=pager,
+            page_params=page_params
         )
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
@@ -1597,7 +1642,7 @@ def show_bins():
             if search_subclauses:
                 search_condition = '(' + ' OR '.join(search_subclauses) + ')'
                 conditions.append(search_condition)
-            context += f" with search pattern: <strong>{search_query}</strong>"
+            context += f" with search pattern: <strong>{escape(search_query)}</strong>"
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -1682,10 +1727,19 @@ pages.register(app, get_db_connection, pathway_groups)
 @click.command()
 @click.version_option(__version__, prog_name='pankegg_app')
 @click.option('--database', "--d", default=get_default_db_path(), help='Path to the SQLite database file.')
-def start_server(database):
+@click.option('--host', default='127.0.0.1', show_default=True,
+              help='Address to listen on. The default is reachable from this computer only; '
+                   'use 0.0.0.0 to make the app reachable from other computers on the network.')
+@click.option('--port', default=5000, show_default=True, type=int, help='Port to listen on.')
+@click.option('--debug', is_flag=True,
+              help='Flask debug mode (auto-reload and an interactive debugger). For development only.')
+def start_server(database, host, port, debug):
     app.config['PANKEGG_DB_PATH'] = database
     print(f"[CLI] Using database: {database}")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    if debug and host not in ('127.0.0.1', 'localhost', '::1'):
+        print("[CLI] WARNING: --debug with a public --host exposes the Flask debugger, which lets anyone "
+              "who can reach this port run code on this computer.")
+    app.run(host=host, port=port, debug=debug)
 
 
 if __name__ == '__main__':

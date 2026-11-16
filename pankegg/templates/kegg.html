@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}KEGG Page{% endblock %}
+{% import "_pagination.html" as pagination %}
 {% block content %}
 
 <div class="container mt-5">
@@ -11,10 +12,11 @@
         <input type="hidden" name="ko_id" value="{{ request.values.get('ko_id', '') }}">
         <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
         <div class="input-group">
-            <input type="text" name="search_query" class="form-control" placeholder="Search by pattern" value="{{ request.form.get('search_query', '') }}">
+            <input type="text" name="search_query" class="form-control" placeholder="Search by pattern" value="{{ request.values.get('search_query', '') }}">
             <button class="btn btn-outline-secondary" type="submit">Search</button>
         </div>
     </form>
+    {{ pagination.pager_nav('kegg', pager, page_params, 'KOs') }}
     <table class="table table-bordered table-striped">
         <thead class="table-dark">
             <tr>
@@ -77,6 +79,8 @@
         {% endfor %}
         </tbody>
     </table>
+    {{ pagination.pager_nav('kegg', pager, page_params, 'KOs') }}
+    <p class="small text-muted">The export contains every KO of the current filter, not only this page.</p>
     <form action="{{ url_for('export_kegg') }}" method="post">
         <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
         <input type="hidden" name="bin_id" value="{{ request.values.get('bin_id', '') }}">

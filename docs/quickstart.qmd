@@ -64,4 +64,4 @@ pankegg_app --d pankegg_test_data/test_sourmash.db
 ## Open web browser
 
 
-Now, open your web browser and go to the IP address written in your terminal ( [http://0.0.0.0:5000](http://0.0.0.0:5000)) to interactively explore your metagenomic data!
+Now, open your web browser and go to the address written in your terminal ([http://127.0.0.1:5000](http://127.0.0.1:5000)) to interactively explore your metagenomic data!
