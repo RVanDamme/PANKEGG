@@ -403,3 +403,41 @@ def test_new_pages_serve(databases, client_for, db_kind, page):
         assert res.status_code in (200, 400)
     else:
         assert res.status_code == 200, f"{page}: {res.status_code}"
+
+
+# --- phase 2, A9: KEGG modules in the app -----------------------------------------------------------
+
+def test_module_pages(databases, client_for):
+    from pankegg import insights
+    con = _con(databases["two"])
+    rows = insights.module_list(con)
+    assert rows and all(0 < r["best"] <= 100 and r["n_bins"] >= r["complete_bins"] for r in rows)
+    number = rows[0]["number"]
+    report = insights.module_report(con, number)
+    stored = dict(con.execute("SELECT bin_id, completeness FROM bin_module bm JOIN module m ON m.id=bm.module_id "
+                              "WHERE m.module_number=?", (number,)))
+    for b in report["bins"]:
+        assert b["module_completeness"] == stored.get(b["id"], 0.0)
+        assert len(b["step_scores"]) == len(report["steps"]) == report["module"]["steps_total"]
+        assert round(100 * sum(b["step_scores"]) / len(b["step_scores"]), 0) == round(b["module_completeness"], 0)
+    bin_id = report["bins"][0]["id"]
+    con.close()
+    client = client_for(databases["two"])
+    assert number in client.get("/module").data.decode()
+    assert client.get("/module?format=csv").data.decode().startswith("module,name,steps")
+    detail = client.get(f"/module/{number}")
+    assert detail.status_code == 200 and b"plot-steps" in detail.data
+    assert client.get(f"/module/{number}?format=csv").data.decode().count("\n") == 6
+    assert client.get("/module/M99999").status_code == 404
+    assert "KEGG modules" in client.get(f"/bin/{bin_id}").data.decode()
+    assert "Module completeness." in client.get("/pathway_taxon").data.decode(), "both measures explained"
+    for page in ("/core_accessory?level=module", "/similarity?level=module",
+                 "/group_compare?a=sample:S1&b=rest&level=module"):
+        assert client.get(page).status_code == 200, page
+
+
+def test_module_pages_on_2_0_0_db(databases, client_for):
+    client = client_for(databases["2.0.0"])
+    assert "rebuild it" in client.get("/module").data.decode()
+    assert client.get("/module/M00001").status_code == 404
+    assert client.get("/core_accessory?level=module").status_code == 200      # falls back to pathways

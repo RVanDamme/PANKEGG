@@ -43,11 +43,14 @@ def register(app, get_db_connection, pathway_groups):
         conn = get_db_connection()
         try:
             report = insights.bin_report(conn, bin_id, map_groups)
+            modules = insights.bin_modules(conn, bin_id) if report else []
+            modules_available = insights.has_modules(conn)
         finally:
             conn.close()
         if report is None:
             abort(404, description=f"No bin with id {bin_id}")
         return render_template("bin_detail.html", report=report, figs=insights.bin_figures(report),
+                               modules=modules, modules_available=modules_available,
                                per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     # --- pathway x taxon ------------------------------------------------------------------
@@ -143,6 +146,45 @@ def register(app, get_db_connection, pathway_groups):
         figs = insights.group_compare_figures(result, label_a, label_b) if result and not result["error"] else {}
         return render_template("group_compare.html", result=result, figs=figs, options=options, levels=levels,
                                a=a, b=b, level=level, quality=quality, label_a=label_a, label_b=label_b)
+
+    # --- KEGG modules -------------------------------------------------------------------------------
+    @app.route("/module")
+    def module_list():
+        conn = get_db_connection()
+        try:
+            available = insights.has_modules(conn)
+            rows = insights.module_list(conn, _flag("unclassified"))
+        finally:
+            conn.close()
+        if request.args.get("format") == "csv":
+            return _csv_response(insights.csv_text(
+                ["module", "name", "steps", "bins_with_part", "bins_complete", "samples_with_a_complete_bin",
+                 "best_percent", "mean_percent_of_bins_with_part"],
+                [[r["number"], r["name"], r["steps"], r["n_bins"], r["complete_bins"], r["complete_samples"],
+                  r["best"], r["mean"]] for r in rows]), "modules.csv")
+        return render_template("module_list.html", rows=rows, available=available,
+                               unclassified=_flag("unclassified"),
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
+
+    @app.route("/module/<number>")
+    def module_detail(number):
+        conn = get_db_connection()
+        try:
+            report = insights.module_report(conn, number, _flag("unclassified"), _rank())
+        finally:
+            conn.close()
+        if report is None:
+            abort(404, description=f"No module {number} in this database")
+        if request.args.get("format") == "csv":
+            return _csv_response(insights.csv_text(
+                ["sample", "bin", *insights.RANKS, "checkm2_completeness", "checkm2_contamination", "module",
+                 "module_completeness_percent", "steps_complete", "steps_total", "kos"],
+                [[b["sample"], b["name"], *[b["lineage"][r] or "" for r in insights.RANKS], b["completeness"],
+                  b["contamination"], number, b["module_completeness"], b["steps_complete"], b["steps_total"],
+                  ";".join(b["kos"])] for b in report["bins"]]), f"{number}_bins.csv")
+        return render_template("module_detail.html", report=report, figs=insights.module_figures(report),
+                               ranks=insights.RANKS,
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     @app.route("/favicon.ico")
     def favicon():

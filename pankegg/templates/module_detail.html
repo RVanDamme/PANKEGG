@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}{{ report.module.number }}{% endblock %}
+{% block content %}
+{% set m = report.module %}
+<div class="container-fluid px-4 mt-4">
+  <h2 class="mb-1">{{ m.number }} — {{ m.name }}</h2>
+  <p class="text-muted mb-2">Complete in {{ report.n_complete }} of {{ report.bins|length }} bins ·
+    {{ m.steps_total }} steps ·
+    <a href="https://www.kegg.jp/module/{{ m.number }}" target="_blank" rel="noopener">Open in KEGG</a> ·
+    <a href="{{ url_for('module_list') }}">All modules</a> ·
+    <a href="{{ url_for('module_detail', number=m.number, unclassified=1 if report.include_unclassified else 0, format='csv') }}">CSV</a></p>
+  <form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto"><select name="rank" class="form-select" onchange="this.form.submit()">
+      {% for r in ranks %}<option value="{{ r }}" {% if r == report.rank %}selected{% endif %}>by {{ r }}</option>{% endfor %}</select></div>
+    <div class="col-auto form-check form-switch ms-2">
+      <input type="hidden" name="unclassified" value="0">
+      <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1" {% if report.include_unclassified %}checked{% endif %} onchange="this.form.submit()">
+      <label class="form-check-label" for="unclassified">Include unclassified bins</label></div>
+  </form>
+  {{ plots.measures_help(per_id_help, module_help, true) }}
+  <p class="small"><strong>Definition:</strong> <code>{{ m.definition }}</code><br>
+    <span class="text-muted">Space = next step, comma = alternative, + = complex, - = optional.</span></p>
+
+  <div class="row g-4">
+    <div class="col-xl-5"><h5>Completeness per sample</h5><div id="plot-distribution"></div></div>
+    <div class="col-xl-7"><h5>Who carries it (by {{ report.rank }})</h5>
+      <table class="table table-sm table-striped">
+        <thead><tr><th>Taxon</th><th>Bins complete</th><th>Best</th><th>Mean</th></tr></thead>
+        <tbody>{% for c in report.carriers[:15] %}
+          <tr><td>{{ c.taxon }}</td><td>{{ c.n_complete }} / {{ c.n_bins }}</td><td>{{ c.best }}%</td><td>{{ c.mean }}%</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+  </div>
+
+  <h5 class="mt-3">Steps × bins</h5>
+  <p class="small text-muted">Which step is missing in which bin. A partial step has some but not all KOs of its best alternative.</p>
+  <div id="plot-steps"></div>
+
+  <h5 class="mt-3">Bins</h5>
+  <table class="table table-sm table-striped">
+    <thead><tr><th>Sample</th><th>Bin</th><th>Genus</th><th>CheckM2 compl. / cont.</th><th>Steps complete</th><th>Module completeness</th><th>KOs of the module</th></tr></thead>
+    <tbody>
+      {% for b in report.bins|sort(attribute='module_completeness', reverse=true) %}
+      <tr {% if b.module_completeness >= 100 %}class="table-success"{% endif %}>
+        <td>{{ b.sample }}</td><td><a href="{{ url_for('bin_detail', bin_id=b.id) }}">{{ b.name }}</a></td>
+        <td>{{ b.lineage.genus or '-' }}</td>
+        <td>{{ b.completeness if b.completeness is not none else '-' }} / {{ b.contamination if b.contamination is not none else '-' }}</td>
+        <td>{{ b.steps_complete }} / {{ b.steps_total }}</td><td>{{ '%.1f'|format(b.module_completeness) }}%</td>
+        <td class="small">{{ b.kos|join(', ') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h5 class="mt-3">KOs of the module found in no bin ({{ report.missing_kos|length }} of {{ report.module_kos|length }})</h5>
+  <p class="small">{% for ko in report.missing_kos %}<span title="{{ report.ko_names.get(ko, '') }}">{{ ko }}</span>{{ ', ' if not loop.last }}{% endfor %}</p>
+  {{ plots.draw(figs) }}
+</div>
+{% endblock %}

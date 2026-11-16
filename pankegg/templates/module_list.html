@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}KEGG modules{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+  <h2>KEGG modules</h2>
+  {% if not available %}
+  <div class="alert alert-info">Module completeness is stored by PANKEGG 2.1.0 or later. This database was built by an
+    earlier version: rebuild it with <code>pankegg_make_db</code> to see modules.</div>
+  {% else %}
+  <p class="text-muted">{{ rows|length }} modules have at least part of a step in a bin;
+    {{ rows|selectattr('complete_bins', 'gt', 0)|list|length }} are complete in at least one bin.</p>
+  {{ plots.measures_help(per_id_help, module_help, true) }}
+  <form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto" style="min-width: 360px;"><input type="search" id="module-filter" class="form-control" placeholder="Filter by name or ID"></div>
+    <div class="col-auto form-check form-switch ms-2">
+      <input type="hidden" name="unclassified" value="0">
+      <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1" {% if unclassified %}checked{% endif %} onchange="this.form.submit()">
+      <label class="form-check-label" for="unclassified">Include unclassified bins</label></div>
+    <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('module_list', unclassified=1 if unclassified else 0, format='csv') }}">CSV</a></div>
+  </form>
+  <table class="table table-sm table-striped" id="module-table">
+    <thead><tr><th>Module</th><th>Name</th><th>Steps</th><th>Bins complete</th><th>Samples with a complete bin</th>
+      <th>Bins with part of it</th><th>Best bin</th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr><td><a href="{{ url_for('module_detail', number=r.number, unclassified=1 if unclassified else 0) }}">{{ r.number }}</a></td><td>{{ r.name }}</td><td>{{ r.steps }}</td>
+          <td>{{ r.complete_bins }}</td><td>{{ r.complete_samples }}</td><td>{{ r.n_bins }}</td>
+          <td><div class="progress" style="height: 18px; min-width: 120px;"><div class="progress-bar {% if r.best >= 100 %}bg-success{% endif %}" style="width: {{ r.best }}%">{{ '%.0f'|format(r.best) }}%</div></div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <script>
+    document.getElementById('module-filter').addEventListener('input', function () {
+      var q = this.value.toLowerCase();
+      document.querySelectorAll('#module-table tbody tr').forEach(function (tr) {
+        tr.style.display = tr.textContent.toLowerCase().indexOf(q) === -1 ? 'none' : '';
+      });
+    });
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

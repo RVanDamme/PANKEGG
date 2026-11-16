@@ -927,3 +927,135 @@ def group_compare_figures(result, label_a="Group A", label_b="Group B"):
         "xaxis": {"title": {"text": f"Bins carrying it in {label_a} (%)"}, "range": [-3, 103]},
         "yaxis": {"title": {"text": f"Bins carrying it in {label_b} (%)"}, "range": [-3, 103]},
         "shapes": [{"type": "line", "x0": 0, "y0": 0, "x1": 100, "y1": 100, "line": {"dash": "dot", "color": "#bbbbbb"}}]}}}
+
+
+# --- KEGG modules (databases built by 2.1.0 or later) ----------------------------------------------
+
+def has_modules(conn):
+    return has_table(conn, "bin_module") and has_table(conn, "module")
+
+
+def module_list(conn, include_unclassified=True):
+    """One row per module seen in at least one bin: bins with part of it, bins complete, mean, samples."""
+    if not has_modules(conn):
+        return []
+    bins = {b["id"]: b for b in load_bins(conn, include_unclassified)}
+    acc = {}
+    for number, name, steps, bin_id, completeness in conn.execute(
+            "SELECT m.module_number, m.module_name, m.steps_total, bm.bin_id, bm.completeness "
+            "FROM bin_module bm JOIN module m ON m.id = bm.module_id"):
+        if bin_id not in bins:
+            continue
+        row = acc.setdefault(number, {"number": number, "name": name, "steps": steps, "values": [],
+                                      "complete_bins": 0, "complete_samples": set()})
+        row["values"].append(completeness)
+        if completeness >= 100:
+            row["complete_bins"] += 1
+            row["complete_samples"].add(bins[bin_id]["sample"])
+    rows = []
+    for row in acc.values():
+        values = row.pop("values")
+        row["n_bins"] = len(values)
+        row["best"] = max(values)
+        row["mean"] = round(sum(values) / len(values), 1)
+        row["complete_samples"] = len(row["complete_samples"])
+        rows.append(row)
+    return sorted(rows, key=lambda r: (-r["complete_bins"], -r["best"], r["number"]))
+
+
+def bin_modules(conn, bin_id):
+    if not has_modules(conn):
+        return []
+    return [{"number": r[0], "name": r[1], "steps_complete": r[2], "steps_total": r[3], "completeness": r[4]}
+            for r in conn.execute(
+                "SELECT m.module_number, m.module_name, bm.steps_complete, bm.steps_total, bm.completeness "
+                "FROM bin_module bm JOIN module m ON m.id = bm.module_id WHERE bm.bin_id = ? "
+                "ORDER BY bm.completeness DESC, m.module_number", (bin_id,))]
+
+
+def _split_steps(definition):
+    """Top-level steps of a module definition as text."""
+    steps, depth, current = [], 0, ""
+    for ch in definition.strip():
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == " " and depth == 0:
+            if current:
+                steps.append(current)
+            current = ""
+        else:
+            current += ch
+    if current:
+        steps.append(current)
+    return steps
+
+
+def module_report(conn, number, include_unclassified=True, rank="genus"):
+    """One module: its steps, and for every bin the completeness and the steps that are not complete."""
+    if not has_modules(conn):
+        return None
+    row = conn.execute("SELECT id, module_number, module_name, definition, steps_total FROM module "
+                       "WHERE module_number = ?", (number,)).fetchone()
+    if row is None:
+        return None
+    from .modules import ModuleSet
+    mset = ModuleSet({r[0]: (r[1], r[2]) for r in conn.execute(
+        "SELECT module_number, module_name, definition FROM module")})
+    step_text = _split_steps(row[3])
+    parsed = mset.steps.get(number, [])
+    if len(step_text) != len(parsed):        # steps without a KO, optional steps, top-level alternatives
+        step_text = [t for t in step_text if t != "--" and not t.startswith("-")]
+        if len(step_text) != len(parsed):
+            step_text = [row[3]] if len(parsed) == 1 else [f"step {i + 1}" for i in range(len(parsed))]
+    stored = {r[0]: r[1:] for r in conn.execute(
+        "SELECT bin_id, steps_complete, steps_total, completeness FROM bin_module WHERE module_id = ?", (row[0],))}
+    kos = bin_kos(conn)
+    module_kos = mset.kos.get(number, set())
+    bins = load_bins(conn, include_unclassified)
+    for b in bins:
+        complete, total, percent = stored.get(b["id"], (0, row[4], 0.0))
+        b["module_completeness"], b["steps_complete"], b["steps_total"] = percent, complete, total
+        b["kos"] = sorted(kos.get(b["id"], set()) & module_kos)
+        scores = mset.step_scores(number, kos.get(b["id"], set())) if percent else [0.0] * len(parsed)
+        b["step_scores"] = [round(s, 2) for s in scores]
+    found = set().union(*(b["kos"] for b in bins)) if bins else set()
+    carriers = defaultdict(list)
+    for b in bins:
+        carriers[taxon_of(b, rank)].append(b["module_completeness"])
+    carriers = sorted(({"taxon": t, "n_bins": len(v), "n_complete": sum(1 for x in v if x >= 100),
+                        "mean": round(sum(v) / len(v), 1), "best": max(v)} for t, v in carriers.items()),
+                      key=lambda c: (-c["best"], -c["mean"], c["taxon"]))
+    return {"module": {"number": row[1], "name": row[2], "definition": row[3], "steps_total": row[4]},
+            "steps": step_text, "bins": bins, "carriers": carriers, "rank": rank,
+            "ko_names": ko_names(conn, sorted(module_kos)), "module_kos": sorted(module_kos),
+            "missing_kos": sorted(module_kos - found),
+            "n_complete": sum(1 for b in bins if b["module_completeness"] >= 100),
+            "include_unclassified": include_unclassified}
+
+
+def module_figures(report):
+    bins = sorted(report["bins"], key=lambda b: (b["sample"], -b["module_completeness"], b["name"]))
+    if not bins or not report["steps"]:
+        return {}
+    steps = [f"{i + 1}. {s[:38]}{'…' if len(s) > 38 else ''}" for i, s in enumerate(report["steps"])]
+    figs = {"steps": {
+        "data": [{"type": "heatmap", "z": [[b["step_scores"][i] for b in bins] for i in reversed(range(len(steps)))],
+                  "x": [b["label"] for b in bins], "y": list(reversed(steps)), "zmin": 0, "zmax": 1, "xgap": 1, "ygap": 1,
+                  "colorscale": [[0, "#eeeeee"], [0.5, "#a6cee3"], [1, "#1f77b4"]],
+                  "colorbar": {"title": {"text": "step"}, "tickvals": [0, 0.5, 1], "ticktext": ["absent", "partial", "complete"]},
+                  "hovertemplate": "%{y}<br>%{x}<br>score %{z}<extra></extra>"}],
+        "layout": {"height": max(300, 24 * len(steps) + 230), "margin": {"l": 330, "b": 190, "t": 20},
+                   "xaxis": {"tickangle": -60, "type": "category"}, "yaxis": {"type": "category", "dtick": 1}}}}
+    colours = colour_map(b["sample"] for b in bins)
+    figs["distribution"] = {
+        "data": [{"type": "box", "name": s, "y": [b["module_completeness"] for b in bins if b["sample"] == s],
+                  "boxpoints": "all", "jitter": 0.5, "pointpos": 0, "marker": {"color": colours[s], "size": 8},
+                  "line": {"width": 1}, "fillcolor": "rgba(0,0,0,0)",
+                  "text": [f"{b['name']}<br>{taxon_of(b, 'genus')}" for b in bins if b["sample"] == s],
+                  "hovertemplate": "%{text}<br>module completeness %{y}%<extra></extra>"}
+                 for s in sorted({b["sample"] for b in bins})],
+        "layout": {"height": 340, "showlegend": False, "margin": {"t": 20},
+                   "yaxis": {"title": {"text": "Module completeness (%)"}, "range": [-4, 104]}}}
+    return figs

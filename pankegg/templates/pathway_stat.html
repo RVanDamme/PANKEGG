@@ -61,7 +61,7 @@
       <div class="small text-muted">KOs of the map found in no bin</div></div></div></div>
   </div>
 
-  {{ plots.measures_help(per_id_help, module_help, false) }}
+  {{ plots.measures_help(per_id_help, module_help, true) }}
 
   <div class="mb-3">
     <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('pathway_stat_export', what='bins', **qargs) }}">CSV: bins</a>

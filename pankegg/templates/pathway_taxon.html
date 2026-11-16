@@ -18,7 +18,7 @@
     <div class="col-auto"><button class="btn btn-primary" type="submit">Show</button></div>
     <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('pathway_taxon', rank=data.rank, group=group, unclassified=1 if unclassified else 0, format='csv') }}">CSV</a></div>
   </form>
-  {{ plots.measures_help(per_id_help, module_help, false) }}
+  {{ plots.measures_help(per_id_help, module_help, true) }}
 
   <h4>Mean per-ID completeness ({{ data.rows|length }} pathways × {{ data.taxa|length }} taxa)</h4>
   <p class="small text-muted">Each cell is the mean over the bins of the taxon (number of bins in brackets); bins without the pathway count as 0.</p>

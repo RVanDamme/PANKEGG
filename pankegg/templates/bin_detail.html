@@ -39,7 +39,30 @@
     </tbody>
   </table>
 
-  {{ plots.measures_help(per_id_help, module_help, false) }}
+  {{ plots.measures_help(per_id_help, module_help, true) }}
+
+  <h5>KEGG modules</h5>
+  {% if not modules_available %}
+  <p class="text-muted small">Module completeness is stored by PANKEGG 2.1.0 or later; rebuild the database with
+    <code>pankegg_make_db</code> to see it.</p>
+  {% elif not modules %}
+  <p class="text-muted small">No KO of this bin belongs to a KEGG module.</p>
+  {% else %}
+  <p class="small text-muted mb-1">{{ modules|selectattr('completeness', 'ge', 100)|list|length }} complete modules,
+    {{ modules|length }} with at least part of a step.</p>
+  <div style="max-height: 360px; overflow-y: auto;" class="mb-3">
+    <table class="table table-sm table-striped">
+      <thead class="sticky-top bg-white"><tr><th>Module</th><th>Name</th><th>Steps complete</th><th>Module completeness</th></tr></thead>
+      <tbody>
+        {% for m in modules %}
+        <tr {% if m.completeness >= 100 %}class="table-success"{% endif %}>
+          <td><a href="{{ url_for('module_detail', number=m.number) }}">{{ m.number }}</a></td><td>{{ m.name }}</td>
+          <td>{{ m.steps_complete }} / {{ m.steps_total }}</td><td>{{ '%.1f'|format(m.completeness) }}%</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
   {% if report.pathways %}
   <div class="row g-4">
