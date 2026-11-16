@@ -98,6 +98,28 @@ CREATE_TABLES = {
     );
     """,
     # Added in 2.1.0 (additive; absent from 2.0.0 databases)
+    "module": """
+        CREATE TABLE IF NOT EXISTS module (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            module_number VARCHAR(10) UNIQUE NOT NULL,
+            module_name VARCHAR(255),
+            definition TEXT,
+            steps_total INT
+        );
+    """,
+    # One row per bin and module with at least part of a step present.
+    "bin_module": """
+        CREATE TABLE IF NOT EXISTS bin_module (
+            bin_id INT NOT NULL,
+            module_id INT NOT NULL,
+            steps_complete INT,
+            steps_total INT,
+            completeness REAL,
+            PRIMARY KEY (bin_id, module_id),
+            FOREIGN KEY (bin_id) REFERENCES bin(id),
+            FOREIGN KEY (module_id) REFERENCES module(id)
+        );
+    """,
     "pankegg_info": """
         CREATE TABLE IF NOT EXISTS pankegg_info (
             key VARCHAR(64) PRIMARY KEY,
@@ -220,4 +242,10 @@ UPDATE_BIN_QUALITY = """
 
 UPDATE_BIN_TAXONOMY = """
    UPDATE Bin SET taxonomic_id = ? WHERE bin_name = ? AND sample_id = ?
+"""
+
+INSERT_MODULE = "INSERT INTO module (module_number, module_name, definition, steps_total) VALUES (?, ?, ?, ?);"
+INSERT_BIN_MODULE = """
+    INSERT OR REPLACE INTO bin_module (bin_id, module_id, steps_complete, steps_total, completeness)
+    VALUES (?, ?, ?, ?, ?);
 """

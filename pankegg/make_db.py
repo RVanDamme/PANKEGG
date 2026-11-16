@@ -13,16 +13,18 @@ import traceback
 
 from . import __version__, resource_path
 from .db_utils import *
+from .modules import ModuleSet, load_modules
 
 log = logging.getLogger("pankegg")
 
 default_pathway_file = resource_path('data', 'kegg_map_orthologs.tsv')
 default_ko_file = resource_path('data', 'ko.txt')
+default_module_file = resource_path('data', 'kegg_modules.tsv')
 
 TABLES_TO_DROP = [
     'taxonomy', 'bin', 'map', 'kegg', 'bin_map_kegg',
     'bin_map', 'map_kegg', 'bin_extra', 'bin_extra_kegg',
-    'sample', 'pankegg_info'
+    'sample', 'pankegg_info', 'module', 'bin_module'
 ]
 
 EPILOG = """\
@@ -137,6 +139,8 @@ def build_database(cur, csv_file_path, plan):
 
     ko_translate_table = load_ko_descriptions(default_ko_file)
     map_translate_table = load_pathways(default_pathway_file)
+    module_set = ModuleSet(load_modules(default_module_file))
+    module_ids = add_modules(cur, module_set)
 
     with open(csv_file_path, mode='r', newline='', encoding='utf-8-sig') as csvfile:
         for row in csv.DictReader(csvfile):
@@ -157,6 +161,7 @@ def build_database(cur, csv_file_path, plan):
             link_maps_to_kos(cur, map_ko_dict, map_translate_table)
             set_full_annot_table(cur, annotation_path, sample_id)
             link_bin_to_map_keg(cur, annotation_path, sample_id)
+            add_bin_modules(cur, annotation_path, sample_id, module_set, module_ids)
 
             duplicates = check_duplicate_bins(cur, sample_id)
             if duplicates:

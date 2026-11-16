@@ -384,6 +384,35 @@ def add_all_kos(cur, kegg_translate_table, annotation_files_path):
     return len(kos)
 
 
+def add_modules(cur, module_set):
+    """Store every KEGG module (name, definition, number of steps); returns {module_number: id}."""
+    ids = {}
+    for number in sorted(module_set.steps):
+        cur.execute(INSERT_MODULE, (number, module_set.names[number], module_set.definitions[number],
+                                    len(module_set.steps[number])))
+        ids[number] = cur.lastrowid
+    return ids
+
+
+def add_bin_modules(cur, annotation_files_path, sample_id, module_set, module_ids):
+    """KEGG module completeness of every bin of a sample, from all KOs of its annotation file."""
+    for filename in sorted(glob.glob(annotation_files_path)):
+        bin_name = bin_name_from_annotation_file(filename)
+        cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
+        bin_id = cur.fetchone()
+        if not bin_id:
+            continue
+        _, rows = read_eggnog_annotations(filename)
+        kos = set()
+        for row in rows:
+            for ko in (row.get('KEGG_ko') or '').split(','):
+                ko = ko.strip()
+                if ko.startswith('ko:'):
+                    kos.add(ko[3:])
+        for number, (complete, total, percent) in sorted(module_set.completeness(kos).items()):
+            cur.execute(INSERT_BIN_MODULE, (bin_id[0], module_ids[number], complete, total, percent))
+
+
 def process_classifications(cur, sample_id, method, records):
     """Store bin classifications for one sample (every mode); bins without one become unclassified."""
     return apply_sample(cur, sample_id, method, records, get_or_create_taxonomy)
