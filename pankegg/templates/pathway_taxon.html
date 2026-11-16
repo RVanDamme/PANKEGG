@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}Pathways by taxon{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+  <h2>Pathways by taxon</h2>
+  <p class="text-muted">Which taxa carry which pathways, across all samples, and how many different taxa can perform each one.</p>
+  <form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto"><select name="rank" class="form-select">
+      {% for r in ranks %}<option value="{{ r }}" {% if r == data.rank %}selected{% endif %}>by {{ r }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><select name="group" class="form-select">
+      <option value="all" {% if group == 'all' %}selected{% endif %}>All pathways</option>
+      {% for g in groups %}<option value="{{ g }}" {% if g == group %}selected{% endif %}>{{ g }}</option>{% endfor %}</select></div>
+    <div class="col-auto form-check form-switch ms-2">
+      <input type="hidden" name="unclassified" value="0">
+      <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1" {% if unclassified %}checked{% endif %}>
+      <label class="form-check-label" for="unclassified">Include unclassified bins</label></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Show</button></div>
+    <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('pathway_taxon', rank=data.rank, group=group, unclassified=1 if unclassified else 0, format='csv') }}">CSV</a></div>
+  </form>
+  {{ plots.measures_help(per_id_help, module_help, false) }}
+
+  <h4>Mean per-ID completeness ({{ data.rows|length }} pathways × {{ data.taxa|length }} taxa)</h4>
+  <p class="small text-muted">Each cell is the mean over the bins of the taxon (number of bins in brackets); bins without the pathway count as 0.</p>
+  {% if figs.matrix %}<div id="plot-matrix"></div>{% else %}<div class="alert alert-info">No pathway of this category was found in these bins.</div>{% endif %}
+
+  <h4 class="mt-4">Functional redundancy</h4>
+  <p class="small text-muted">Number of distinct {{ data.rank }}-level taxa with at least one bin carrying the pathway (any KO of it),
+    for every pathway of the database; fewest first. A pathway carried by a single taxon depends on that taxon.
+    Unclassified bins are not counted as a taxon.</p>
+  <div style="max-height: 520px; overflow-y: auto;">
+    <table class="table table-sm table-striped">
+      <thead class="sticky-top bg-white"><tr><th>Pathway</th><th>Name</th><th>Taxa</th><th>Bins</th><th>Carried by</th></tr></thead>
+      <tbody>
+        {% for r in data.redundancy %}
+        <tr><td><a href="{{ url_for('pathway_stat', q=r.number, rank=data.rank) }}">{{ r.number }}</a></td><td>{{ r.name }}</td>
+            <td>{{ r.n_taxa }}</td><td>{{ r.n_bins }}</td>
+            <td class="small">{{ r.taxa[:6]|join(', ') }}{% if r.taxa|length > 6 %}, … (+{{ r.taxa|length - 6 }}){% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ plots.draw(figs) }}
+</div>
+{% endblock %}

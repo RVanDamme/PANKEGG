@@ -298,3 +298,108 @@ def test_overview_and_bin_pages(databases, client_for, db_kind):
         assert res.status_code == 200 and b"CheckM2 completeness" in res.data
     assert client.get("/bin/99999").status_code == 404
     assert f"/bin/{ids[0]}" in client.get("/bin").data.decode(), "bin list links to the bin page"
+
+
+# --- phase 2, A5-A8: cross-module pages --------------------------------------------------------
+
+def _con(db):
+    import sqlite3
+    return sqlite3.connect(db)
+
+
+def test_fisher_and_fdr_match_scipy():
+    import random
+    from scipy import stats
+    from pankegg import insights
+    rng = random.Random(1)
+    for _ in range(500):
+        a, b, c, d = (rng.randint(0, 12) for _ in range(4))
+        assert abs(insights.fisher_exact_two_sided(a, b, c, d) - stats.fisher_exact([[a, b], [c, d]])[1]) < 1e-9
+    ps = [rng.random() ** 3 for _ in range(60)]
+    if hasattr(stats, "false_discovery_control"):
+        expected = stats.false_discovery_control(ps, method="bh")
+        assert all(abs(x - y) < 1e-12 for x, y in zip(insights.benjamini_hochberg(ps), expected))
+
+
+def test_pathway_taxon(databases):
+    from pankegg import insights
+    con = _con(databases["two"])
+    data = insights.pathway_taxon(con, "genus")
+    comp = insights.bin_pathway_completeness(con)
+    bins = insights.load_bins(con)
+    assert data["taxa"][-1] == "Unclassified" and sum(data["taxon_bins"].values()) == 5
+    row = data["rows"][0]
+    for taxon, value in zip(data["taxa"], row["values"]):
+        vals = [comp.get((b["id"], row["number"]), 0.0) for b in bins if insights.taxon_of(b, "genus") == taxon]
+        assert value == round(sum(vals) / len(vals), 2)
+    assert all("Unclassified" not in r["taxa"] and r["n_taxa"] == len(r["taxa"]) for r in data["redundancy"])
+    assert [r["n_taxa"] for r in data["redundancy"]] == sorted(r["n_taxa"] for r in data["redundancy"])
+    assert "Unclassified" not in insights.pathway_taxon(con, "genus", include_unclassified=False)["taxa"]
+    con.close()
+
+
+@pytest.mark.parametrize("level", ["pathway", "ko"])
+def test_core_accessory(databases, level):
+    from pankegg import insights
+    con = _con(databases["two"])
+    data = insights.core_accessory(con, level)
+    sets, _ = insights.features(con, level)
+    bins = insights.load_bins(con)
+    s1 = set().union(*(sets.get(b["id"], set()) for b in bins if b["sample"] == "S1"))
+    s2 = set().union(*(sets.get(b["id"], set()) for b in bins if b["sample"] == "S2"))
+    con.close()
+    assert data["counts"] == {"core": len(s1 & s2), "shared": 0, "unique": len(s1 ^ s2)}
+    assert data["unique_per_sample"] == {"S1": len(s1 - s2), "S2": len(s2 - s1)}
+    assert s2 <= s1 and data["unique_per_sample"]["S1"] > 0     # S2 is S1 without S1.bin3
+    assert sum(v for _, v in data["combos"]) == len(data["rows"])
+
+
+def test_similarity(databases):
+    from pankegg import insights
+    con = _con(databases["two"])
+    samples = insights.similarity(con, "sample", "ko")
+    assert sorted(samples["labels"]) == ["S1", "S2"]
+    assert samples["matrix"][0][0] == 1.0 and 0 < samples["matrix"][0][1] < 1
+    assert samples["matrix"][0][1] == samples["matrix"][1][0]
+    bins = insights.similarity(con, "bin", "ko")
+    con.close()
+    i, j = bins["labels"].index("S1.bin1 [S1]"), bins["labels"].index("S1.bin1 [S2]")
+    assert bins["matrix"][i][j] == 1.0, "the same annotation file in two samples is identical"
+    assert abs(i - j) == 1, "clustering puts identical bins next to each other"
+
+
+def test_group_compare(databases):
+    from pankegg import insights
+    con = _con(databases["two"])
+    res = insights.group_compare(con, "sample:S1", "sample:S2", "ko")
+    assert res["error"] is None and (res["n_a"], res["n_b"]) == (3, 2) and res["warnings"]
+    sets, _ = insights.features(con, "ko")
+    bins = insights.load_bins(con)
+    row = res["rows"][0]
+    assert row["a"] == sum(1 for b in bins if b["sample"] == "S1" and row["id"] in sets.get(b["id"], ()))
+    assert all(0 <= r["p"] <= 1 and r["p"] <= r["q"] + 1e-12 <= 1 + 1e-12 for r in res["rows"])
+    assert [r["p"] for r in res["rows"]] == sorted(r["p"] for r in res["rows"])
+    rest = insights.group_compare(con, "taxon:genus=g__Escherichia", "rest", "pathway")
+    assert (rest["n_a"], rest["n_b"]) == (2, 3)
+    assert "share" in insights.group_compare(con, "sample:S1", "all", "ko")["error"]
+    assert insights.group_compare(con, "sample:nope", "rest", "ko")["error"]
+    assert insights.group_compare(con, "unclassified", "rest", "ko")["n_a"] == 2
+    con.close()
+
+
+NEW_PAGES = ["/pathway_taxon", "/pathway_taxon?rank=family&group=all&unclassified=0", "/pathway_taxon?format=csv",
+             "/core_accessory", "/core_accessory?level=ko", "/core_accessory?level=ko&format=csv",
+             "/similarity", "/similarity?entity=bin&level=pathway", "/similarity?format=csv",
+             "/group_compare", "/group_compare?a=sample:S1&b=rest&level=ko",
+             "/group_compare?a=sample:S1&b=rest&level=ko&format=csv", "/comparison"]
+
+
+@pytest.mark.parametrize("db_kind", ["2.0.0", "new_tax", "two"])
+@pytest.mark.parametrize("page", NEW_PAGES)
+def test_new_pages_serve(databases, client_for, db_kind, page):
+    res = client_for(databases[db_kind]).get(page)
+    if "group_compare?a=" in page and db_kind != "two":
+        # one sample only: group B (the rest) is empty, which is reported, not a crash
+        assert res.status_code in (200, 400)
+    else:
+        assert res.status_code == 200, f"{page}: {res.status_code}"

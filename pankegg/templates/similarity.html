@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}Similarity{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+  <h2>Similarity</h2>
+  <p class="text-muted">Jaccard similarity = shared functions ÷ functions found in either one (1 = identical content, 0 = nothing in common).
+    Rows and columns are ordered by hierarchical clustering, so similar {{ 'bins' if data.entity == 'bin' else 'samples' }} sit next to each other.
+    Unlike a PCA, this stays readable with only a few samples.</p>
+  <form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto"><select name="entity" class="form-select">
+      <option value="sample" {% if data.entity == 'sample' %}selected{% endif %}>Between samples (bins pooled)</option>
+      <option value="bin" {% if data.entity == 'bin' %}selected{% endif %}>Between bins</option></select></div>
+    <div class="col-auto"><select name="level" class="form-select">
+      {% for value, label in levels.items() %}<option value="{{ value }}" {% if value == data.level %}selected{% endif %}>on {{ label }}</option>{% endfor %}</select></div>
+    <div class="col-auto form-check form-switch ms-2">
+      <input type="hidden" name="unclassified" value="0">
+      <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1" {% if unclassified %}checked{% endif %}>
+      <label class="form-check-label" for="unclassified">Include unclassified bins</label></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Show</button></div>
+    <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('similarity', entity=data.entity, level=data.level, unclassified=1 if unclassified else 0, format='csv') }}">CSV</a></div>
+  </form>
+  {% if figs.similarity %}
+  <div id="plot-similarity" style="max-width: 1200px;"></div>
+  {% if conditions and data.entity == 'sample' %}
+  <h5>Conditions</h5>
+  <table class="table table-sm table-striped w-auto">
+    <thead><tr><th>Sample (in the order of the heatmap)</th>{% for variable in conditions %}<th>{{ variable }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for s in data.labels %}<tr><td>{{ s }}</td>{% for variable, values in conditions.items() %}<td>{{ values.get(s, '–') }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table>
+  {% endif %}
+  {{ plots.draw(figs) }}
+  {% else %}
+  <div class="alert alert-warning">A similarity matrix needs at least 2 {{ 'bins' if data.entity == 'bin' else 'samples' }}.</div>
+  {% endif %}
+</div>
+{% endblock %}

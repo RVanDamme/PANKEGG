@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Phase 2 (web app and summaries), step:** A5–A8 — cross-module pages
-- **Next action:** pathway × taxon matrix, core/accessory, similarity heatmap, two-group Fisher test (data in `insights.py`, routes in `pages.py`, links in `comp_menu.html`).
+- **Phase 2 (web app and summaries), step:** A12 — keep KOs with no pathway (make_db)
+- **Next action:** failing test (a KO whose KEGG_Pathway is `-` must be in `kegg` and linked in `bin_extra_kegg`); regression becomes "2.0.0 content is a subset"; then A9 modules, A10 metadata.
 - Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
 ## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
@@ -15,10 +15,10 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] A2. Pathway Stats rework (name search, KO × bin matrix, distribution, who carries it, missing KOs, unclassified toggle, CSV)
 - [x] A3. Overview page replaces the static home
 - [x] A4. Bin detail page
-- [ ] A5. Pathway × taxon matrix
-- [ ] A6. Core vs accessory pathways and KOs
-- [ ] A7. Sample similarity heatmap
-- [ ] A8. Two-group comparison with statistics
+- [x] A5. Pathway × taxon matrix
+- [x] A6. Core vs accessory pathways and KOs
+- [x] A7. Sample similarity heatmap
+- [x] A8. Two-group comparison with statistics
 - [ ] A12. make_db: keep KOs with no pathway (regression: 2.0.0 content must be a subset)
 - [ ] A9. make_db: KEGG module completeness (new tables) + module displays and the two-measures explanation
 - [ ] A10. make_db: `--metadata` sample/condition TSV + colouring and grouping by condition

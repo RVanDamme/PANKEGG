@@ -4,7 +4,7 @@
 
 <div class="container">
     <h1 class="text-center my-4">Comparison Menu</h1>
-    <div class="row">
+    <div class="row mb-4">
         <div class="col-md-3">
             <div class="card mb-4 h-100">
                 <div class="card-body text-center d-flex flex-column">
@@ -38,6 +38,45 @@
                     <h5 class="card-title">PCA</h5>
                     <p class="card-text flex-grow-1">Get a PCA of all samples.</p>
                     <a href="./compar_full" class="btn btn-primary mt-auto">Go to PCA</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h4 class="text-center my-4">Across samples, taxa and functions</h4>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Pathways by taxon</h5>
+                    <p class="card-text flex-grow-1">Mean pathway completeness per taxon across all samples, and how many taxa can perform each pathway.</p>
+                    <a href="{{ url_for('pathway_taxon') }}" class="btn btn-primary mt-auto">Go to Pathways by taxon</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Core and accessory</h5>
+                    <p class="card-text flex-grow-1">Pathways and KOs found in every sample, in several, or in only one.</p>
+                    <a href="{{ url_for('core_accessory') }}" class="btn btn-primary mt-auto">Go to Core and accessory</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Similarity</h5>
+                    <p class="card-text flex-grow-1">Clustered Jaccard similarity between samples or between bins.</p>
+                    <a href="{{ url_for('similarity') }}" class="btn btn-primary mt-auto">Go to Similarity</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card mb-4 h-100">
+                <div class="card-body text-center d-flex flex-column">
+                    <h5 class="card-title">Compare two groups</h5>
+                    <p class="card-text flex-grow-1">Fisher's exact test per pathway or KO between two groups of bins (samples, conditions or taxa).</p>
+                    <a href="{{ url_for('group_compare') }}" class="btn btn-primary mt-auto">Go to Group comparison</a>
                 </div>
             </div>
         </div>

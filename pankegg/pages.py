@@ -50,6 +50,100 @@ def register(app, get_db_connection, pathway_groups):
         return render_template("bin_detail.html", report=report, figs=insights.bin_figures(report),
                                per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
+    # --- pathway x taxon ------------------------------------------------------------------
+    @app.route("/pathway_taxon")
+    def pathway_taxon():
+        groups = pathway_groups or {}
+        default_group = "1.1 Carbohydrate metabolism" if "1.1 Carbohydrate metabolism" in groups else "all"
+        group = request.args.get("group", default_group)
+        only = set(groups[group]) if group in groups else None
+        conn = get_db_connection()
+        try:
+            data = insights.pathway_taxon(conn, _rank(), only, _flag("unclassified"))
+        finally:
+            conn.close()
+        if request.args.get("format") == "csv":
+            return _csv_response(insights.csv_text(
+                ["pathway", "name", "taxa_carrying", "bins_carrying"] + data["taxa"],
+                [[r["number"], r["name"], r["n_taxa"], r["n_bins"]] + r["values"] for r in data["rows"]]),
+                f"pathway_by_{data['rank']}.csv")
+        return render_template("pathway_taxon.html", data=data, figs=insights.pathway_taxon_figures(data),
+                               groups=list(groups), group=group if only is not None else "all",
+                               ranks=insights.RANKS, unclassified=_flag("unclassified"),
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
+
+    def _level(conn):
+        levels = insights.available_levels(conn)
+        level = request.args.get("level", "pathway")
+        return (level if level in levels else "pathway"), levels
+
+    # --- core and accessory ----------------------------------------------------------------
+    @app.route("/core_accessory")
+    def core_accessory():
+        conn = get_db_connection()
+        try:
+            level, levels = _level(conn)
+            data = insights.core_accessory(conn, level, _flag("unclassified"))
+        finally:
+            conn.close()
+        if request.args.get("format") == "csv":
+            return _csv_response(insights.csv_text(
+                ["id", "name", "category", "n_samples", "samples"],
+                [[r["id"], r["name"], r["category"], r["n_samples"], ";".join(r["samples"])] for r in data["rows"]]),
+                f"core_accessory_{level}.csv")
+        return render_template("core_accessory.html", data=data, figs=insights.core_accessory_figures(data),
+                               levels=levels, unclassified=_flag("unclassified"))
+
+    # --- similarity -----------------------------------------------------------------------------
+    @app.route("/similarity")
+    def similarity():
+        entity = request.args.get("entity", "sample")
+        entity = entity if entity in ("sample", "bin") else "sample"
+        conn = get_db_connection()
+        try:
+            level, levels = _level(conn)
+            if "level" not in request.args:
+                level = "ko"
+            data = insights.similarity(conn, entity, level, _flag("unclassified"))
+            conditions = insights.sample_conditions(conn)
+        finally:
+            conn.close()
+        if request.args.get("format") == "csv":
+            return _csv_response(insights.csv_text(
+                [entity] + data["labels"], [[lab] + row for lab, row in zip(data["labels"], data["matrix"])]),
+                f"similarity_{entity}_{level}.csv")
+        return render_template("similarity.html", data=data, figs=insights.similarity_figures(data),
+                               levels=levels, unclassified=_flag("unclassified"), conditions=conditions)
+
+    # --- two-group comparison ------------------------------------------------------------------------
+    @app.route("/group_compare")
+    def group_compare():
+        a, b = request.args.get("a", ""), request.args.get("b", "rest")
+        quality = request.args.get("quality", "all")
+        quality = quality if quality in insights.QUALITY_FILTERS else "all"
+        conn = get_db_connection()
+        try:
+            level, levels = _level(conn)
+            options = insights.group_options(conn)
+            result = insights.group_compare(conn, a, b, level, quality) if a else None
+        finally:
+            conn.close()
+        labels = {value: label for _, opts in options for value, label in opts}
+        label_a = labels.get(a, a)
+        label_b = "all other bins" if b == "rest" else labels.get(b, b)
+        if result and request.args.get("format") == "csv":
+            if result["error"]:
+                abort(400, description=result["error"])
+            return _csv_response(insights.csv_text(
+                ["id", "name", "bins_with_a", "n_a", "percent_a", "bins_with_b", "n_b", "percent_b",
+                 "odds_ratio", "p_value", "q_value"],
+                [[r["id"], r["name"], r["a"], result["n_a"], r["pct_a"], r["b"], result["n_b"], r["pct_b"],
+                  r["odds_ratio"], f"{r['p']:.6g}", f"{r['q']:.6g}"] for r in result["rows"]]),
+                f"group_comparison_{level}.csv")
+        figs = insights.group_compare_figures(result, label_a, label_b) if result and not result["error"] else {}
+        return render_template("group_compare.html", result=result, figs=figs, options=options, levels=levels,
+                               a=a, b=b, level=level, quality=quality, label_a=label_a, label_b=label_b)
+
     @app.route("/favicon.ico")
     def favicon():
         return Response(status=204)

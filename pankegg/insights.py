@@ -561,3 +561,369 @@ def bin_figures(report):
                        "xaxis": {"title": {"text": "Pathways with at least one KO"}}},
         }
     return figs
+
+
+# --- features shared by the cross-module pages -------------------------------------------------
+
+LEVELS = {"pathway": "KEGG pathways", "ko": "KOs"}
+
+
+def available_levels(conn):
+    levels = dict(LEVELS)
+    if has_table(conn, "bin_module"):
+        levels["module"] = "KEGG modules (complete)"
+    return levels
+
+
+def features(conn, level):
+    """({bin_id: set(feature id)}, {feature id: name}) for 'pathway', 'ko' or 'module'.
+
+    A pathway is present when the bin has at least one of its KOs; a module when it is complete.
+    """
+    if level == "ko":
+        sets = bin_kos(conn)
+        return sets, ko_names(conn, set().union(*sets.values()) if sets else [])
+    if level == "module":
+        return module_sets(conn)
+    return bin_pathways(conn), {n: name for n, name, _ in list_pathways(conn)}
+
+
+def module_sets(conn, threshold=100.0):
+    if not has_table(conn, "bin_module"):
+        return {}, {}
+    sets = defaultdict(set)
+    for bin_id, number in conn.execute(
+            "SELECT bm.bin_id, m.module_number FROM bin_module bm JOIN module m ON m.id = bm.module_id "
+            "WHERE bm.completeness >= ?", (threshold,)):
+        sets[bin_id].add(number)
+    return sets, {r[0]: r[1] for r in conn.execute("SELECT module_number, module_name FROM module")}
+
+
+# --- pathway x taxon ------------------------------------------------------------------------------
+
+def bin_pathway_completeness(conn):
+    """{(bin_id, map_number): per-ID completeness %}"""
+    out = {}
+    for bin_id, number, total, n in conn.execute(
+            """SELECT bmk.bin_id, m.map_number, m.pathway_total_orthologs, COUNT(DISTINCT mk.kegg_id)
+               FROM bin_map_kegg bmk JOIN map_kegg mk ON mk.id = bmk.map_kegg_id AND mk.real_pathway_id = 1
+               JOIN map m ON m.id = mk.map_id WHERE m.map_number LIKE 'map%'
+               GROUP BY bmk.bin_id, m.id"""):
+        out[(bin_id, number)] = round(100.0 * n / total, 2) if total else 0.0
+    return out
+
+
+def pathway_taxon(conn, rank="genus", only_maps=None, include_unclassified=True):
+    """Mean per-ID completeness of each pathway in the bins of each taxon, and functional redundancy.
+
+    ``only_maps`` restricts the matrix (not the redundancy table) to some map numbers.
+    """
+    bins = load_bins(conn, include_unclassified)
+    completeness = bin_pathway_completeness(conn)
+    names = {n: name for n, name, _ in list_pathways(conn)}
+    groups = defaultdict(list)
+    for b in bins:
+        groups[taxon_of(b, rank)].append(b["id"])
+    taxa = sorted(groups, key=lambda t: (t == UNCLASSIFIED, t))
+    present = sorted({number for (_, number) in completeness})
+    rows = []
+    for number in present:
+        values, carriers, n_bins = [], [], 0
+        for taxon in taxa:
+            vals = [completeness.get((bid, number), 0.0) for bid in groups[taxon]]
+            values.append(round(sum(vals) / len(vals), 2))
+            with_it = sum(1 for v in vals if v > 0)
+            n_bins += with_it
+            if with_it and taxon != UNCLASSIFIED:
+                carriers.append(taxon)
+        if n_bins:
+            rows.append({"number": number, "name": names.get(number, ""), "values": values,
+                         "n_taxa": len(carriers), "taxa": carriers, "n_bins": n_bins})
+    shown = [r for r in rows if only_maps is None or r["number"] in only_maps]
+    return {"rank": rank, "taxa": taxa, "taxon_bins": {t: len(groups[t]) for t in taxa},
+            "rows": shown, "redundancy": sorted(rows, key=lambda r: (r["n_taxa"], r["number"])),
+            "n_bins": len(bins)}
+
+
+def pathway_taxon_figures(data):
+    rows = list(reversed(data["rows"]))
+    if not rows or not data["taxa"]:
+        return {}
+    x = [f"{t} ({data['taxon_bins'][t]})" for t in data["taxa"]]
+    return {"matrix": {
+        "data": [{"type": "heatmap", "z": [r["values"] for r in rows], "x": x,
+                  "y": [f"{r['number']} {r['name']}"[:55] for r in rows],
+                  "colorscale": "Viridis", "zmin": 0, "colorbar": {"title": {"text": "mean %"}},
+                  "hovertemplate": "%{y}<br>%{x}<br>mean per-ID completeness %{z}%<extra></extra>"}],
+        "layout": {"height": max(360, 16 * len(rows) + 240), "margin": {"l": 390, "t": 20, "b": 200},
+                   "xaxis": {"tickangle": -60, "type": "category"}, "yaxis": {"type": "category", "dtick": 1}},
+    }}
+
+
+# --- core and accessory ------------------------------------------------------------------------------
+
+def core_accessory(conn, level="pathway", include_unclassified=True):
+    """Features by the number of samples that carry them (in at least one bin)."""
+    bins = load_bins(conn, include_unclassified)
+    sets, names = features(conn, level)
+    samples = sorted({b["sample"] for b in bins})
+    by_sample = {s: set() for s in samples}
+    for b in bins:
+        by_sample[b["sample"]] |= sets.get(b["id"], set())
+    where = defaultdict(list)
+    for s in samples:
+        for f in by_sample[s]:
+            where[f].append(s)
+    n = len(samples)
+
+    def category(k):
+        if n > 1 and k == n:
+            return "core"
+        return "unique" if k == 1 else "shared"
+
+    rows = sorted(({"id": f, "name": names.get(f, ""), "samples": ss, "n_samples": len(ss),
+                    "category": category(len(ss))} for f, ss in where.items()),
+                  key=lambda r: (-r["n_samples"], r["id"]))
+    combos = Counter(" + ".join(r["samples"]) for r in rows)
+    return {
+        "level": level, "samples": samples, "rows": rows,
+        "counts": {c: sum(1 for r in rows if r["category"] == c) for c in ("core", "shared", "unique")},
+        "by_n": {k: sum(1 for r in rows if r["n_samples"] == k) for k in range(1, n + 1)},
+        "unique_per_sample": {s: sum(1 for r in rows if r["samples"] == [s]) for s in samples},
+        "totals": {s: len(by_sample[s]) for s in samples},
+        "combos": combos.most_common(25),
+    }
+
+
+def core_accessory_figures(data):
+    if not data["rows"]:
+        return {}
+    n = len(data["samples"])
+    ks = list(range(1, n + 1))
+    colours = ["#d62728" if k == 1 else "#2ca02c" if (k == n and n > 1) else "#ff7f0e" for k in ks]
+    combos = list(reversed(data["combos"]))
+    return {
+        "by_n": {"data": [{"type": "bar", "x": [str(k) for k in ks], "y": [data["by_n"][k] for k in ks],
+                           "marker": {"color": colours}, "text": [data["by_n"][k] for k in ks], "textposition": "auto"}],
+                 "layout": {"height": 340, "margin": {"t": 20}, "xaxis": {"title": {"text": "Number of samples carrying it"}, "type": "category"},
+                            "yaxis": {"title": {"text": LEVELS.get(data["level"], data["level"])}}}},
+        "combos": {"data": [{"type": "bar", "orientation": "h", "y": [c for c, _ in combos], "x": [v for _, v in combos],
+                             "marker": {"color": "#1f77b4"}, "text": [v for _, v in combos], "textposition": "auto"}],
+                   "layout": {"height": max(260, 24 * len(combos) + 110), "margin": {"l": 320, "t": 20},
+                              "xaxis": {"title": {"text": "Features found in exactly these samples"}}}},
+    }
+
+
+# --- similarity ------------------------------------------------------------------------------------------
+
+def jaccard(a, b):
+    union = len(a | b)
+    return round(len(a & b) / union, 4) if union else 0.0
+
+
+def cluster_order(matrix):
+    """Leaf order of an average-linkage clustering of a similarity matrix (input order if not possible)."""
+    n = len(matrix)
+    if n < 3:
+        return list(range(n))
+    try:
+        from scipy.cluster.hierarchy import leaves_list, linkage
+        from scipy.spatial.distance import squareform
+        dist = [[0.0 if i == j else 1.0 - matrix[i][j] for j in range(n)] for i in range(n)]
+        return [int(i) for i in leaves_list(linkage(squareform(dist, checks=False), method="average"))]
+    except Exception:
+        return list(range(n))
+
+
+def similarity(conn, entity="sample", level="ko", include_unclassified=True):
+    """Jaccard similarity between samples (bins pooled) or between bins, on shared features."""
+    bins = load_bins(conn, include_unclassified)
+    sets, _ = features(conn, level)
+    if entity == "bin":
+        labels = [b["label"] for b in bins]
+        items = [sets.get(b["id"], set()) for b in bins]
+    else:
+        labels = sorted({b["sample"] for b in bins})
+        items = [set().union(*(sets.get(b["id"], set()) for b in bins if b["sample"] == s)) for s in labels]
+    matrix = [[1.0 if i == j else jaccard(a, b) for j, b in enumerate(items)] for i, a in enumerate(items)]
+    order = cluster_order(matrix)
+    return {"entity": entity, "level": level,
+            "labels": [labels[i] for i in order], "sizes": [len(items[i]) for i in order],
+            "matrix": [[matrix[i][j] for j in order] for i in order]}
+
+
+def similarity_figures(data, label_colours=None):
+    n = len(data["labels"])
+    if n < 2:
+        return {}
+    trace = {"type": "heatmap", "z": data["matrix"], "x": data["labels"], "y": data["labels"],
+             "zmin": 0, "zmax": 1, "colorscale": "Viridis", "colorbar": {"title": {"text": "Jaccard"}},
+             "hovertemplate": "%{y}<br>%{x}<br>Jaccard %{z}<extra></extra>"}
+    if n <= 15:
+        trace["text"] = [[f"{v:.2f}" for v in row] for row in data["matrix"]]
+        trace["texttemplate"] = "%{text}"
+    side = max(420, min(1100, 26 * n + 260))
+    return {"similarity": {"data": [trace],
+                           "layout": {"height": side, "margin": {"l": 220, "b": 200, "t": 20},
+                                      "xaxis": {"tickangle": -60, "type": "category"},
+                                      "yaxis": {"type": "category", "autorange": "reversed"}}}}
+
+
+# --- two-group comparison ---------------------------------------------------------------------------------
+
+def fisher_exact_two_sided(a, b, c, d):
+    """Two-sided Fisher's exact test p-value for the table [[a, b], [c, d]] (standard library only)."""
+    from math import exp, lgamma
+
+    def logcomb(n, k):
+        return lgamma(n + 1) - lgamma(k + 1) - lgamma(n - k + 1)
+
+    r1, r2, c1, n = a + b, c + d, a + c, a + b + c + d
+    if n == 0:
+        return 1.0
+    denom = logcomb(n, c1)
+
+    def logp(x):
+        return logcomb(r1, x) + logcomb(r2, c1 - x) - denom
+
+    observed = logp(a)
+    total = 0.0
+    for x in range(max(0, c1 - r2), min(r1, c1) + 1):
+        lp = logp(x)
+        if lp <= observed + 1e-9:
+            total += exp(lp)
+    return min(1.0, total)
+
+
+def benjamini_hochberg(pvalues):
+    """q-values (false discovery rate) in the input order."""
+    m = len(pvalues)
+    order = sorted(range(m), key=lambda i: pvalues[i])
+    q = [0.0] * m
+    running = 1.0
+    for rank in range(m, 0, -1):
+        i = order[rank - 1]
+        running = min(running, pvalues[i] * m / rank)
+        q[i] = running
+    return q
+
+
+def group_options(conn):
+    """Choices for a group of bins: [(heading, [(value, label)])]."""
+    bins = load_bins(conn)
+    options = [("Samples", [(f"sample:{s}", f"{s} ({n} bins)")
+                            for s, n in sorted(Counter(b["sample"] for b in bins).items())])]
+    for variable, values in sorted(sample_conditions(conn).items()):
+        counts = Counter(values.get(b["sample"]) for b in bins)
+        options.append((f"Condition: {variable}",
+                        [(f"condition:{variable}={v}", f"{v} ({counts[v]} bins)")
+                         for v in sorted(set(values.values()), key=str)]))
+    for rank in ("phylum", "class", "order", "family", "genus"):
+        counts = Counter(b["lineage"][rank] for b in bins if b["lineage"][rank])
+        if counts:
+            options.append((rank.capitalize(), [(f"taxon:{rank}={t}", f"{t} ({n} bins)") for t, n in sorted(counts.items())]))
+    options.append(("Other", [("unclassified", "Unclassified bins"), ("all", "All bins")]))
+    return options
+
+
+def sample_conditions(conn):
+    """{variable: {sample_name: value}} from the sample metadata ({} when the database has none)."""
+    if not has_table(conn, "sample_metadata"):
+        return {}
+    out = defaultdict(dict)
+    for sample, variable, value in conn.execute(
+            "SELECT s.sample_name, sm.variable, sm.value FROM sample_metadata sm JOIN sample s ON s.id = sm.sample_id"):
+        out[variable][sample] = value
+    return dict(out)
+
+
+def select_bins(bins, selector, conditions=None):
+    """Bins matching 'sample:NAME', 'taxon:RANK=VALUE', 'condition:VARIABLE=VALUE', 'unclassified' or 'all'."""
+    kind, _, rest = (selector or "").partition(":")
+    if kind == "all":
+        return list(bins)
+    if kind == "unclassified":
+        return [b for b in bins if not b["classified"]]
+    if kind == "sample":
+        return [b for b in bins if b["sample"] == rest]
+    key, _, value = rest.partition("=")
+    if kind == "taxon" and key in RANKS:
+        return [b for b in bins if b["lineage"][key] == value]
+    if kind == "condition":
+        values = (conditions or {}).get(key, {})
+        return [b for b in bins if str(values.get(b["sample"])) == value]
+    return []
+
+
+QUALITY_FILTERS = {"all": ("high", "medium", "low", "not assessed"), "medium": ("high", "medium"), "high": ("high",)}
+
+
+def group_compare(conn, selector_a, selector_b, level="pathway", quality="all"):
+    """Per feature: bins carrying it in group A and in group B, Fisher's exact test and BH q-value.
+
+    ``selector_b`` may be 'rest' (every bin not in A). The unit is the bin.
+    """
+    bins = [b for b in load_bins(conn) if b["tier"] in QUALITY_FILTERS.get(quality, QUALITY_FILTERS["all"])]
+    conditions = sample_conditions(conn)
+    group_a = select_bins(bins, selector_a, conditions)
+    ids_a = {b["id"] for b in group_a}
+    if selector_b == "rest":
+        group_b = [b for b in bins if b["id"] not in ids_a]
+    else:
+        group_b = select_bins(bins, selector_b, conditions)
+    ids_b = {b["id"] for b in group_b}
+    result = {"level": level, "n_a": len(ids_a), "n_b": len(ids_b), "rows": [], "warnings": [], "error": None,
+              "bins_a": group_a, "bins_b": group_b}
+    if not ids_a or not ids_b:
+        result["error"] = "Each group needs at least one bin (after the quality filter)."
+        return result
+    if ids_a & ids_b:
+        result["error"] = (f"The two groups share {len(ids_a & ids_b)} bins; choose groups that do not overlap, "
+                           "or compare group A with the rest.")
+        return result
+    if min(len(ids_a), len(ids_b)) < 5:
+        result["warnings"].append(
+            f"Small groups ({len(ids_a)} and {len(ids_b)} bins): the test has little power, and no feature may "
+            "reach significance even when the groups differ.")
+    sets, names = features(conn, level)
+    in_a, in_b = Counter(), Counter()
+    for bid in ids_a:
+        in_a.update(sets.get(bid, ()))
+    for bid in ids_b:
+        in_b.update(sets.get(bid, ()))
+    rows = []
+    for f in sorted(set(in_a) | set(in_b)):
+        a, c = in_a[f], in_b[f]
+        b, d = len(ids_a) - a, len(ids_b) - c
+        rows.append({"id": f, "name": names.get(f, ""), "a": a, "b": c,
+                     "pct_a": round(100.0 * a / len(ids_a), 1), "pct_b": round(100.0 * c / len(ids_b), 1),
+                     # Haldane-Anscombe correction keeps the odds ratio finite
+                     "odds_ratio": round(((a + 0.5) * (d + 0.5)) / ((b + 0.5) * (c + 0.5)), 3),
+                     "p": fisher_exact_two_sided(a, b, c, d)})
+    for row, q in zip(rows, benjamini_hochberg([r["p"] for r in rows])):
+        row["q"] = q
+    rows.sort(key=lambda r: (r["p"], -abs(r["pct_a"] - r["pct_b"]), r["id"]))
+    result["rows"] = rows
+    result["n_significant"] = sum(1 for r in rows if r["q"] < 0.05)
+    return result
+
+
+def group_compare_figures(result, label_a="Group A", label_b="Group B"):
+    rows = result["rows"]
+    if not rows:
+        return {}
+    data = []
+    for name, keep, colour in (("q < 0.05", lambda r: r["q"] < 0.05, "#d62728"),
+                               ("not significant", lambda r: r["q"] >= 0.05, "#9aa0a6")):
+        sel = [r for r in rows if keep(r)]
+        if sel:
+            data.append({"type": "scatter", "mode": "markers", "name": name,
+                         "x": [r["pct_a"] for r in sel], "y": [r["pct_b"] for r in sel],
+                         "text": [f"{r['id']} {r['name']}<br>p = {r['p']:.3g}, q = {r['q']:.3g}" for r in sel],
+                         "hovertemplate": "%{text}<br>A %{x}% · B %{y}%<extra></extra>",
+                         "marker": {"color": colour, "size": 8, "opacity": 0.7}})
+    return {"prevalence": {"data": data, "layout": {
+        "height": 460, "margin": {"t": 20},
+        "xaxis": {"title": {"text": f"Bins carrying it in {label_a} (%)"}, "range": [-3, 103]},
+        "yaxis": {"title": {"text": f"Bins carrying it in {label_b} (%)"}, "range": [-3, 103]},
+        "shapes": [{"type": "line", "x0": 0, "y0": 0, "x1": 100, "y1": 100, "line": {"dash": "dot", "color": "#bbbbbb"}}]}}}

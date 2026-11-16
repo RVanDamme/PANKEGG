@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}Compare two groups{% endblock %}
+{% macro group_select(name, current, with_rest) %}
+<select name="{{ name }}" class="form-select" required>
+  {% if with_rest %}<option value="rest" {% if current == 'rest' %}selected{% endif %}>All other bins</option>
+  {% else %}<option value="" disabled {% if not current %}selected{% endif %}>Choose…</option>{% endif %}
+  {% for heading, opts in options %}
+  <optgroup label="{{ heading }}">
+    {% for value, label in opts %}<option value="{{ value }}" {% if value == current %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </optgroup>
+  {% endfor %}
+</select>
+{% endmacro %}
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+  <h2>Compare two groups of bins</h2>
+  <p class="text-muted">For each function, the number of bins that carry it in group A and in group B is compared with
+    Fisher's exact test (two-sided). The q-value corrects for testing many functions at once (Benjamini–Hochberg);
+    q &lt; 0.05 is highlighted. The unit is the bin: bins of the same sample or species are not independent,
+    so read the result as a screen for candidates, not as proof.</p>
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-md-3"><label class="form-label mb-0 small">Group A</label>{{ group_select('a', a, false) }}</div>
+    <div class="col-md-3"><label class="form-label mb-0 small">Group B</label>{{ group_select('b', b, true) }}</div>
+    <div class="col-auto"><label class="form-label mb-0 small">Functions</label><select name="level" class="form-select">
+      {% for value, label in levels.items() %}<option value="{{ value }}" {% if value == level %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-auto"><label class="form-label mb-0 small">Bin quality</label><select name="quality" class="form-select">
+      <option value="all" {% if quality == 'all' %}selected{% endif %}>All bins</option>
+      <option value="medium" {% if quality == 'medium' %}selected{% endif %}>Medium and high</option>
+      <option value="high" {% if quality == 'high' %}selected{% endif %}>High only</option></select></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Compare</button></div>
+  </form>
+
+  {% if result %}
+    {% if result.error %}<div class="alert alert-danger">{{ result.error }}</div>
+    {% else %}
+    {% for w in result.warnings %}<div class="alert alert-warning">{{ w }}</div>{% endfor %}
+    <p><strong>A:</strong> {{ label_a }} — {{ result.n_a }} bins · <strong>B:</strong> {{ label_b }} — {{ result.n_b }} bins ·
+      {{ result.rows|length }} functions tested · <strong>{{ result.n_significant }}</strong> with q &lt; 0.05
+      <a class="btn btn-sm btn-outline-secondary ms-2" href="{{ url_for('group_compare', a=a, b=b, level=level, quality=quality, format='csv') }}">CSV (all)</a></p>
+    <div class="row g-4">
+      <div class="col-xl-5"><div id="plot-prevalence"></div>
+        <p class="small text-muted">One point per function: share of bins carrying it in each group. Points far from the diagonal differ most.</p></div>
+      <div class="col-xl-7">
+        <div style="max-height: 560px; overflow-y: auto;">
+          <table class="table table-sm table-striped">
+            <thead class="sticky-top bg-white"><tr><th>ID</th><th>Name</th><th>A</th><th>B</th><th title="Odds ratio (A vs B), with a 0.5 correction">OR</th><th>p</th><th>q</th></tr></thead>
+            <tbody>
+              {% for r in result.rows[:300] %}
+              <tr {% if r.q < 0.05 %}class="table-danger"{% endif %}>
+                <td>{% if level == 'pathway' %}<a href="{{ url_for('pathway_stat', q=r.id) }}">{{ r.id }}</a>{% else %}{{ r.id }}{% endif %}</td>
+                <td>{{ r.name }}</td>
+                <td>{{ r.a }}/{{ result.n_a }} ({{ r.pct_a }}%)</td><td>{{ r.b }}/{{ result.n_b }} ({{ r.pct_b }}%)</td>
+                <td>{{ r.odds_ratio }}</td><td>{{ '%.3g'|format(r.p) }}</td><td>{{ '%.3g'|format(r.q) }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% if result.rows|length > 300 %}<p class="small text-muted">The 300 smallest p-values; the CSV has all {{ result.rows|length }}.</p>{% endif %}
+      </div>
+    </div>
+    {{ plots.draw(figs) }}
+    {% endif %}
+  {% else %}
+  <p class="text-muted">Choose group A (a sample, a condition or a taxon) and group B, or compare A with all other bins.</p>
+  {% endif %}
+</div>
+{% endblock %}

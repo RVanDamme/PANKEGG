@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_plots.html" as plots %}
+{% block title %}Core and accessory{% endblock %}
+{% block content %}
+<div class="container-fluid px-4 mt-4">
+  <h2>Core and accessory functions</h2>
+  <p class="text-muted">A function belongs to a sample when at least one of its bins carries it.
+    <strong>Core</strong> = in every sample, <strong>shared</strong> = in several but not all, <strong>unique</strong> = in one sample only.
+    {% if data.level == 'pathway' %}A pathway counts as carried when a bin has at least one of its KOs.{% endif %}
+    {% if data.level == 'module' %}A module counts as carried when it is 100% complete in a bin.{% endif %}</p>
+  <form method="get" class="row g-2 align-items-center mb-3">
+    <div class="col-auto"><select name="level" class="form-select">
+      {% for value, label in levels.items() %}<option value="{{ value }}" {% if value == data.level %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-auto form-check form-switch ms-2">
+      <input type="hidden" name="unclassified" value="0">
+      <input class="form-check-input" type="checkbox" id="unclassified" name="unclassified" value="1" {% if unclassified %}checked{% endif %}>
+      <label class="form-check-label" for="unclassified">Include unclassified bins</label></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Show</button></div>
+    <div class="col-auto"><a class="btn btn-outline-secondary" href="{{ url_for('core_accessory', level=data.level, unclassified=1 if unclassified else 0, format='csv') }}">CSV (all {{ data.rows|length }})</a></div>
+  </form>
+
+  {% if data.samples|length < 2 %}
+  <div class="alert alert-warning">Core and accessory need at least 2 samples; this database has {{ data.samples|length }}.</div>
+  {% endif %}
+  <div class="row g-3 mb-3">
+    {% for key, colour in [('core', 'success'), ('shared', 'warning'), ('unique', 'danger')] %}
+    <div class="col-md-4"><div class="card border-{{ colour }}"><div class="card-body text-center">
+      <div class="fs-3 fw-bold">{{ data.counts[key] }}</div><div class="small text-muted">{{ key }}</div></div></div></div>
+    {% endfor %}
+  </div>
+  <div class="row g-4">
+    <div class="col-lg-5"><h5>By number of samples</h5><div id="plot-by_n"></div>
+      <table class="table table-sm table-striped">
+        <thead><tr><th>Sample</th><th>Total</th><th>Unique to it</th></tr></thead>
+        <tbody>{% for s in data.samples %}<tr><td>{{ s }}</td><td>{{ data.totals[s] }}</td><td>{{ data.unique_per_sample[s] }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    <div class="col-lg-7"><h5>Exact sample combinations</h5>
+      <p class="small text-muted mb-0">Functions found in exactly these samples and no other (the 25 largest groups).</p>
+      <div id="plot-combos"></div></div>
+  </div>
+
+  <h5 class="mt-3">Shared and unique functions {% if data.rows|length > 500 %}<small class="text-muted">(first 500 non-core; the CSV has all)</small>{% endif %}</h5>
+  <div style="max-height: 520px; overflow-y: auto;">
+    <table class="table table-sm table-striped">
+      <thead class="sticky-top bg-white"><tr><th>ID</th><th>Name</th><th>Category</th><th>Samples</th></tr></thead>
+      <tbody>
+        {% for r in (data.rows|rejectattr('category', 'equalto', 'core')|list)[:500] %}
+        <tr><td>{% if data.level == 'pathway' %}<a href="{{ url_for('pathway_stat', q=r.id) }}">{{ r.id }}</a>{% else %}{{ r.id }}{% endif %}</td>
+            <td>{{ r.name }}</td><td>{{ r.category }}</td><td>{{ r.samples|join(', ') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {{ plots.draw(figs) }}
+</div>
+{% endblock %}
