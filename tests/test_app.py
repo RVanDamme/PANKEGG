@@ -31,6 +31,15 @@ def databases(tmp_path_factory):
                          f"{FIX}/s1/checkm2/S1_checkm2_report.tsv\n")
         run_make_db(csv_path, tmp, name, "--quiet")
         dbs[name] = tmp / f"{name}.db"
+    # Two samples that share bin names (as SemiBin2 bins do); S2 has only two of the three bins.
+    csv_path = write(tmp / "two.csv",
+                     "Sample name,Annotation_dir,classification_dir,Checkm2_dir\n"
+                     f"S1,{FIX}/s1/eggnog/*.emapper.annotations,{FIX}/sourmash_lca/*.lca.csv,"
+                     f"{FIX}/s1/checkm2/S1_checkm2_report.tsv\n"
+                     f"S2,{FIX}/s1/eggnog/S1.bin[12].emapper.annotations,{FIX}/sourmash_lca/*.lca.csv,"
+                     f"{FIX}/s1/checkm2/S1_checkm2_report.tsv\n")
+    run_make_db(csv_path, tmp, "two", "--quiet")
+    dbs["two"] = tmp / "two.db"
     return dbs
 
 
@@ -97,3 +106,58 @@ def test_dotenv_in_current_directory_is_used(tmp_path):
     out = subprocess.run([sys.executable, str(probe)], cwd=tmp_path, env=env,
                          capture_output=True, text=True, check=True).stdout.strip()
     assert out == "from_cwd_env"
+
+
+# --- phase 2, A1: wrong numbers and offline assets ---------------------------------------
+
+def test_common_pathways_both_is_an_overlap(databases, client_for):
+    rows = client_for(databases["two"]).post("/get_common_pathways_data",
+                                             data={"sample1": "S1", "sample2": "S2"}).get_json()
+    assert rows
+    for r in rows:
+        assert r["both"] is (r["sample1"] > 0 and r["sample2"] > 0), r
+        assert r["sample1"] + r["sample2"] > 0, "pathways absent from both samples are not listed"
+    assert any(not r["both"] for r in rows), "S1.bin3 pathways are only in S1"
+
+
+def test_bin_vs_bin_is_per_sample(databases, client_for):
+    """S1.bin1 exists in both samples; comparing it within S1 must not count the S2 bin."""
+    rows = client_for(databases["two"]).post(
+        "/get_common_pathways_for_bins",
+        data={"sample1": "S1", "bin1": "S1.bin1", "sample2": "S1", "bin2": "S1.bin3"}).get_json()
+    assert rows
+    assert max(r["bin1"] for r in rows) == 1 and max(r["bin2"] for r in rows) == 1
+    for r in rows:
+        assert r["both"] is (r["bin1"] > 0 and r["bin2"] > 0)
+
+
+def test_bin_pca_with_two_bins(databases, client_for):
+    res = client_for(databases["two"]).post("/get_pca_data", data={"sample": "S2"})
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "error" in data or len(data["bins"]) == 2
+
+
+def test_sample_pca_with_too_few_samples_explains_itself(databases, client_for):
+    res = client_for(databases["two"]).post("/compar_full", data={"pca_type": "maps"})
+    assert res.status_code == 200
+    assert "at least 3 samples" in res.get_json()["error"]
+
+
+def test_taxonomy_heatmap_with_one_taxon_is_not_a_server_error(databases, client_for):
+    res = client_for(databases["new_lca"]).post("/get_heatmap_data_for_taxonomy",
+                                                data={"sample": "S1", "rank": "_kingdom_"})
+    assert res.status_code == 200 and "error" in res.get_json()
+
+
+def test_bin_query_serves(databases, client_for):
+    assert client_for(databases["two"]).get("/bin_query", follow_redirects=True).status_code == 200
+
+
+def test_assets_are_served_locally(databases, client_for):
+    client = client_for(databases["two"])
+    html = client.get("/").data.decode()
+    assert "cdn." not in html and "https://" not in html.split("<body")[0], "page must work offline"
+    for asset in ("plotly.min.js", "bootstrap.min.css", "bootstrap.bundle.min.js"):
+        res = client.get(f"/static/vendor/{asset}")
+        assert res.status_code == 200 and len(res.data) > 50_000, asset

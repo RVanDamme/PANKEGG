@@ -39,10 +39,8 @@ def resolve_db_path():
 
 def get_db_connection():
     db_path = resolve_db_path()
-    print(f"[Flask DEBUG] Opening DB at: {os.path.abspath(db_path)}")
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
-    print_db_status(conn)
     return conn
 
 def handle_sql_error(e):
@@ -309,6 +307,9 @@ def get_heatmap_data_for_taxonomy():
 
         # Create a pivot table for the heatmap data
         heatmap_data = df.pivot_table(index='map_number', columns='taxon', values='count', fill_value=0)
+        if heatmap_data.shape[0] < 2 or heatmap_data.shape[1] < 2:
+            return jsonify({'error': 'The heatmap needs at least 2 taxa and 2 pathways at this rank '
+                                     f'for sample {sample}; choose a lower rank.'})
 
         # Standardize the data before clustering
         scaler = StandardScaler()
@@ -408,36 +409,43 @@ def get_bins():
 
 @app.route('/get_common_pathways_for_bins', methods=['POST'])
 def get_common_pathways_for_bins():
+    """Pathways of two bins. A bin is identified by its sample and its name (bin names repeat
+    across samples); without sample1/sample2 the name alone is used, as before 2.1.0."""
     try:
         bin1 = request.form.get('bin1')
         bin2 = request.form.get('bin2')
+        sample1 = request.form.get('sample1') or None
+        sample2 = request.form.get('sample2') or None
 
         conn = get_db_connection()
         cur = conn.cursor()
 
         query = """
         SELECT m.pathway_name,
-            COUNT(CASE WHEN b.bin_name = ? THEN 1 END) AS bin1_count,
-            COUNT(CASE WHEN b.bin_name = ? THEN 1 END) AS bin2_count,
-            COUNT(CASE WHEN b.bin_name IN (?, ?) THEN 1 END) AS both_count
+            COUNT(DISTINCT CASE WHEN b.bin_name = ? AND (? IS NULL OR s.sample_name = ?) THEN b.id END) AS bin1_count,
+            COUNT(DISTINCT CASE WHEN b.bin_name = ? AND (? IS NULL OR s.sample_name = ?) THEN b.id END) AS bin2_count
         FROM map m
         JOIN bin_map bm ON m.id = bm.map_id
         JOIN bin b ON bm.bin_id = b.id
+        JOIN sample s ON b.sample_id = s.id
         WHERE m.pathway_name != 'Description not available'
         GROUP BY m.pathway_name
         """
-        cur.execute(query, (bin1, bin2, bin1, bin2))
+        cur.execute(query, (bin1, sample1, sample1, bin2, sample2, sample2))
         rows = cur.fetchall()
         cur.close()
         conn.close()
 
         data = []
         for row in rows:
+            in1, in2 = min(row['bin1_count'], 1), min(row['bin2_count'], 1)
+            if not (in1 or in2):
+                continue
             data.append({
                 'pathway_name': row['pathway_name'],
-                'both': row['both_count'],
-                'bin1': row['bin1_count'],
-                'bin2': row['bin2_count']
+                'both': bool(in1 and in2),
+                'bin1': in1,
+                'bin2': in2
             })
 
         return jsonify(data)
@@ -572,8 +580,6 @@ def get_map_details():
     try:
         data = request.get_json()
         map_numbers = data.get('map_numbers', [])
-        print("mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm")
-        print(map_numbers)
         if not map_numbers:
             return jsonify({'error': 'No map numbers provided.'})
 
@@ -591,7 +597,6 @@ def get_map_details():
         conn.close()
 
         map_details = {row['map_number']: row['pathway_name'] for row in rows}
-        print(map_details)
         return jsonify(map_details=map_details)
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
@@ -674,6 +679,7 @@ def get_scatterplot_all_samples():
 
 @app.route('/get_common_pathways_data', methods=['POST'])
 def get_common_pathways_data():
+    """Pathways of two samples: number of bins carrying each one, and whether both samples have it."""
     try:
         sample1 = request.form.get('sample1')
         sample2 = request.form.get('sample2')
@@ -683,9 +689,8 @@ def get_common_pathways_data():
 
         query = """
         SELECT m.pathway_name,
-            COUNT(CASE WHEN s.sample_name = ? THEN 1 END) AS sample1_count,
-            COUNT(CASE WHEN s.sample_name = ? THEN 1 END) AS sample2_count,
-            COUNT(CASE WHEN s.sample_name IN (?, ?) THEN 1 END) AS both_count
+            COUNT(DISTINCT CASE WHEN s.sample_name = ? THEN b.id END) AS sample1_count,
+            COUNT(DISTINCT CASE WHEN s.sample_name = ? THEN b.id END) AS sample2_count
         FROM map m
         JOIN bin_map bm ON m.id = bm.map_id
         JOIN bin b ON bm.bin_id = b.id
@@ -693,16 +698,18 @@ def get_common_pathways_data():
         WHERE m.pathway_name != 'Description not available'
         GROUP BY m.pathway_name
         """
-        cur.execute(query, (sample1, sample2, sample1, sample2))
+        cur.execute(query, (sample1, sample2))
         rows = cur.fetchall()
         cur.close()
         conn.close()
 
         data = []
         for row in rows:
+            if not (row['sample1_count'] or row['sample2_count']):
+                continue
             data.append({
                 'pathway_name': row['pathway_name'],
-                'both': row['both_count'],
+                'both': bool(row['sample1_count'] and row['sample2_count']),
                 'sample1': row['sample1_count'],
                 'sample2': row['sample2_count']
             })
@@ -743,6 +750,9 @@ def get_pca_data():
         bin_index = {bin_name: i for i, bin_name in enumerate(bin_names)}
         map_index = {map_number: i for i, map_number in enumerate(map_numbers)}
 
+        if len(bin_names) < 2:
+            return jsonify({'error': f'A PCA needs at least 2 bins; sample {sample} has {len(bin_names)}.'})
+
         matrix = np.zeros((len(bin_names), len(map_numbers)))
 
         for row in rows:
@@ -750,7 +760,7 @@ def get_pca_data():
             matrix[bin_index[bin_name], map_index[map_number]] = 1
 
         # Calculate clusters K-means
-        n_clusters = 3  # E.g. we group the bins in 3 clusters
+        n_clusters = min(3, len(bin_names))  # up to 3 clusters, never more than there are bins
         kmeans = KMeans(n_clusters=n_clusters, random_state=42)
         clusters = kmeans.fit_predict(matrix)
 
@@ -762,7 +772,8 @@ def get_pca_data():
             'x': pca_result[:, 0].tolist(),
             'y': pca_result[:, 1].tolist(),
             'bins': bin_names,
-            'clusters': clusters.tolist()
+            'clusters': clusters.tolist(),
+            'explained_variance': pca.explained_variance_ratio_.tolist()
         }
 
         return jsonify(pca_data)
@@ -838,8 +849,6 @@ def compar_full():
             elif pca_type == 'taxonomy':
                 df = pd.DataFrame(rows, columns=['sample_name', 'taxon', 'count_bins'])
 
-            # Debug: Show the DataFrame before pivot
-            print("DataFrame before pivot:\n", df.head())
 
             if pca_type == 'maps':
                 df_pivot = df.pivot_table(index='sample_name', columns='map_number', values='count_bins', fill_value=0)
@@ -848,14 +857,22 @@ def compar_full():
             elif pca_type == 'taxonomy':
                 df_pivot = df.pivot_table(index='sample_name', columns='taxon', values='count_bins', fill_value=0)
 
-            # Debug: Show the pivoted DataFrame
-            print("Pivoted DataFrame:\n", df_pivot.head())
+
+            n_samples = len(df_pivot.index)
+            if n_samples < 3:
+                return jsonify({
+                    'context': context,
+                    'pca_data': [],
+                    'error': f'A PCA needs at least 3 samples; this database has {n_samples}. '
+                             'Use the sample similarity page instead.'
+                })
+            if n_samples < 5:
+                context += (f' (only {n_samples} samples: two axes describe {n_samples - 1} or fewer '
+                            'independent directions, so read distances with care)')
 
             # Remove constant columns
             df_pivot = df_pivot.loc[:, (df_pivot != df_pivot.iloc[0]).any()]
 
-            # Debug: Show the DataFrame after removing constant columns
-            print("DataFrame after removing constant columns:\n", df_pivot.head())
 
             # Check if dataframe is empty after removing constant columns
             if df_pivot.empty:
@@ -869,8 +886,6 @@ def compar_full():
             scaler = StandardScaler()
             df_pivot_normalized = scaler.fit_transform(df_pivot)
 
-            # Debug: Show the normalized DataFrame
-            print("Normalized DataFrame:\n", df_pivot_normalized)
 
             # Perform PCA
             pca = PCA(n_components=2)
@@ -884,16 +899,11 @@ def compar_full():
                     'error': str(e)
                 })
 
-            # Debug: Show the PCA results and explained variance
-            print("PCA Results:\n", pca_results)
-            print("Explained Variance Ratio:\n", explained_variance)
 
             # Convert PCA results to DataFrame for visualization
             pca_df = pd.DataFrame(pca_results, columns=['PC1', 'PC2'])
             pca_df['sample_name'] = df_pivot.index
 
-            # Debug: Show the PCA DataFrame
-            print("PCA DataFrame:\n", pca_df)
 
             # Return JSON response for AJAX
             return jsonify({
@@ -1234,28 +1244,9 @@ def export_kegg():
 
 @app.route('/bin_query')
 def show_bins2():
-    try:
-        # Fetch requested columns otherwise use default columns
-        requested_columns = request.args.getlist('columns')
-        # print(requested_columns)
-        default_columns = ['id', 'bin_name', 'completeness', 'contamination', 'taxonomic_id']
-        columns = requested_columns if requested_columns else default_columns
+    """Old address of the bin list (it never rendered); kept as a redirect."""
+    return redirect(url_for('show_bins'))
 
-        # Build SQL request checking that each requested column is Valid
-        safe_columns = [col for col in columns if col in default_columns]
-        if not safe_columns:
-            safe_columns = default_columns  # Use default columns if none of the column requested are Valid
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-        query = f"SELECT {', '.join(safe_columns)} FROM bin"
-        # print(query)
-        cur.execute(query)
-        bins = cur.fetchall()
-        conn.close()
-        return render_template('bin.html', bins=bins, columns=safe_columns)
-    except sqlite3.OperationalError as e:
-        return handle_sql_error(e)
 
 @app.route('/taxonomy')
 def taxonomy():

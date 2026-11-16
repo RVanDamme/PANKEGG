@@ -52,7 +52,7 @@ Issues = "https://github.com/RVanDamme/PANKEGG/issues"
 packages = ["pankegg"]
 
 [tool.setuptools.package-data]
-pankegg = ["data/*", "templates/*.html"]
+pankegg = ["data/*", "templates/*.html", "static/vendor/*"]
 
 [tool.setuptools.dynamic]
 version = { attr = "pankegg.__version__" }

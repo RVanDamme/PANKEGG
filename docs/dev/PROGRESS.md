@@ -5,13 +5,13 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Phase 2 (web app and summaries), step:** A1 — correct wrong numbers, bundle Plotly/Bootstrap
-- **Next action:** failing tests for "Both", Bin vs Bin by sample and the PCA guards; then fix.
+- **Phase 2 (web app and summaries), step:** A2 — Pathway Stats rework
+- **Next action:** tests for name search, KO × bin matrix, distribution, carriers, missing KOs, unclassified toggle, CSV; new code in `pankegg/insights.py`.
 - Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
 ## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
 
-- [ ] A1. "Both" = overlap; Bin vs Bin by sample; PCA/heatmap guards; Plotly and Bootstrap bundled in the package
+- [x] A1. "Both" = overlap; Bin vs Bin by sample; PCA/heatmap guards; Plotly and Bootstrap bundled in the package
 - [ ] A2. Pathway Stats rework (name search, KO × bin matrix, distribution, who carries it, missing KOs, unclassified toggle, CSV)
 - [ ] A3. Overview page replaces the static home
 - [ ] A4. Bin detail page

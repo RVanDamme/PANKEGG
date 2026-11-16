@@ -165,8 +165,8 @@
                                                 <thead class="thead-dark">
                                                     <tr>
                                                         <th>Pathway Name</th>
-                                                        <th>Both</th>
-                                                        <th id="sample1Header">Sample 1</th>
+                                                        <th title="Present in at least one bin of both samples">In both</th>
+                                                        <th id="sample1Header" title="Number of bins carrying the pathway">Sample 1</th>
                                                         <th id="sample2Header">Sample 2</th>
                                                     </tr>
                                                 </thead>
@@ -194,7 +194,6 @@
 </div>
 
 <!-- Include Plotly.js -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 <script type="text/javascript">
     // Function to generate valid ID for an HTML element
@@ -438,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 tr.appendChild(tdPathway);
 
                 var tdBoth = document.createElement('td');
-                tdBoth.textContent = row.both;
+                tdBoth.textContent = row.both ? 'yes' : '–';
                 tr.appendChild(tdBoth);
 
                 var tdSample1 = document.createElement('td');
@@ -473,7 +472,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var barLayout = {
                 barmode: 'group',
-                title: 'Common Pathways Counts'
+                title: 'Number of bins carrying each pathway',
+                yaxis: { title: 'Bins' }
             };
 
             Plotly.newPlot('common-pathways-barplot', barData, barLayout);
@@ -511,8 +511,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var layout = {
                 title: `PCA of Bins for ${sampleName} (Clustered)`,
-                xaxis: { title: 'PCA 1' },
-                yaxis: { title: 'PCA 2' }
+                xaxis: { title: `PC1 (${(100 * data.explained_variance[0]).toFixed(0)}%)` },
+                yaxis: { title: `PC2 (${(100 * (data.explained_variance[1] || 0)).toFixed(0)}%)` }
             };
 
             Plotly.newPlot(container, [trace], layout);

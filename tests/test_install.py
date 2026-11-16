@@ -121,7 +121,8 @@ def test_full_wheel_clean_install(tmp_path):
     probe = (
         "from pankegg.app import app, get_default_db_path; import os;"
         "assert os.path.exists(get_default_db_path()), get_default_db_path();"
-        "r = app.test_client().get('/'); assert r.status_code == 200, r.status_code"
+        "c = app.test_client(); r = c.get('/'); assert r.status_code == 200, r.status_code;"
+        "r = c.get('/static/vendor/plotly.min.js'); assert r.status_code == 200, 'bundled plotly missing'"
     )
     run([bindir / "python", "-c", probe], cwd=work, env=env)
     # No stray top-level package from PANKEGG (finding F7).

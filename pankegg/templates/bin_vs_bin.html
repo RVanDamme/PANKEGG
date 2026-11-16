@@ -57,7 +57,7 @@
                                         <thead class="thead-dark">
                                             <tr>
                                                 <th>Pathway Name</th>
-                                                <th>Both</th>
+                                                <th title="Present in both bins">In both</th>
                                                 <th id="bin1Header">Bin 1</th>
                                                 <th id="bin2Header">Bin 2</th>
                                             </tr>
@@ -78,7 +78,6 @@
 </div>
 
 <!-- Include Plotly.js -->
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
 <script type="text/javascript">
 document.addEventListener('DOMContentLoaded', function() {
@@ -145,6 +144,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var formData = new FormData();
         formData.append('bin1', bin1);
         formData.append('bin2', bin2);
+        formData.append('sample1', document.getElementById('sample1').value);
+        formData.append('sample2', document.getElementById('sample2').value);
 
         fetch("{{ url_for('get_common_pathways_for_bins') }}", {
             method: 'POST',
@@ -177,15 +178,15 @@ document.addEventListener('DOMContentLoaded', function() {
             tr.appendChild(tdPathway);
 
             var tdBoth = document.createElement('td');
-            tdBoth.textContent = row.both;
+            tdBoth.textContent = row.both ? 'yes' : '–';
             tr.appendChild(tdBoth);
 
             var tdBin1 = document.createElement('td');
-            tdBin1.textContent = row.bin1;
+            tdBin1.textContent = row.bin1 ? 'present' : 'absent';
             tr.appendChild(tdBin1);
 
             var tdBin2 = document.createElement('td');
-            tdBin2.textContent = row.bin2;
+            tdBin2.textContent = row.bin2 ? 'present' : 'absent';
             tr.appendChild(tdBin2);
 
             if (row.bin1 > row.bin2) {
@@ -231,6 +232,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var formData = new FormData();
         formData.append('bin1', bin1);
         formData.append('bin2', bin2);
+        formData.append('sample1', document.getElementById('sample1').value);
+        formData.append('sample2', document.getElementById('sample2').value);
 
         fetch('/get_common_pathways_for_bins', {
             method: 'POST',
@@ -266,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ];
             var barLayout = {
                 barmode: 'group',
-                title: 'Common Pathways Counts'
+                title: 'Pathway presence (1 = present)'
             };
             Plotly.newPlot('common-pathways-barplot', barData, barLayout);
         });
