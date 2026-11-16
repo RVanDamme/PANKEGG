@@ -25,9 +25,10 @@ jobs:
 
       - name: Python ${{ matrix.python-version }} virtual environment
         run: |
-          uv venv --python ${{ matrix.python-version }} .venv
-          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
-          echo "VIRTUAL_ENV=$PWD/.venv" >> "$GITHUB_ENV"
+          # outside the checkout, so flake8 and pytest never see third-party code
+          uv venv --python ${{ matrix.python-version }} "$RUNNER_TEMP/venv"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
 
       - name: Install pankegg with test dependencies
         run: |
@@ -36,8 +37,8 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --extend-exclude=.venv,build,dist
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --extend-exclude=.venv,build,dist
 
       - name: CLI smoke test (must not fail)
         run: |
