@@ -40,6 +40,10 @@ input CSV (-i), one row per sample:
     Checkm2_dir         CheckM2 quality report(s) (Name, Completeness,
                         Contamination)
 
+stored: samples, bins with quality and taxonomy, KEGG pathways and KOs (also
+  KOs without a pathway), KEGG module completeness per bin, and the sample
+  metadata of --metadata.
+
 bin names:
   A bin has the same name in all three inputs after removing
   .emapper.annotations / .annotations.tsv / .annotations from annotation file

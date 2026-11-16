@@ -161,6 +161,31 @@ for sample in Dir/bin_annotation/*; do
 done
 ```
 
+### Sample metadata
+
+To compare conditions in the web app, give `pankegg_make_db` a tab-separated file with one line per sample: the sample name (as in the input CSV) and its condition.
+
+```
+SAMPLE1	sick
+SAMPLE2	healthy
+SAMPLE3	sick
+```
+
+The condition is free text: write `sick`/`healthy`, `test`/`true`, a time point, or anything else, with as many different values as you need. If you want more than one variable, add a header line that starts with `sample` and one column per variable:
+
+```
+sample	condition	site
+SAMPLE1	sick	gut
+SAMPLE2	healthy	gut
+SAMPLE3	sick	skin
+```
+
+```bash
+pankegg_make_db -i samples.csv -o my_db --metadata conditions.tsv
+```
+
+Samples of the input CSV that are not in the file simply have no condition (a warning lists them). In the web app the variables appear wherever samples are grouped or coloured: the sample PCA, the two-group comparison, the core and accessory page, the overview and the similarity page.
+
 ## Parameters Make DB
 
 - `-i, --input`
@@ -177,6 +202,9 @@ Format of the classification files. `auto` (default) recognises it from the file
 
 - `--gtdbtk`
 Same as `--classification gtdbtk`; kept so that existing commands keep working.
+
+- `--metadata FILE`
+Optional sample metadata, used by `pankegg_app` to colour and group samples. See [Sample metadata](#sample-metadata).
 
 - `-q, --quiet` / `-v, --verbose`
 Print only warnings and errors / print details for every input file.
@@ -202,11 +230,18 @@ The database contains the following tables:
 - `bin_extra`
 - `bin_extra_kegg`
 - `sample`
-- `pankegg_info` (from 2.1.0: `pankegg_version`, `schema_version`, `classification_methods`)
+- `pankegg_info` (from 2.1.0: `pankegg_version`, `schema_version`, `classification_methods`, `metadata_variables`)
+- `module` and `bin_module` (from 2.1.0: KEGG modules and their completeness in each bin)
+- `sample_metadata` (from 2.1.0: the variables of `--metadata`)
 
 Each table stores specific information related to bins, pathways, taxonomy, and annotation results for easy querying and visualization.
 
 From 2.1.0 the `bin` table also records how each bin was classified, in `classification_method` (`sourmash_tax`, `sourmash_lca` or `gtdbtk`; empty when the sample had no classification file and `--classification auto` was used) and `classification_status`: the status written by the tool (`match`, `below_threshold`, `nomatch` for `sourmash tax genome`; `found`, `disagree`, `nomatch` for `sourmash lca classify`; `classified` or `unclassified` for GTDB-Tk), or `absent` when the bin had no row in any classification file. Unclassified bins point to a taxonomy row whose ranks are all empty (NULL). Databases made by earlier versions do not have these columns and still open in `pankegg_app`.
+
+Two more things are stored from 2.1.0:
+
+- **Every KO of the annotation files**, including the KOs that eggNOG-mapper assigns to no KEGG pathway (`KEGG_Pathway` is `-`). Earlier versions dropped them. They are linked to their bins through `bin_extra` and `bin_extra_kegg`.
+- **KEGG module completeness** of each bin, computed from all its KOs and the module definitions shipped with Pankegg (`pankegg/data/kegg_modules.tsv`). A module definition is a series of steps; a comma separates alternative KOs, `+` joins the subunits of a complex, and `-` marks an optional part. A KO scores 1 when present, a series or complex scores the mean of its parts and a set of alternatives the best of its parts; the completeness of a module is the mean score of its steps, and a module is complete at 100%. The existing measure, the share of the KOs of a KEGG map that were found, is kept and called *pathway per-ID completeness*; see [The two completeness measures](#the-two-completeness-measures).
 
 ## Using pankegg_make_db in a pipeline
 
@@ -255,13 +290,7 @@ pankegg_make_db -i pankegg_test_data/gtdbtk_example.csv -o test_gtdbtk --output_
 ```
 After running these commands, you should find newly created `test_sourmash.db` and `test_gtdbtk.db` inside the `pankegg_test_data` directory. This is in addition to the already existing `sourmash_example.db` and `gtdbtk_example.db` files in the same directory.
 
-The existing and newly generated databases contain the same samples, bins, taxonomy, quality values and KEGG links. The files are not byte-identical, because 2.1.0 adds the classification columns and the `pankegg_info` table and processes the input files in sorted order. From a copy of the repository you can compare them by content:
-
-```bash
-python tests/regression/summarise_db.py pankegg_test_data/sourmash_example.db > old.json
-python tests/regression/summarise_db.py pankegg_test_data/test_sourmash.db > new.json
-diff old.json new.json && echo identical
-```
+The existing and newly generated databases contain the same samples, bins, taxonomy, quality values and pathway links. The new ones contain more: the KOs without a pathway (the `kegg` table of the Sourmash example grows from 1,580 to 2,514 KOs), the KEGG modules, the classification columns and the `pankegg_info` table. Nothing that the existing databases hold is missing from the new ones; the test suite of the repository checks this (`pytest --run-osf`).
 
 
 ## Troubleshooting

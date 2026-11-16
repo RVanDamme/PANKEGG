@@ -10,6 +10,15 @@ Two distributions are released from one tag:
 The version is set only in `pankegg/__init__.py` (`__version__`). `codemeta.json` must agree
 (`tests/test_version.py` checks it). Tags have no `v` prefix (`2.0.0`, `2.1.0`).
 
+## Before the first 2.1.0 release
+
+- `pankegg/data/kegg_modules.tsv` was downloaded from the KEGG REST service (`/list/module` and `/get/M…`,
+  2026-11-16). Like `ko.txt` and the pathway files already in the repository, it is KEGG data: check that
+  redistributing it fits the KEGG terms that apply to you before publishing. To refresh it, download the same
+  two endpoints again and keep the three columns `module<TAB>name<TAB>definition`; `tests/test_modules.py`
+  checks that every definition parses.
+- `pankegg/static/vendor/` holds Plotly and Bootstrap (both MIT); see the README in that folder for versions.
+
 ## 1. Prepare
 
 ```bash
@@ -221,6 +230,8 @@ pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification sourma
 pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification gtdbtk --quiet
 ```
 
+- Optional: `--metadata conditions.tsv` (`sample<TAB>condition`, e.g. from a samplesheet column) lets the web app
+  group and colour samples by condition.
 - Annotations: raw `*.emapper.annotations`, one per bin. CheckM2: the nf-core `<prefix>_checkm2_report.tsv`
   (a glob is fine).
 - Bins without a gather match need no file; they are stored as unclassified (`classification_status = 'absent'`).

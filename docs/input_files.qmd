@@ -36,6 +36,7 @@ PANKEGG requires more input files. However, these are already provided and you d
 |-------------------------|-------------------------------------------------------------------------------|-----------------------------------------|
 | kegg_map_info.tsv       | Contains mapID, pathway name, and total number of orthologs per pathway (map) | Extracted from KEGG pathway database    |
 | kegg_map_orthologs.tsv  | Contains mapID, pathway name, and list of orthologs per pathway (map)         | Extracted from KEGG pathway database    |
+| kegg_modules.tsv        | Contains the IDs, names and definitions of the KEGG modules                    | Extracted from KEGG module database     |
 | ko.txt                  | Contains the IDs and names of orthologs                                       | Extracted from KEGG orthologs database  |
 | pathway.txt             | Contains map IDs (pathways) and their names                                   | Extracted from KEGG pathway database    |
 | pathway_groups.txt      | Maps IDs grouped by KEGG sub-categories                                       | Extracted from KEGG pathway database    |

@@ -109,7 +109,7 @@ def test_help_is_english_and_documents_inputs():
     for french in ("Format du fichier", "attendu", "fichier"):
         assert french not in text
     for word in ("Sample name", "Annotation_dir", "classification_dir", "Checkm2_dir",
-                 "--classification", "sourmash_tax", "--quiet", "--verbose", "--version"):
+                 "--classification", "sourmash_tax", "--quiet", "--verbose", "--version", "--metadata"):
         assert word in text, word
 
 

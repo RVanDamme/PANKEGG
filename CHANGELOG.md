@@ -7,7 +7,30 @@ All notable changes to PANKEGG. Versions follow [semantic versioning](https://se
 Makes `pankegg_make_db` usable as an installed standalone tool and as a step of the
 MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep working.
 
-### Added
+### Added — web app
+- **Overview** page replaces the static home: counts, bin quality tiers per sample, completeness and
+  contamination, taxonomy sunburst, classification confidence, per-sample summary, most widespread
+  and rarest pathways.
+- **Bin details** page for every bin (`/bin/<id>`), linked from the bin list.
+- **Pathway Stats** reworked: search by pathway name or map ID, KO × bin matrix, completeness per
+  sample, mean completeness by taxon, KOs of the map found in no bin, optional exclusion of
+  unclassified bins, CSV exports.
+- **Modules**: KEGG module completeness per bin, with a steps × bins view of what is missing.
+- **Pathways by taxon** (with functional redundancy), **Core and accessory**, **Similarity**
+  (clustered Jaccard heatmap between samples or bins) and **Compare two groups** (Fisher's exact
+  test per pathway, KO or module with Benjamini–Hochberg q-values). All with CSV export.
+- Sample metadata is used to colour the sample PCA and to group samples or bins by condition.
+- Plotly 2.35.2 and Bootstrap 5.3.3 are shipped in the package: the app works without internet.
+- The existing completeness measure is now called **pathway per-ID completeness**, and every page
+  that shows it or module completeness explains the difference.
+
+### Added — database builder
+- **KEGG module completeness** per bin (new tables `module`, `bin_module`), computed from all KOs
+  of a bin and the 583 KEGG module definitions shipped in `pankegg/data/kegg_modules.tsv`.
+- **`--metadata FILE`**: sample metadata as a `sample<TAB>condition` file with free-text conditions;
+  with a header, any number of variables (new table `sample_metadata`).
+- **KOs without a KEGG pathway are kept** (`KEGG_Pathway` = `-`). They were dropped before, so
+  rebuilt databases hold more KOs (OSF Sourmash example: 1,580 → 2,514); nothing is removed.
 - **`sourmash tax genome` input** (`--output-format csv_summary`, `*.classifications.csv`):
   one or several bins per file; bin name from `query_name`; `below_threshold` calls are
   stored with their partial lineage.
@@ -27,6 +50,10 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
 - Classification globs: directories and binary files are skipped with a warning; a pattern whose directory does not exist is an error; UTF-8 byte-order marks are accepted in every input.
 
 ### Fixed
+- Web app: the "Both" column of the common-pathways tables was the sum of the two samples, not
+  their overlap; Bin vs Bin mixed bins that have the same name in different samples; the bin PCA
+  failed with fewer than 3 bins and the taxonomy heatmap with a single taxon; `/bin_query` returned
+  an error.
 - `pip install` (not editable) produced a broken `pankegg_make_db`: KEGG reference data,
   templates and the example database were not installed. They now live inside the
   `pankegg` package.

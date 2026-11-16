@@ -5,13 +5,21 @@ title: "The Pankegg Web Page"
 
 This is an overview of all the web app pages: 
 
-## Home
+## Home (Overview)
 
-At the top, a navigation bar provides quick access to all major sections: Home, Bin, Map, Kegg, Taxonomy, and Visualisation. Each of these sections links to a page where you can browse detailed information about your bins, pathway maps, KEGG identifiers, and taxonomic classifications, or use the different interactive visualisation tools. The navbar ensures that you can switch between functional modules.
+At the top, a navigation bar provides quick access to all major sections: Overview, Bin, Map, Kegg, Taxonomy, Visualisation, Pathway Stats and Modules. The navbar ensures that you can switch between functional modules.
 
-The landing page, `Home`, links to all elements that are also present in the navigation bar, and provides a short description for each one. Additionally, it shows the full content of the `Visualisation` page, Sample VS Sample; Bin VS Bin; Taxonomy comparison; PCA, and briefly describes each one.
+The landing page summarises the database you opened:
 
-![Figure: Home Page Example](figures/1.home.png)
+- the number of samples, bins, high and medium quality bins, classified bins, genera, KEGG pathways and KOs;
+- **bin quality per sample**, in MIMAG tiers computed from the CheckM2 values only (high: completeness ≥ 90% and contamination < 5%; medium: ≥ 50% and < 10%), and a completeness/contamination scatterplot of all bins;
+- a **taxonomy sunburst** (number of bins per lineage, not abundance) and the classification per sample: classified, low confidence (a sourmash call below its threshold) and unclassified;
+- a table with one line per sample (bins, median quality, genera, pathways, KOs and, when the database has sample metadata, its conditions);
+- the most widespread and the rarest pathways, with links to their statistics.
+
+Links to every other page are at the bottom.
+
+![Figure: Overview Page](figures/12.overview.png)
 
 ## Bin
 
@@ -125,7 +133,7 @@ PCA (Principal Component Analysis) plots are generated for all bins in each samp
 *Note: This should only be used if there are sufficient amount of bins provided, a PCA on e.g. 3 bins has no value*
 
 - **Common Pathways:**  
-A table lists all detected pathways, with counts of shared and unique orthologs for each sample. You can filter pathways using the search bar. Below, a barplot provides a visual summary of these counts, making it easy to spot pathways enriched or unique to each sample.
+A table lists every pathway found in at least one of the two samples, with the number of bins that carry it in each sample and whether both samples have it ("In both"). You can filter pathways using the search bar. Below, a barplot shows the number of bins per pathway in each sample.
 
 These combined tools offer a comprehensive, multi-angle comparison of the functional and taxonomic profiles of your samples.
 
@@ -133,7 +141,7 @@ These combined tools offer a comprehensive, multi-angle comparison of the functi
 
 ## Bin vs Bin
 
-The Bin vs Bin comparison page allows you to directly compare the metabolic potential of any two bins, whether they belong to the same sample or to different samples. After selecting two bins, the page displays a table listing all metabolic pathways, showing the count of orthologs detected in both bins, or uniquely in each bin. You can use the search bar to filter pathways of interest.
+The Bin vs Bin comparison page allows you to directly compare the metabolic potential of any two bins, whether they belong to the same sample or to different samples. After selecting two bins (each one identified by its sample and its name, because bin names can repeat across samples), the page displays a table listing the metabolic pathways found in at least one of them, showing whether each bin carries the pathway and whether both do. You can use the search bar to filter pathways of interest.
 
 Below the table, a barplot visually summarizes these pathway counts, making it easy to identify pathways that are shared or unique to each bin.
 
@@ -161,7 +169,68 @@ The PCA page provides Principal Component Analysis (PCA) visualizations to help 
 - **Based on Taxonomy:** The samples are differentiated by their taxonomic composition based on the specified rank (such as phylum, class, order, etc.).
 
 The resulting PCA plot visualizes your samples in a reduced dimensional space, helping to highlight patterns, clusters, or differences driven by functional or taxonomic profiles. The explained variance for the principal components is displayed below the plot to indicate how much of the data's variation is captured.
-*Note: We recommend using this tool only if you have enough samples.*
+When the database has sample metadata, the points are coloured by the variable you choose (for example the condition).
+*Note: A PCA needs at least 3 samples and is only informative with more; with few samples, use the Similarity page instead.*
 
 ![Figure: PCA Page](figures/11.PCA.png)
 
+## Bin details
+
+Clicking a bin name in the Bin page opens the page of that bin: CheckM2 completeness and contamination, quality tier, lineage and how it was classified, its most complete pathways, the number of pathways per KEGG category, its KEGG modules, and the full list of its pathways.
+
+![Figure: Bin Details Page](figures/13.bin_detail.png)
+
+## The two completeness measures
+
+Pankegg shows two different measures, and every page that displays one explains them in a "How to read the completeness values" box.
+
+- **Pathway per-ID completeness** is the number of distinct KOs of a KEGG map found in a bin (or sample), divided by all KOs drawn on that map. A map collects every alternative route and every group of organisms, so no single genome reaches 100%: use it to compare bins, not to decide that a pathway is complete.
+- **Module completeness** is the fraction of the steps of a KEGG module that are satisfied. A module is a small functional unit defined as steps with alternatives (one KO or another), complexes (several KOs together) and optional parts, so 100% means that every required step has at least one of its alternatives. It is available for databases built with Pankegg 2.1.0 or later.
+
+For example, in the test data the glycolysis map (map00010) is 11–21% complete per bin by ID, while the glycolysis module (M00001) is 56–94% complete in the same bins.
+
+## Pathway Stats
+
+The Pathway Stats page describes one pathway in depth. Type part of its name or its map ID (for example `Glycolysis` or `map00010`); if several pathways match, choose one from the list.
+
+- **Completeness per sample:** one point per bin, with its genus and CheckM2 completeness on hover.
+- **KO × bin matrix:** which KO was found in which bin, the most widespread KOs at the top, bins grouped by sample.
+- **Who carries it:** mean per-ID completeness of the bins of each taxon, at the rank you choose.
+- **Samples and bins:** per-ID completeness per sample and per bin, with KO lists including the KO names.
+- **Missing KOs:** the KOs drawn on the KEGG map that were found in no bin.
+
+Unclassified bins are included by default and can be switched off. The bins, the matrix and the missing KOs can each be exported as CSV.
+
+![Figure: Pathway Stats Page](figures/14.pathway_stats.png)
+
+## Modules
+
+The Modules page lists every KEGG module with at least part of a step in a bin: number of bins in which it is complete, number of samples with a complete bin, and the best bin. Clicking a module shows its definition, a **steps × bins** heatmap that tells which step is missing in which bin, the completeness per sample and per taxon, and the KOs of the module found in no bin.
+
+![Figure: Module Page](figures/15.module.png)
+
+## Pathways by taxon
+
+Reached from the Visualisation page. A heatmap shows, for the pathways of a KEGG category, the mean per-ID completeness in the bins of each taxon at the chosen rank, across all samples. Below, the **functional redundancy** table gives the number of distinct taxa carrying each pathway, fewest first: a pathway carried by a single taxon depends on that taxon.
+
+![Figure: Pathways by Taxon Page](figures/16.pathways_by_taxon.png)
+
+## Core and accessory
+
+Pathways, KOs or complete modules are sorted by the number of samples that carry them: **core** (every sample), **shared** (several but not all) and **unique** (one sample). The page also shows the exact sample combinations and what is unique to each sample. With sample metadata, samples can be pooled by a variable to compare conditions instead of samples.
+
+![Figure: Core and Accessory Page](figures/17.core_accessory.png)
+
+## Similarity
+
+A clustered heatmap of the Jaccard similarity (shared functions ÷ functions found in either one) between samples, or between bins, computed on KOs, pathways or complete modules. Unlike a PCA it stays readable with only a few samples.
+
+![Figure: Similarity Page](figures/18.similarity.png)
+
+## Compare two groups
+
+Choose two groups of bins — a sample, a condition from the sample metadata, a taxon, the unclassified bins, or "all other bins" — and Pankegg tests every pathway, KO or module with Fisher's exact test (two-sided) on the number of bins that carry it in each group. The q-value corrects for the number of tests (Benjamini–Hochberg); functions with q < 0.05 are highlighted. You can restrict the comparison to medium and high quality bins and export the full table as CSV.
+
+*Note: The unit is the bin. Bins of the same sample or species are not independent, and small groups have little power, so read the result as a screen for candidates.*
+
+![Figure: Group Comparison Page](figures/19.group_comparison.png)
