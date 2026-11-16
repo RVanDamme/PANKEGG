@@ -204,7 +204,11 @@ build string `pyhdfd78af_0`; check the actual tag on quay.io):
 - Package: `bioconda::pankegg-makedb=2.1.0` (container as above). The web app is not needed in the pipeline.
 - One task for all samples; the task writes `samples.csv` (header
   `Sample name,Annotation_dir,classification_dir,Checkm2_dir`, one row per sample, glob patterns relative
-  to the task directory) and runs one of:
+  to the task directory) and runs one of the commands below.
+- Stage each sample's files in their own subdirectory (e.g. `stageAs: "${meta.id}/annotations/*"`):
+  bin names are only unique within a sample (SemiBin2 writes `SemiBin_<n>` in every sample, so
+  `SemiBin_1.emapper.annotations` from two samples would collide in one directory). The CSV row of a sample
+  then points to `<sample>/annotations/*.emapper.annotations`, `<sample>/taxonomy/*` and `<sample>/checkm2/*`.
 
 ```bash
 # --bin_taxonomy sourmash (default): sourmash tax genome --output-format csv_summary, *.classifications.csv
@@ -220,6 +224,9 @@ pankegg_make_db -i samples.csv -o pankegg --output_dir . --classification gtdbtk
 - Annotations: raw `*.emapper.annotations`, one per bin. CheckM2: the nf-core `<prefix>_checkm2_report.tsv`
   (a glob is fine).
 - Bins without a gather match need no file; they are stored as unclassified (`classification_status = 'absent'`).
-- Output: `pankegg.db`. Same inputs give a byte-identical file, so it can be snapshot-tested with nf-test.
+- Output: `pankegg.db`. Same inputs give a byte-identical file with the same SQLite library (pinned
+  container), so it can be snapshot-tested with nf-test. The SQLite file header records the library version,
+  so a different SQLite gives different bytes with identical content; snapshot a content summary (e.g.
+  `sqlite3 pankegg.db .dump | md5sum`) if the container is not pinned.
 - Exit status 1 on any input problem (message on stderr naming the file); no partial `pankegg.db` is left.
 - Version for `versions.yml`: `pankegg_make_db --version` prints `pankegg_make_db 2.1.0`.

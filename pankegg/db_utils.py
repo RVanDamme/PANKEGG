@@ -102,7 +102,7 @@ def read_eggnog_annotations(path):
 
     Returns (fieldnames, rows) with rows as dicts keyed by the header.
     """
-    with open(path, 'r', newline='', encoding='utf-8') as fh:
+    with open(path, 'r', newline='', encoding='utf-8-sig') as fh:
         lines = [line for line in fh if not line.startswith('##')]
     start = next((i for i, line in enumerate(lines) if line.startswith('#query')), 0)
     reader = csv.DictReader(lines[start:], delimiter='\t')
@@ -116,8 +116,11 @@ def read_eggnog_annotations(path):
 def check_input_csv(input_csv):
     required_cols = {'Sample name', 'Annotation_dir', 'classification_dir', 'Checkm2_dir'}
     sample_names = set()
-    with open(input_csv, newline='') as f:
+    with open(input_csv, newline='', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            raise ValueError("the input CSV is empty (expected the header line "
+                             "'Sample name,Annotation_dir,classification_dir,Checkm2_dir')")
         if not required_cols.issubset(reader.fieldnames):
             raise ValueError(f"CSV missing required columns: {required_cols - set(reader.fieldnames)}")
         for i, row in enumerate(reader, 2):
@@ -135,7 +138,7 @@ def check_required_files_and_headers(csv_file):
     failures = []
     required_annot_cols = {'KEGG_Pathway', 'KEGG_ko'}
     required_quality_cols = {'Name', 'Completeness', 'Contamination'}
-    with open(csv_file, newline='') as f:
+    with open(csv_file, newline='', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for i, row in enumerate(reader, 2):
             sample = row['Sample name']
@@ -157,7 +160,7 @@ def check_required_files_and_headers(csv_file):
                 failures.append((i, sample, f"No quality report files found for pattern: {row['Checkm2_dir']}"))
             for qfile in q_files:
                 try:
-                    with open(qfile, 'r') as qf:
+                    with open(qfile, 'r', encoding='utf-8-sig') as qf:
                         header = qf.readline().strip().split('\t')
                         if not required_quality_cols.issubset(header):
                             failures.append((i, sample, f"Quality file {qfile} missing columns: {required_quality_cols - set(header)}"))
@@ -220,7 +223,7 @@ def resolve_classifications(csv_file, requested='auto'):
     (method, records); failures and warnings are (line, sample, message) tuples.
     """
     plan, failures, warnings = {}, [], []
-    with open(csv_file, 'r', newline='') as f:
+    with open(csv_file, 'r', newline='', encoding='utf-8-sig') as f:
         for i, row in enumerate(csv.DictReader(f), 2):  # line numbers as in the file (header = 1)
             sample = row['Sample name']
             try:
@@ -333,7 +336,7 @@ def link_maps_to_kos(cur, maps_dict, map_translate_table):
 def add_bin_quality_values(cur, quality_report_path, sample_id):  # Include sample_id
     """CheckM2 values; quality_report_path may be a glob pattern (all matching reports are read)."""
     for path in sorted(glob.glob(quality_report_path)) or [quality_report_path]:
-        with open(path, 'r', newline='') as file:
+        with open(path, 'r', newline='', encoding='utf-8-sig') as file:
             reader = csv.DictReader(file, delimiter='\t')
             for line, row in enumerate(reader, 2):
                 bin_name = normalise_bin_name(row['Name'])

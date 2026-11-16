@@ -152,3 +152,27 @@ def test_checkm2_dir_accepts_a_glob(tmp_path):
     assert res.returncode == 0, res.stderr
     con = sqlite3.connect(tmp_path / "out" / "db.db")
     assert con.execute("SELECT COUNT(*) FROM bin WHERE completeness IS NULL").fetchone()[0] == 0
+
+
+def test_empty_input_csv_has_a_clear_message(tmp_path):
+    res = cli("-i", write(tmp_path / "empty.csv", ""), "-o", "db", "--output_dir", tmp_path / "out")
+    assert res.returncode == 1
+    assert "TypeError" not in res.stderr and "empty" in res.stderr.lower()
+
+
+def test_input_csv_with_bom(tmp_path):
+    path = s1_csv(tmp_path)
+    path.write_text("﻿" + path.read_text())
+    res = cli("-i", path, "-o", "db", "--output_dir", tmp_path / "out")
+    assert res.returncode == 0, res.stderr
+
+
+def test_summary_counts_classified_by_taxonomy(tmp_path):
+    """A 'match' row whose lineage is 'unclassified' is stored unclassified and not counted as classified."""
+    text = (FIX / "sourmash_tax_genome" / "S1.bin1.classifications.csv").read_text().splitlines()
+    fields = text[1].split(",")
+    fields[4] = "unclassified"
+    cls = write(tmp_path / "cls" / "x.classifications.csv", text[0] + "\n" + ",".join(fields) + "\n")
+    res = cli("-i", s1_csv(tmp_path, cls=str(cls)), "-o", "db", "--output_dir", tmp_path / "out")
+    assert res.returncode == 0, res.stderr
+    assert "3 bins, 0 classified" in res.stderr, res.stderr

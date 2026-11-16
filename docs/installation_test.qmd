@@ -3,7 +3,14 @@ title: "Test the installation"
 ---
 
 
-Once the installation is complete, you can run Pankegg using:
+Once the installation is complete, you need to generate the secret key to protect your Flask session:
+
+```bash
+python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
+```
+This ".env" file needs to be in the directory where you start `pankegg_app` (or one of its parent directories, or the PANKEGG dir), and once it's done, it doesn't need to be rerun.
+
+You can now run Pankegg using:
 
 ```bash
 pankegg_make_db --version

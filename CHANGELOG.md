@@ -23,7 +23,8 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
   Databases from 2.0.0 still open in `pankegg_app`.
 - `generate_input_sourmash_tax_by_sample.sh` and `generate_input_sourmash_tax_by_tool.sh`.
 - `Checkm2_dir` accepts glob patterns like the other CSV columns.
-- `pankegg_app` also reads `FLASK_SECRET_KEY` from a `.env` file in the directory it is started from.
+- `pankegg_app` also reads `FLASK_SECRET_KEY` from a `.env` file in the directory it is started from (or a parent directory).
+- Classification globs: directories and binary files are skipped with a warning; a pattern whose directory does not exist is an error; UTF-8 byte-order marks are accepted in every input.
 
 ### Fixed
 - `pip install` (not editable) produced a broken `pankegg_make_db`: KEGG reference data,

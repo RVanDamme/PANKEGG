@@ -151,7 +151,7 @@ First, generate the secret key to protect your Flask session:
 ``` bash
 python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
 ```
-This ".env" file needs to be in the directory where you start `pankegg_app` (or in the PANKEGG dir).
+This ".env" file needs to be in the directory where you start `pankegg_app` (or one of its parent directories, or the PANKEGG dir).
 
 Start the web server using the example database installed with Pankegg:
 
@@ -354,7 +354,7 @@ Once the installation is complete, you need to generate the secret key to protec
 ``` bash
 python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
 ```
-This ".env" file needs to be in the directory where you start `pankegg_app` (or in the PANKEGG dir), and once it's done, it doesn't need to be rerun.
+This ".env" file needs to be in the directory where you start `pankegg_app` (or one of its parent directories, or the PANKEGG dir), and once it's done, it doesn't need to be rerun.
 
 
 You can now run Pankegg using:
@@ -463,7 +463,7 @@ Every path may be a glob pattern (`*`). Relative paths are resolved from the dir
 
 Classification inputs
 
-By default (`--classification auto`) the format is recognised from the file header, separately for each sample; files of two different formats in one sample are an error. Every bin that appears in the annotations but in no classification file is stored as unclassified: this is the normal case for a bin without a `sourmash gather` match, for which sourmash writes no file at all.
+By default (`--classification auto`) the format is recognised from the file header, separately for each sample; files of two different formats in one sample are an error. Every bin that appears in the annotations but in no classification file is stored as unclassified: this is the normal case for a bin without a `sourmash gather` match, for which sourmash writes no file at all. A `classification_dir` pattern whose directory does not exist is an error (usually a typo); files that are not classification files (directories, signatures, logs) are skipped with a warning.
 
 Examples:
 
@@ -615,7 +615,7 @@ Print only warnings and errors / print details for every input file.
 - `--version`
 Print the version and exit.
 
-All messages are written to the standard error. The exit status is 0 on success, 1 when an input or processing error occurred (no partial database is left behind, and an existing database with the same name is kept), and 2 for an invalid command line. The same inputs always give the same database.
+All messages are written to the standard error (only `--help` and `--version` print to the standard output). The exit status is 0 on success, 1 when an input or processing error occurred (no partial database is left behind, and an existing database with the same name is kept), and 2 for an invalid command line. The same inputs always give the same database.
 
 ## Output Make DB
 
@@ -637,7 +637,7 @@ The database contains the following tables:
 
 Each table stores specific information related to bins, pathways, taxonomy, and annotation results for easy querying and visualization.
 
-From 2.1.0 the `bin` table also records how each bin was classified, in `classification_method` (`sourmash_tax`, `sourmash_lca` or `gtdbtk`) and `classification_status`: the status written by the tool (`match`, `below_threshold`, `nomatch` for `sourmash tax genome`; `found`, `disagree`, `nomatch` for `sourmash lca classify`; `classified` or `unclassified` for GTDB-Tk), or `absent` when the bin had no row in any classification file. Unclassified bins point to a taxonomy row whose ranks are all empty (NULL). Databases made by earlier versions do not have these columns and still open in `pankegg_app`.
+From 2.1.0 the `bin` table also records how each bin was classified, in `classification_method` (`sourmash_tax`, `sourmash_lca` or `gtdbtk`; empty when the sample had no classification file and `--classification auto` was used) and `classification_status`: the status written by the tool (`match`, `below_threshold`, `nomatch` for `sourmash tax genome`; `found`, `disagree`, `nomatch` for `sourmash lca classify`; `classified` or `unclassified` for GTDB-Tk), or `absent` when the bin had no row in any classification file. Unclassified bins point to a taxonomy row whose ranks are all empty (NULL). Databases made by earlier versions do not have these columns and still open in `pankegg_app`.
 
 ## Using pankegg_make_db in a pipeline
 
@@ -724,7 +724,8 @@ the repository, `python pankegg_app.py --d ...` works too.)
 > Before running the web application, it is highly recommended to
 > **set your own Flask secret key**: put `FLASK_SECRET_KEY=<a long
 > random value>` in a `.env` file in the directory where you start
-> `pankegg_app` (or in the repository folder), or export
+> `pankegg_app` (or one of its parent directories, or the repository
+> folder), or export
 > `FLASK_SECRET_KEY` in your shell. This key is used
 > by Flask for session security. Leaving it as the default (‘dev’) is
 > fine for local or testing use, but for any real-world or multi-user

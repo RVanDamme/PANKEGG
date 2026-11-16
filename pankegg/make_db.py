@@ -138,7 +138,7 @@ def build_database(cur, csv_file_path, plan):
     ko_translate_table = load_ko_descriptions(default_ko_file)
     map_translate_table = load_pathways(default_pathway_file)
 
-    with open(csv_file_path, mode='r', newline='') as csvfile:
+    with open(csv_file_path, mode='r', newline='', encoding='utf-8-sig') as csvfile:
         for row in csv.DictReader(csvfile):
             sample = row['Sample name']
             annotation_path = row['Annotation_dir']
@@ -161,8 +161,9 @@ def build_database(cur, csv_file_path, plan):
             if duplicates:
                 log.warning(f"Duplicate bins for sample {sample}: {duplicates}")
             n_bins, n_classified = cur.execute(
-                "SELECT COUNT(*), SUM(classification_status NOT IN ('absent','nomatch','unclassified')) "
-                "FROM bin WHERE sample_id = ?", (sample_id,)).fetchone()
+                "SELECT COUNT(*), SUM(COALESCE(t._kingdom_, '') != '') "
+                "FROM bin b LEFT JOIN taxonomy t ON t.id = b.taxonomic_id WHERE b.sample_id = ?",
+                (sample_id,)).fetchone()
             log.info(f"Sample {sample}: {n_bins} bins, {n_classified or 0} classified ({method or 'none'})")
 
     issues = check_bin_consistency(cur)

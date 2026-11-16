@@ -33,9 +33,13 @@ def test_s1_lca_matches_2_0_0(tmp_path):
 
 
 @pytest.mark.osf
-@pytest.mark.parametrize("mode", ["sourmash", "gtdbtk"])
-def test_osf_example_matches_2_0_0(tmp_path, test_data_dir, mode):
-    extra = ["--gtdbtk"] if mode == "gtdbtk" else []
+@pytest.mark.parametrize("mode, extra", [
+    ("sourmash", []),                                       # 2.0.0 command line
+    ("gtdbtk", ["--gtdbtk"]),                               # 2.0.0 command line
+    ("sourmash", ["--classification", "sourmash_lca"]),
+    ("gtdbtk", []),                                         # auto-detected
+], ids=["sourmash", "gtdbtk-flag", "sourmash-explicit", "gtdbtk-auto"])
+def test_osf_example_matches_2_0_0(tmp_path, test_data_dir, mode, extra):
     db = build(test_data_dir / f"{mode}_example.csv", tmp_path, mode, *extra,
                cwd=test_data_dir.parent)
     expected = json.loads((REG / f"osf_{mode}_2.0.0.json").read_text())

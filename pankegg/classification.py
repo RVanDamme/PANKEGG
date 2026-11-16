@@ -16,6 +16,7 @@ status ``absent``.
 
 import csv
 import glob
+import os
 
 from .binnames import normalise_bin_name
 
@@ -30,9 +31,15 @@ class ClassificationError(ValueError):
 
 
 def detect_file_type(path):
-    """``sourmash_tax``, ``sourmash_lca``, ``gtdbtk``, ``empty`` or ``unknown`` from the header line."""
-    with open(path, "r", newline="", encoding="utf-8") as fh:
-        first = fh.readline()
+    """``sourmash_tax``, ``sourmash_lca``, ``gtdbtk``, ``empty`` or ``unknown`` from the header line.
+
+    Binary or non-UTF-8 files (e.g. gzipped signatures next to the CSVs) are ``unknown``.
+    """
+    try:
+        with open(path, "r", newline="", encoding="utf-8-sig") as fh:
+            first = fh.readline()
+    except UnicodeDecodeError:
+        return "unknown"
     if not first.strip():
         return "empty"
     delimiter = "\t" if "\t" in first else ","
@@ -57,7 +64,7 @@ def read_sourmash_tax(path):
     ``below_threshold`` rows keep their (possibly truncated) lineage; missing
     ranks are NULL (decision P3). ``nomatch`` or an empty lineage is unclassified.
     """
-    with open(path, "r", newline="", encoding="utf-8") as fh:
+    with open(path, "r", newline="", encoding="utf-8-sig") as fh:
         for row in csv.DictReader(fh):
             name = normalise_bin_name(row.get("query_name") or "")
             if not name:
@@ -73,7 +80,7 @@ def read_sourmash_tax(path):
 def read_sourmash_lca(path):
     """``sourmash lca classify``: every row (F6). Rank values are kept as written
     (empty ranks stay empty strings, as in PANKEGG 2.0.0); ``nomatch`` is unclassified."""
-    with open(path, "r", newline="", encoding="utf-8") as fh:
+    with open(path, "r", newline="", encoding="utf-8-sig") as fh:
         reader = csv.reader(fh)
         next(reader, None)  # header
         for row in reader:
@@ -89,7 +96,7 @@ def read_sourmash_lca(path):
 
 def read_gtdbtk(path):
     """GTDB-Tk summary. 'Unclassified ...' labels and empty classifications are unclassified."""
-    with open(path, "r", newline="", encoding="utf-8") as fh:
+    with open(path, "r", newline="", encoding="utf-8-sig") as fh:
         for row in csv.DictReader(fh, delimiter="\t"):
             name = normalise_bin_name(row.get("user_genome") or "")
             if not name:
@@ -111,7 +118,14 @@ def resolve_sample(pattern, requested="auto"):
     ``(status, ranks)``. ``method`` is ``None`` only in auto mode when the
     sample has no classification file at all. Raises ClassificationError.
     """
-    files = sorted(glob.glob(pattern))
+    matches = sorted(glob.glob(pattern))
+    # Directories (e.g. gtdbtk_out/classify/ matched by gtdbtk_out/*) are not inputs.
+    files = [p for p in matches if os.path.isfile(p)]
+    if not matches:
+        parent = os.path.dirname(pattern) or "."
+        parent_exists = bool(glob.glob(parent)) if glob.has_magic(parent) else os.path.isdir(parent)
+        if not parent_exists:
+            raise ClassificationError(f"classification directory does not exist: {parent} (pattern {pattern!r})")
     kinds = {fp: detect_file_type(fp) for fp in files}
     by_kind = {}
     for fp, kind in kinds.items():

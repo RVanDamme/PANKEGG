@@ -228,3 +228,40 @@ def test_pankegg_info_table(tmp_path):
     con.close()
     assert info["pankegg_version"] == pankegg.__version__
     assert info["classification_methods"] == "sourmash_tax"
+
+
+# --- review findings (step 10) ---------------------------------------------------------
+
+def test_directories_and_binary_files_in_the_glob_are_skipped(tmp_path):
+    """gtdbtk_out/* also matches align/, classify/...; signature files are gzip."""
+    import gzip
+    (tmp_path / "cls" / "classify").mkdir(parents=True)
+    (tmp_path / "cls" / "S1.bin1.sig.gz").write_bytes(gzip.compress(b"xxxx"))
+    res, db = build(tmp_path, [GTDB / "S1.bac120.summary.tsv"])
+    assert res.returncode == 0, res.stderr
+    assert "S1.bin1.sig.gz" in res.stderr          # warned about, by name
+    assert bins(db)["S1.bin1"]["tax"] == ECOLI
+
+
+def test_missing_classification_directory_is_an_error(tmp_path):
+    """A typo in classification_dir must not silently give an all-unclassified database."""
+    csv_path = write(tmp_path / "samples.csv",
+                     "Sample name,Annotation_dir,classification_dir,Checkm2_dir\n"
+                     f"S1,{S1}/eggnog/*.emapper.annotations,no_such_dir/*.csv,{S1}/checkm2/S1_checkm2_report.tsv\n")
+    res = run_make_db(csv_path, tmp_path / "out", "t", cwd=tmp_path, check=False)
+    assert res.returncode == 1
+    assert "no_such_dir" in res.stderr
+
+
+def test_existing_empty_classification_directory_is_allowed(tmp_path):
+    (tmp_path / "cls").mkdir()
+    res, db = build(tmp_path, [])
+    assert res.returncode == 0, res.stderr
+    assert {v["status"] for v in bins(db).values()} == {"absent"}
+
+
+@pytest.mark.parametrize("fixture", [TAX / "S1.bin1.classifications.csv", LCA / "S1.bin1.lca.csv",
+                                     GTDB / "S1.bac120.summary.tsv"], ids=["tax", "lca", "gtdbtk"])
+def test_utf8_bom_is_tolerated(tmp_path, fixture):
+    _, db = build(tmp_path, [(fixture.name, "﻿" + fixture.read_text())])
+    assert bins(db)["S1.bin1"]["tax"] == ECOLI

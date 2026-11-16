@@ -42,6 +42,13 @@ pankegg_make_db -i pankegg_test_data/sourmash_example.csv -o test_sourmash --out
 
 ## Launch the Web Application
 
+First, generate the secret key to protect your Flask session:
+
+```bash
+python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env
+```
+This ".env" file needs to be in the directory where you start `pankegg_app` (or one of its parent directories, or the PANKEGG dir).
+
 Start the web server using the example database installed with Pankegg:
 
 ```bash

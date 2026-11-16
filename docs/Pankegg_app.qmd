@@ -19,7 +19,7 @@ pankegg_app --d /Path/to/YOUR_PANKEGG.db
 (Replace /Path/to/YOUR_PANKEGG.db with your actual path. From a copy of the repository, `python pankegg_app.py --d ...` works too.)
 
 > **Note:**  
-> Before running the web application, it is highly recommended to **set your own Flask secret key**. Put `FLASK_SECRET_KEY=<a long random value>` in a `.env` file in the directory where you start `pankegg_app` (or in the repository folder), or export `FLASK_SECRET_KEY` in your shell. You can create the file with `python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env`.
+> Before running the web application, it is highly recommended to **set your own Flask secret key**. Put `FLASK_SECRET_KEY=<a long random value>` in a `.env` file in the directory where you start `pankegg_app` (or one of its parent directories, or the repository folder), or export `FLASK_SECRET_KEY` in your shell. You can create the file with `python3 -c "import secrets; print('FLASK_SECRET_KEY=' + secrets.token_hex(32))" > .env`.
 This key is used by Flask for session security. Leaving it as the default ('dev') is fine for local or testing use, but for any real-world or multi-user deployment, you should generate and use a strong, unique secret key to prevent session tampering and increase security.
 
 ## Parameters APP

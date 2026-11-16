@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 10 — Review and acceptance report
-- **Next action:** independent review of `git diff 2.0.0..HEAD` against brief §7 by a fresh subagent; fix findings; report every acceptance criterion with evidence; write release steps.
+- **Step:** done (all 10 steps). Waiting for the owner: merge, tag 2.1.0, publish (see `docs/dev/RELEASE.md`).
+- **Next action:** none until the owner decides on the open points below.
 
 ## Steps
 
@@ -20,7 +20,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] 7. App check against new and 2.0.0 databases
 - [x] 8. Offline tests, optional OSF test, CI without `|| true`, clean-install job, no committed `__pycache__`
 - [x] 9. Docs, tax genome helper script, CHANGELOG
-- [ ] 10. Independent review against brief §7, fixes, acceptance report, release instructions
+- [x] 10. Independent review against brief §7, fixes, acceptance report, release instructions
 
 ## Decisions
 
@@ -44,6 +44,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | App (step 7): one fix needed. Visualisation → taxonomy counted a bin as classified when it had any taxonomy row; with P7 unclassified bins have one (all NULL), so it now also requires a non-empty kingdom. This also corrects the count for 2.0.0 GTDB-Tk DBs. Composition charts now show lca `nomatch` bins as `Unknown` (as GTDB-Tk DBs already did) instead of leaving them out. All main pages serve 200 on 2.0.0 and new DBs (`tests/test_app.py`; real server checked with curl). |
 | 2026-11-16 | — | Tests (step 8): default `pytest` is offline (no network attempt) and uses `tests/fixtures`; OSF tests are marked `osf` and run with `pytest --run-osf`. The OSF fixture no longer changes the working directory for the whole session (it did, which made later tests depend on test order). CI: `test` (Python 3.9 + 3.13, offline), `osf-regression`, `clean-install` (`python -m build` + `tools/build_makedb.py`, fresh venvs, run from an empty directory), `test-conda` (conda-lock env); no `\|\| true` left. |
 | 2026-11-16 | — | Docs (step 9): `.qmd` sources and `README.md` edited together (README had drifted from the sources, so edits were made by hand, not regenerated). New: classification inputs table, bin-naming rule, the two packages, pipeline command lines, schema 2.1 columns, how to compare a new DB with a 2.0.0 one by content. Helper scripts `generate_input_sourmash_tax_by_{sample,tool}.sh` (tested). App also reads `.env` from the directory it is started from: after the move into `pankegg/`, installed users had no "PANKEGG dir" to put it in. `CHANGELOG.md` added. |
+| 2026-11-16 | — | Review (step 10, fresh subagent, no blocker/major): fixed C1 directories/binary files in a classification glob crashed the run → skipped with a warning; C2 a `classification_dir` whose directory does not exist exited 0 with all bins unclassified → error (an existing empty directory is still allowed); C3 empty input CSV gave `TypeError` → clear message; C4 per-sample log counted classified bins by status → by taxonomy; C5 UTF-8 BOM rejected → accepted in every input; doc fixes (stale repo layout in CONTRIBUTING/reporting_bugs, `.env` lookup wording, NULL `classification_method`, stdout for --help/--version, `.env` sentences added to the .qmd sources, SQLite-version caveat and per-sample staging in RELEASE.md). Added OSF regression in auto mode for GTDB-Tk. |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes
@@ -69,6 +70,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
   three-row lca file → only `S1.bin1` classified (others `'null'`); empty lca file → `StopIteration` (and a
   0-bin DB left on disk).
 - Determinism reproduced before the fix: same inputs, `PYTHONHASHSEED=1` vs `2` → 210 differing dump lines.
+- **Open for the owner (pre-existing in 2.0.0, app out of scope, not changed):** `pankegg_app` runs `app.run(host='0.0.0.0', debug=True)`, which exposes the Werkzeug debugger on all interfaces; `/bin_query` returns 500 (`Row is not JSON serializable`); `/get_heatmap_data_for_taxonomy` 500 with fewer than 2 taxa; `/compar_full` taxonomy PCA 500 when every bin is unclassified.
+- F6 note: the committed F6 tests fail on the pre-fix code, but on the missing new columns/option rather than on F6 itself; F6 itself was reproduced by hand (recorded above) and again by the reviewer.
 - Python 3.9.25 (via uv): full dependency set resolves (numpy 2.0.2, scipy 1.13.1, flask 3.1.3); tests pass.
 
 - Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code
