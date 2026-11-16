@@ -120,6 +120,16 @@ CREATE_TABLES = {
             FOREIGN KEY (module_id) REFERENCES module(id)
         );
     """,
+    # Free-text sample variables (e.g. condition) from --metadata; one row per sample and variable.
+    "sample_metadata": """
+        CREATE TABLE IF NOT EXISTS sample_metadata (
+            sample_id INT NOT NULL,
+            variable VARCHAR(255) NOT NULL,
+            value VARCHAR(255) NOT NULL,
+            PRIMARY KEY (sample_id, variable),
+            FOREIGN KEY (sample_id) REFERENCES sample(id)
+        );
+    """,
     "pankegg_info": """
         CREATE TABLE IF NOT EXISTS pankegg_info (
             key VARCHAR(64) PRIMARY KEY,
@@ -249,3 +259,4 @@ INSERT_BIN_MODULE = """
     INSERT OR REPLACE INTO bin_module (bin_id, module_id, steps_complete, steps_total, completeness)
     VALUES (?, ?, ?, ?, ?);
 """
+INSERT_SAMPLE_METADATA = "INSERT INTO sample_metadata (sample_id, variable, value) VALUES (?, ?, ?);"

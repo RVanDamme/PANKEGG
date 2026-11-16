@@ -24,7 +24,7 @@ default_module_file = resource_path('data', 'kegg_modules.tsv')
 TABLES_TO_DROP = [
     'taxonomy', 'bin', 'map', 'kegg', 'bin_map_kegg',
     'bin_map', 'map_kegg', 'bin_extra', 'bin_extra_kegg',
-    'sample', 'pankegg_info', 'module', 'bin_module'
+    'sample', 'pankegg_info', 'module', 'bin_module', 'sample_metadata'
 ]
 
 EPILOG = """\
@@ -74,6 +74,11 @@ def parse_arguments(argv=None):
         help='Bin classification input: sourmash_tax (sourmash tax genome csv_summary), '
              'sourmash_lca (sourmash lca classify), gtdbtk (GTDB-Tk *.summary.tsv), or auto '
              '(default: detected per sample from the file headers).')
+    parser.add_argument(
+        '--metadata', metavar='FILE',
+        help='Sample metadata: a tab-separated file with one line per sample, "sample<TAB>condition". '
+             'Conditions are free text. With a header line starting with "sample", any number of '
+             'further columns are stored as variables. Used by pankegg_app to colour and group samples.')
     parser.add_argument('--gtdbtk', action='store_true',
                         help='Same as --classification gtdbtk (kept for compatibility).')
     verbosity = parser.add_mutually_exclusive_group()
@@ -129,10 +134,23 @@ def validate_inputs(args):
         raise InputError(_line_failures("Classification input problems:", failures))
     for line, sample, msg in notes:
         log.warning(f"Line {line} (Sample {sample}): {msg}")
-    return mode, plan
+
+    metadata = ([], {})
+    metadata_file = getattr(args, 'metadata', None)
+    if metadata_file:
+        if not os.path.isfile(metadata_file):
+            raise InputError(f"metadata file not found: {metadata_file}")
+        try:
+            variables, values, warnings = read_sample_metadata(metadata_file, list(plan))
+        except (ValueError, UnicodeDecodeError, csv.Error) as e:
+            raise InputError(str(e)) from None
+        for msg in warnings:
+            log.warning(msg)
+        metadata = (variables, values)
+    return mode, plan, metadata
 
 
-def build_database(cur, csv_file_path, plan):
+def build_database(cur, csv_file_path, plan, metadata=((), {})):
     drop_all_tables(cur, TABLES_TO_DROP)
     create_tables(cur)
     check_db_schema(cur)
@@ -150,6 +168,7 @@ def build_database(cur, csv_file_path, plan):
             method, records = plan[sample]
 
             sample_id = add_sample_in_db(cur, sample)
+            add_sample_metadata(cur, sample_id, metadata[1].get(sample, {}))
             sample_preliminary_process(cur, annotation_path, sample_id)
             not_annotated = process_classifications(cur, sample_id, method, records)
             if not_annotated:
@@ -178,12 +197,13 @@ def build_database(cur, csv_file_path, plan):
 
     methods = sorted({m for m, _ in plan.values() if m})
     for key, value in (('pankegg_version', __version__), ('schema_version', SCHEMA_VERSION),
-                       ('classification_methods', ','.join(methods))):
+                       ('classification_methods', ','.join(methods)),
+                       ('metadata_variables', ','.join(metadata[0]))):
         cur.execute(INSERT_INFO, (key, value))
 
 
 def run(args):
-    mode, plan = validate_inputs(args)
+    mode, plan, metadata = validate_inputs(args)
 
     os.makedirs(args.output_dir, exist_ok=True)
     database_path = os.path.abspath(os.path.join(args.output_dir, f'{args.output}.db'))
@@ -198,7 +218,7 @@ def run(args):
         conn = connect_db(tmp_path)
         try:
             cur = conn.cursor()
-            build_database(cur, args.input, plan)
+            build_database(cur, args.input, plan, metadata)
             conn.commit()
             cur.close()
         finally:
