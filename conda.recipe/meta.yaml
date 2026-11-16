@@ -1,48 +1,52 @@
+# Local conda recipe for the full "pankegg" package (database builder + web app),
+# built from this checkout:  conda build conda.recipe
+# The version is read from pankegg/__init__.py (single source).
+{% set version = load_file_regex(load_file="pankegg/__init__.py", regex_pattern='__version__ = "([^"]+)"').group(1) %}
+
 package:
   name: pankegg
-  version: "1.0"
+  version: {{ version }}
 
 source:
   path: ../
 
 build:
   noarch: python
-  script: python setup.py install --single-version-externally-managed --record=record.txt
+  number: 0
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
+  entry_points:
+    - pankegg_make_db = pankegg.make_db:main
+    - pankegg_app = pankegg.app:start_server
 
 requirements:
   host:
-    - python
-    - setuptools
+    - python >=3.9
     - pip
+    - setuptools >=77
+    - wheel
   run:
-    - python
-    - flask
-    - pandas
-    - numpy
-    - scikit-learn
-    - scipy
-    - jinja2
-    - click
-    - python-dotenv
-    - importlib-metadata
-    - pytest==8.4.0
+    - python >=3.9
+    - flask >=2.2
+    - jinja2 >=3.0
+    - click >=8.0
+    - python-dotenv >=0.21
+    - pandas >=1.5
+    - numpy >=1.23
+    - scikit-learn >=1.1
+    - scipy >=1.9
 
 test:
-  requires:
-    - pytest==8.4.0
+  imports:
+    - pankegg
+    - pankegg.make_db
+    - pankegg.app
   commands:
-    - python -c "import flask"
-    - python -c "import pandas"
-    - python -c "import numpy"
-    - python -c "import jinja2"
-    - python -c "import click"
-    - python -c "import sklearn"
-    - python -c "import scipy"
-    - python -c "import python-dotenv"
-    - pankegg_make_db.py -h || true
-    - pankegg_app.py -h || true
+    - pankegg_make_db --version
+    - pankegg_make_db --help
+    - pankegg_app --help
 
 about:
   home: https://github.com/RVanDamme/PANKEGG
   license: MIT
-  summary: "The PanKEGG Flask application is a web-based tool for visualizing, comparing, and exporting metagenomic data related to taxonomy and pathways."
+  license_file: LICENSE
+  summary: "Build, explore and compare KEGG pathway, taxonomy and quality data of metagenome-assembled genomes"

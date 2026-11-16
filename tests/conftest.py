@@ -38,3 +38,5 @@ def test_data_dir(tmp_path_factory):
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "osf: needs the OSF example archive (network); skipped when unavailable")
+    config.addinivalue_line(
+        "markers", "install: builds wheels and installs them in fresh virtual environments (slow)")

@@ -4,7 +4,8 @@ import csv
 
 import pytest
 
-from lib.db_utils import (
+from pankegg import resource_path
+from pankegg.db_utils import (
     load_pathways,
     load_ko_descriptions,
     check_input_csv,
@@ -18,13 +19,13 @@ from lib.db_utils import (
 TEST_DATA_URL = "https://osf.io/download/5v3zc/"
 
 def test_load_pathways_basic():
-    path = os.path.join('data', 'kegg_map_orthologs.tsv')
+    path = resource_path('data', 'kegg_map_orthologs.tsv')
     pathways = load_pathways(path)
     assert 'map00010' in pathways, "Known pathway 'map00010' should be loaded"
     assert isinstance(pathways['map00010'], list), "Expected list of KOs for 'map00010'"
 
 def test_load_ko_descriptions_basic():
-    path = os.path.join('data', 'ko.txt')
+    path = resource_path('data', 'ko.txt')
     ko = load_ko_descriptions(path)
     assert 'K00001' in ko, "Expected KO 'K00001' to be loaded"
 

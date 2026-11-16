@@ -3,7 +3,7 @@ import argparse
 import pytest
 
 import pankegg_make_db
-from lib.db_utils import check_db_schema
+from pankegg.db_utils import check_db_schema
 
 @pytest.mark.usefixtures('test_data_dir')
 def test_make_db_sourmash(tmp_path, test_data_dir, monkeypatch):

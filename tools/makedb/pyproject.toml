@@ -1,0 +1,42 @@
+# Light distribution "pankegg-makedb": the PANKEGG database builder only.
+# Do not build this file in place: tools/build_makedb.py copies it next to a
+# copy of the pankegg package (without the web app) and builds from there.
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pankegg-makedb"
+dynamic = ["version"]
+description = "PANKEGG database builder (pankegg_make_db) without the web app; standard library only"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Arnaud Vanbelle" },
+    { name = "Renaud Van Damme", email = "renaud.van.damme@slu.se" },
+]
+keywords = ["metagenomics", "MAG", "KEGG", "eggNOG", "sourmash", "GTDB-Tk", "CheckM2", "bioinformatics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = []
+
+[project.scripts]
+pankegg_make_db = "pankegg.make_db:main"
+
+[project.urls]
+Homepage = "https://github.com/RVanDamme/PANKEGG"
+Issues = "https://github.com/RVanDamme/PANKEGG/issues"
+
+[tool.setuptools]
+packages = ["pankegg"]
+
+[tool.setuptools.package-data]
+pankegg = ["data/*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pankegg.__version__" }

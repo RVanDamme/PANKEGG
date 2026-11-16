@@ -5,14 +5,14 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 2 — Packaging
-- **Next action:** write the failing clean-install test (wheel → fresh venv → empty dir), then move code into the `pankegg/` package.
+- **Step:** 3 — Bin names
+- **Next action:** write failing tests for `S3.439`, `SemiBin_12`, `a.b.c`, `.fa`, `.fa.gz`, `.fna.gz`, then add one normalisation function.
 
 ## Steps
 
 - [x] 0. Progress file, CI runs on this branch
 - [x] 1. Baseline from OSF example CSVs (regression reference)
-- [ ] 2. Packaging: `pankegg` (full) + `pankegg-makedb` (light), single version, console scripts, `--version`, clean-install test
+- [x] 2. Packaging: `pankegg` (full) + `pankegg-makedb` (light), single version, console scripts, `--version`, clean-install test
 - [ ] 3. Bin-name normalisation (brief 3.4)
 - [ ] 4. eggNOG reader: raw and legacy files (brief 3.5)
 - [ ] 5. Classification modes, tax genome reader, lca all rows, unclassified everywhere, schema additions
@@ -39,6 +39,18 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes
+
+- Packaging (step 2): code in `pankegg/` (`make_db.py`, `app.py`, `db_utils.py`, `sql_commands.py`, `data/`,
+  `templates/`); root `pankegg_make_db.py` / `pankegg_app.py` are wrappers for checkout use. Version only in
+  `pankegg/__init__.py` (pyproject reads it; conda recipe reads it with `load_file_regex`; `codemeta.json`
+  checked by `tests/test_version.py`). `setup.py`, `MANIFEST.in`, `lib/` and its committed `__pycache__` removed.
+  Light distribution: `python tools/build_makedb.py` → `dist/pankegg_makedb-*.{tar.gz,whl}` (no `app.py`,
+  no templates, no `pankegg.db`/`pathway_groups.txt`, no dependencies).
+- F1 reproduced before the fix: installed 2.0.0 wheel → `FileNotFoundError: .../site-packages/data/ko.txt`;
+  F7: wheel installs a top-level `lib` package.
+- Pitfall found: a stale in-tree `build/` directory leaks old files into a wheel built with `pip wheel .`.
+  The install test builds from a clean copy; release builds must use `python -m build` from a clean checkout.
+- Python 3.9.25 (via uv): full dependency set resolves (numpy 2.0.2, scipy 1.13.1, flask 3.1.3); tests pass.
 
 - Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code
   (`git diff 2.0.0 HEAD -- pankegg_make_db.py lib data` is empty). Summaries of the rebuilt DBs are byte-identical

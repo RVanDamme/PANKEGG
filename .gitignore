@@ -26,3 +26,6 @@ instance/
 # Quarto files
 docs/.quarto/
 docs/_site/
+
+# Python bytecode anywhere
+__pycache__/

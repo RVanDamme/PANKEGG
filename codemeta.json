@@ -33,5 +33,5 @@
   "keywords": "metagenomics, visualisation, python, SQLite3",
   "license": "MIT",
   "title": "PANKEGG",
-  "version": "v2.0.0"
+  "version": "v2.1.0"
 }

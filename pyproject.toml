@@ -1,4 +1,61 @@
 [build-system]
-requires = ["setuptools>=84.1.0", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# Full distribution: database builder + web app.
+# The light distribution "pankegg-makedb" (database builder only, standard
+# library only) is built from the same sources by tools/build_makedb.py.
+[project]
+name = "pankegg"
+dynamic = ["version"]
+description = "Build, explore and compare KEGG pathway, taxonomy and quality data of metagenome-assembled genomes"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Arnaud Vanbelle" },
+    { name = "Renaud Van Damme", email = "renaud.van.damme@slu.se" },
+]
+keywords = ["metagenomics", "MAG", "KEGG", "eggNOG", "sourmash", "GTDB-Tk", "CheckM2", "bioinformatics"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Framework :: Flask",
+]
+# Web app only; pankegg_make_db needs nothing beyond the standard library.
+dependencies = [
+    "flask>=2.2",
+    "jinja2>=3.0",
+    "click>=8.0",
+    "python-dotenv>=0.21",
+    "pandas>=1.5",
+    "numpy>=1.23",
+    "scikit-learn>=1.1",
+    "scipy>=1.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+pankegg_make_db = "pankegg.make_db:main"
+pankegg_app = "pankegg.app:start_server"
+
+[project.urls]
+Homepage = "https://github.com/RVanDamme/PANKEGG"
+Documentation = "https://github.com/RVanDamme/PANKEGG/blob/master/docs/PANKEGG_documentation.pdf"
+Issues = "https://github.com/RVanDamme/PANKEGG/issues"
+
+[tool.setuptools]
+packages = ["pankegg"]
+
+[tool.setuptools.package-data]
+pankegg = ["data/*", "templates/*.html"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pankegg.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
