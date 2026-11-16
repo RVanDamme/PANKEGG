@@ -6,6 +6,8 @@ import glob
 import os
 from .sql_commands import *
 from .binnames import normalise_bin_name, bin_name_from_annotation_file
+from .classification import (METHODS as CLASSIFICATION_METHODS, ClassificationError,
+                             apply_sample, detect_file_type, resolve_sample)
 
 
 def connect_db(path):
@@ -40,6 +42,17 @@ def insert_taxonomy(cur, tax_data):
         # Insert new taxonomic entry
         cur.execute(INSERT_TAXONOMY, tax_data[2:9])
         return cur.lastrowid
+
+
+def get_or_create_taxonomy(cur, ranks):
+    """Id of the taxonomy row with exactly these 7 ranks (NULLs included), created if needed."""
+    ranks = tuple(ranks)
+    cur.execute(SELECT_TAXONOMY_ID, ranks)
+    result = cur.fetchone()
+    if result:
+        return result[0]
+    cur.execute(INSERT_TAXONOMY, ranks)
+    return cur.lastrowid
 
 
 def insert_bin(cur, bin_name, taxonomic_id, sample_id):
@@ -196,41 +209,30 @@ def check_duplicate_bins(cur, sample_id):
     return [b for b, _ in duplicates]
 
 
-# Classification mode check 
-def detect_file_type(filepath):
-    # Try both comma and tab as delimiter, inspect the first line
-    with open(filepath, 'r') as f:
-        peek = f.readline()
-        header = peek.strip().split('\t') if '\t' in peek else peek.strip().split(',')
-    # Decide type by columns present
-    if {'user_genome', 'classification'}.issubset(set(header)):
-        return 'gtdbtk'
-    if {'ID', 'status'}.issubset(set(header)):
-        return 'sourmash'
-    return 'unknown'
+# Classification mode check
+def resolve_classifications(csv_file, requested='auto'):
+    """Choose and read the classification files of every sample before the DB is written.
 
-
-def check_classification_mode_per_row(csv_file, gtdbtk_flag):
-    failures = []
+    Returns (plan, failures, warnings): plan maps sample name to
+    (method, records); failures and warnings are (line, sample, message) tuples.
+    """
+    plan, failures, warnings = {}, [], []
     with open(csv_file, 'r', newline='') as f:
-        reader = csv.DictReader(f)
-        for i, row in enumerate(reader, 2):  # start at 2 to match line numbers (header = line 1)
+        for i, row in enumerate(csv.DictReader(f), 2):  # line numbers as in the file (header = 1)
             sample = row['Sample name']
-            classification_dir = row['classification_dir']
-            files = glob.glob(classification_dir)
-            file_types = set()
-            for fp in files:
-                kind = detect_file_type(fp)
-                if kind != 'unknown':
-                    file_types.add(kind)
-            if not file_types:
-                failures.append((i, sample, 'No recognizable classification files found.'))
+            try:
+                method, records, notes = resolve_sample(row['classification_dir'], requested)
+            except (ClassificationError, OSError, UnicodeDecodeError, csv.Error) as e:
+                failures.append((i, sample, str(e)))
                 continue
-            if gtdbtk_flag and ('sourmash' in file_types):
-                failures.append((i, sample, 'Sourmash classification file(s) found, but --gtdbtk flag was set.'))
-            if not gtdbtk_flag and ('gtdbtk' in file_types):
-                failures.append((i, sample, 'GTDBtk classification file(s) found, but --gtdbtk flag was NOT set.'))
-    return failures
+            plan[sample] = (method, records)
+            warnings.extend((i, sample, n) for n in notes)
+    return plan, failures, warnings
+
+
+def check_classification_mode_per_row(csv_file, gtdbtk_flag=False):
+    """2.0.0 interface: failures only. gtdbtk_flag=True requires GTDB-Tk files, otherwise auto-detect."""
+    return resolve_classifications(csv_file, 'gtdbtk' if gtdbtk_flag else 'auto')[1]
 
 
 # Data process
@@ -355,45 +357,9 @@ def set_ko(cur, kegg_translate_table, maps_dict):
                 cur.execute(INSERT_KEGG, (ko_id, "null", "null", ko_id))
 
 
-def process_taxonomy_files(cur, file_path, sample_id):
-    files = glob.glob(file_path)
-    for file_path in files:
-        with open(file_path, 'r') as file:
-            next(file)  # Skip header
-            line = next(file).strip()
-            data = line.split(',')
-            assigned_status = data[1]
-            bin_name = normalise_bin_name(data[0])
-            if assigned_status != "nomatch":
-                tax_id = insert_taxonomy(cur, data)
-                cur.execute(UPDATE_BIN_TAXONOMY, (tax_id, bin_name, sample_id))
-
-
-def process_gtdbtk_taxonomy_files(cur, gtdbtk_dir_pattern, annotation_files_path, sample_id):
-    # Find all bins from annotation (so we can detect 'nomatch' bins)
-    all_bin_files = glob.glob(annotation_files_path)
-    all_bins = set()
-    for fname in all_bin_files:
-        all_bins.add(bin_name_from_annotation_file(fname))
-    found_bins = set()
-    for summary_path in glob.glob(gtdbtk_dir_pattern):
-        with open(summary_path, 'r') as f:
-            reader = csv.DictReader(f, delimiter='\t')
-            for row in reader:
-                bin_name = normalise_bin_name(row['user_genome'])
-                tax_line = row['classification']
-                taxa = tax_line.split(';')
-                taxa = [t if t else None for t in taxa]
-                while len(taxa) < 7:
-                    taxa.append(None)
-                data = ['']*2 + taxa[:7]
-                tax_id = insert_taxonomy(cur, data)
-                cur.execute(UPDATE_BIN_TAXONOMY, (tax_id, bin_name, sample_id))
-                found_bins.add(bin_name)
-    for bin_name in all_bins - found_bins:
-        data = [bin_name, 'nomatch', None, None, None, None, None, None, None, None]
-        tax_id = insert_taxonomy(cur, data)
-        cur.execute(UPDATE_BIN_TAXONOMY, (tax_id, bin_name, sample_id))
+def process_classifications(cur, sample_id, method, records):
+    """Store bin classifications for one sample (every mode); bins without one become unclassified."""
+    return apply_sample(cur, sample_id, method, records, get_or_create_taxonomy)
 
 
 def sample_preliminary_process(cur, annotation_files_path, sample_id):
@@ -403,7 +369,7 @@ def sample_preliminary_process(cur, annotation_files_path, sample_id):
         cur.execute(SELECT_BIN_ID, (name_part, sample_id))  # Ensure unique bins per sample
         bin_id = cur.fetchone()
         if not bin_id:
-            insert_bin(cur, name_part, "null", sample_id)
+            insert_bin(cur, name_part, None, sample_id)  # classification set later
 
 
 def process_annotation_file(cur, annotation_files_path, pathways_dict, sample_id):

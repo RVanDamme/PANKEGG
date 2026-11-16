@@ -28,6 +28,8 @@ CREATE_TABLES = {
             contamination FLOAT,
             taxonomic_id INT,
             sample_id INT,
+            classification_method VARCHAR(32),
+            classification_status VARCHAR(32),
             FOREIGN KEY (taxonomic_id) REFERENCES taxonomy(id),
             FOREIGN KEY (sample_id) REFERENCES sample(id)
         );
@@ -94,8 +96,20 @@ CREATE_TABLES = {
             FOREIGN KEY (bin_id) REFERENCES bin(id),
             FOREIGN KEY (map_kegg_id) REFERENCES map_kegg(id)
     );
+    """,
+    # Added in 2.1.0 (additive; absent from 2.0.0 databases)
+    "pankegg_info": """
+        CREATE TABLE IF NOT EXISTS pankegg_info (
+            key VARCHAR(64) PRIMARY KEY,
+            value VARCHAR(255)
+        );
     """
 }
+
+# Schema version recorded in pankegg_info; 2.0.0 databases have no pankegg_info table.
+SCHEMA_VERSION = "2.1"
+
+INSERT_INFO = "INSERT OR REPLACE INTO pankegg_info (key, value) VALUES (?, ?);"
 
 # Delete Table
 DROP_TABLE = "DROP TABLE IF EXISTS {table_name}"
@@ -117,10 +131,12 @@ INSERT_SAMPLE = """
 """
 
 # Select data
+# IS (not =) so that lineages with NULL ranks, and the all-NULL unclassified row, are reused.
 SELECT_TAXONOMY_ID = """
     SELECT id FROM taxonomy WHERE
-    _kingdom_ = ? AND _phylum_ = ? AND _class_ = ? AND _order_ = ? AND
-    _family_ = ? AND _genus_ = ? AND _species_ = ?;
+    _kingdom_ IS ? AND _phylum_ IS ? AND _class_ IS ? AND _order_ IS ? AND
+    _family_ IS ? AND _genus_ IS ? AND _species_ IS ?
+    ORDER BY id LIMIT 1;
 """
 
 # sql_commands.py

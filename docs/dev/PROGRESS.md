@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 5 — Classification
-- **Next action:** failing tests for `sourmash tax genome` (match, below_threshold truncated, missing bin, several bins per file), lca all rows / empty file, `--classification` option.
+- **Step:** 6 — CLI behaviour
+- **Next action:** failing tests: errors on stderr with exit code ≠ 0, `--quiet`/`--verbose`, same DB content for shuffled glob order, English help text.
 
 ## Steps
 
@@ -15,7 +15,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] 2. Packaging: `pankegg` (full) + `pankegg-makedb` (light), single version, console scripts, `--version`, clean-install test
 - [x] 3. Bin-name normalisation (brief 3.4)
 - [x] 4. eggNOG reader: raw and legacy files (brief 3.5)
-- [ ] 5. Classification modes, tax genome reader, lca all rows, unclassified everywhere, schema additions
+- [x] 5. Classification modes, tax genome reader, lca all rows, unclassified everywhere, schema additions
 - [ ] 6. CLI behaviour: stderr/exit codes, `--quiet`/`--verbose`, deterministic output, English help
 - [ ] 7. App check against new and 2.0.0 databases
 - [ ] 8. Offline tests, optional OSF test, CI without `|| true`, clean-install job, no committed `__pycache__`
@@ -37,6 +37,9 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | Internal row IDs may differ from 2.0.0 (input files are sorted); allowed as long as samples, bins and all links between them are unchanged. Regression compares by names, not IDs. |
 | 2026-11-16 | — | Tests run offline from fixtures committed in `tests/fixtures`; the OSF download test is optional. |
 | 2026-11-16 | — | Bin names (step 3): `pankegg/binnames.py` strips `.emapper.annotations` / `.annotations.tsv` / `.annotations` from annotation file names and `.fa`/`.fna`/`.fasta` (+`.gz`) from every identifier. An annotation file without a known suffix keeps the 2.0.0 rule (first two dot parts) with a warning, so old inputs give the same DB. Side effect: the per-bin `<bin>_not_mapped` pseudo-pathway now uses the normalised name; it differs from 2.0.0 only when the annotation file name carried a FASTA extension before the suffix (e.g. `x.fa.emapper.annotations`: 2.0.0 `x.fa_not_mapped`, now `x_not_mapped`). |
+| 2026-11-16 | P4 | Schema 2.1 (additive): `bin.classification_method` (`sourmash_tax`/`sourmash_lca`/`gtdbtk`) and `bin.classification_status` (tool status verbatim: `match`, `below_threshold`, `nomatch`, `found`, `disagree`; GTDB-Tk `classified`/`unclassified`; `absent` = bin has no row in any classification file); table `pankegg_info(key, value)` with `pankegg_version`, `schema_version`, `classification_methods`. |
+| 2026-11-16 | P7 | Applied: lca `nomatch`, tax genome `nomatch`/empty lineage, GTDB-Tk `Unclassified …` labels and bins absent from every file all point to one shared taxonomy row with all ranks NULL. Taxonomy lookup uses `IS` so NULL-containing lineages are reused instead of duplicated (2.0.0 GTDB-Tk mode created one all-NULL row per unclassified bin). Non-empty ranks keep 2.0.0 values (lca empty ranks stay `''`, GTDB-Tk `s__` stays `s__`). |
+| 2026-11-16 | — | Classification inputs (step 5): `--classification auto` is the default, so an old command without `--gtdbtk` on GTDB-Tk files now works instead of failing. Errors (before the DB is opened): mixed types in a sample, an explicit mode contradicting the files, only unrecognised files, the same bin classified differently in two files. Warnings: unrecognised files next to recognised ones (2.0.0 ignored them silently), no classification file at all (every bin unclassified, the "all bins unmatched" case). Bins present in a classification file but not in the annotations are ignored, as in 2.0.0. |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes
@@ -58,6 +61,9 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - **Open for the owner (not changed, would alter DB content):** a KO whose `KEGG_Pathway` is `-` never reaches the
   `kegg` table, so it has no `bin_extra_kegg` link; the `<bin>_not_mapped` branch only fires on an empty
   `KEGG_Pathway`, which emapper never writes (it writes `-`).
+- F2/F6 reproduced before the fix: `sourmash tax genome` file → `No recognizable classification files found.`;
+  three-row lca file → only `S1.bin1` classified (others `'null'`); empty lca file → `StopIteration` (and a
+  0-bin DB left on disk).
 - Python 3.9.25 (via uv): full dependency set resolves (numpy 2.0.2, scipy 1.13.1, flask 3.1.3); tests pass.
 
 - Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code

@@ -18,7 +18,7 @@ default_ko_file = resource_path('data', 'ko.txt')
 TABLES_TO_DROP = [
     'taxonomy', 'bin', 'map', 'kegg', 'bin_map_kegg',
     'bin_map', 'map_kegg', 'bin_extra', 'bin_extra_kegg',
-    'sample'
+    'sample', 'pankegg_info'
 ]
 
 def parse_arguments():
@@ -31,8 +31,24 @@ def parse_arguments():
     parser.add_argument('-i', '--input', required=True, help='Path to the input CSV file.')
     parser.add_argument('-o', '--output', default='pankegg', help='Name for the output database file (without extension).')
     parser.add_argument('--output_dir', default='./db_output', help='Directory path for the output database file.')
-    parser.add_argument('--gtdbtk', action='store_true', help='Use GTDBtk classification instead of Sourmash')
+    parser.add_argument(
+        '--classification', choices=('auto',) + CLASSIFICATION_METHODS, default='auto',
+        help='Bin classification input: sourmash_tax (sourmash tax genome csv_summary), '
+             'sourmash_lca (sourmash lca classify), gtdbtk (GTDB-Tk *.summary.tsv), or auto '
+             '(default: detected per sample from the file headers).')
+    parser.add_argument('--gtdbtk', action='store_true',
+                        help='Same as --classification gtdbtk (kept for compatibility).')
     return parser.parse_args()
+
+
+def classification_mode(args):
+    """--classification, with the 2.0.0 --gtdbtk flag as an alias of --classification gtdbtk."""
+    mode = getattr(args, 'classification', 'auto') or 'auto'
+    if getattr(args, 'gtdbtk', False):
+        if mode not in ('auto', 'gtdbtk'):
+            raise ValueError(f"--gtdbtk conflicts with --classification {mode}")
+        mode = 'gtdbtk'
+    return mode
 
 def main():
     args = parse_arguments()
@@ -65,13 +81,20 @@ def main():
             print(f"  Line {line} (Sample {sample}): {msg}")
         sys.exit(1)
 
-    # TEST 9: Classification mode (gtdbtk/sourmash) consistency
-    failures = check_classification_mode_per_row(csv_file_path, args.gtdbtk)
+    # TEST 9: Classification inputs: pick the reader per sample and read the files
+    try:
+        mode = classification_mode(args)
+    except ValueError as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
+    plan, failures, notes = resolve_classifications(csv_file_path, mode)
     if failures:
         print("[ERROR] Classification mode mismatch detected on these lines:")
         for line, sample, msg in failures:
             print(f"  Line {line} (Sample {sample}): {msg}")
         sys.exit(1)
+    for line, sample, msg in notes:
+        print(f"[WARN] Line {line} (Sample {sample}): {msg}")
 
     # DB creation
     conn = connect_db(database_path)
@@ -96,16 +119,13 @@ def main():
         for row in csvreader:
             sample = row['Sample name']
             annotation_path = row['Annotation_dir']
-            sourmash_txt_dir = row['classification_dir']
             checkm2_dir = row['Checkm2_dir']
 
             print("Processing:", sample)
             sample_id = add_sample_in_db(cur, sample)
             sample_preliminary_process(cur, annotation_path, sample_id)
-            if args.gtdbtk:
-                process_gtdbtk_taxonomy_files(cur, sourmash_txt_dir, annotation_path, sample_id)
-            else:
-                process_taxonomy_files(cur, sourmash_txt_dir, sample_id)
+            method, records = plan[sample]
+            process_classifications(cur, sample_id, method, records)
             add_bin_quality_values(cur, checkm2_dir, sample_id)
             map_ko_dict = process_annotation_file(cur, annotation_path, map_translate_table, sample_id)
             set_ko(cur, ko_translate_table, map_ko_dict)
@@ -122,6 +142,11 @@ def main():
     issues = check_bin_consistency(cur)
     if issues:
         print(f"[WARN] Bin mapping issues: {issues}")
+
+    methods = sorted({m for m, _ in plan.values() if m})
+    for key, value in (('pankegg_version', __version__), ('schema_version', SCHEMA_VERSION),
+                       ('classification_methods', ','.join(methods))):
+        cur.execute(INSERT_INFO, (key, value))
 
     conn.commit()
     cur.close()
