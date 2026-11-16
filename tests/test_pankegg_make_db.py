@@ -27,3 +27,22 @@ def test_make_db_sourmash(tmp_path, test_data_dir, monkeypatch):
         pytest.fail(f"Generated database schema invalid: {e}")
     conn.close()
 
+
+
+def test_make_db_offline(tmp_path, monkeypatch):
+    """Same call style as above (2.0.0 namespace, no new options), offline fixtures."""
+    from pathlib import Path
+    repo = Path(__file__).resolve().parent.parent
+    monkeypatch.chdir(repo)
+    args = argparse.Namespace(
+        input=str(repo / "tests" / "fixtures" / "db_2.0.0" / "s1_lca_input.csv"),
+        output="test_db",
+        output_dir=str(tmp_path),
+        gtdbtk=False,
+    )
+    monkeypatch.setattr(pankegg_make_db, "parse_arguments", lambda: args)
+    assert pankegg_make_db.main() == 0
+    conn = sqlite3.connect(tmp_path / "test_db.db")
+    check_db_schema(conn.cursor())
+    assert conn.execute("SELECT COUNT(*) FROM bin").fetchone()[0] == 3
+    conn.close()

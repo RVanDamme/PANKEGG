@@ -83,3 +83,41 @@ def test_check_duplicate_bins(test_data_dir):
         assert check_duplicate_bins(cur, sid) == [], f"Duplicate bins found for sample {sid}"
     conn.close()
 
+
+
+# --- offline equivalents of the OSF tests above (small fixtures) -------------------
+
+from pathlib import Path  # noqa: E402
+
+FIX = Path(__file__).resolve().parent / "fixtures"
+S1_CSV = FIX / "db_2.0.0" / "s1_lca_input.csv"     # paths relative to the repository root
+OLD_DB = FIX / "db_2.0.0" / "s1_lca_2.0.0.db"
+
+
+@pytest.fixture
+def in_repo_root(monkeypatch):
+    monkeypatch.chdir(FIX.parent.parent)
+
+
+def test_check_required_files_and_headers_offline(in_repo_root):
+    assert check_required_files_and_headers(str(S1_CSV)) == []
+
+
+def test_check_classification_mode_offline(in_repo_root):
+    assert check_classification_mode_per_row(str(S1_CSV), gtdbtk_flag=False) == []
+    assert check_classification_mode_per_row(str(S1_CSV), gtdbtk_flag=True) != []
+
+
+@pytest.mark.parametrize("check", ["schema", "consistency", "duplicates"])
+def test_checks_on_2_0_0_db(check):
+    conn = sqlite3.connect(OLD_DB)
+    cur = conn.cursor()
+    if check == "schema":
+        check_db_schema(cur)
+    elif check == "consistency":
+        # 2.0.0 stored S1.bin2 (lca nomatch) with the text 'null' as taxonomic_id
+        assert check_bin_consistency(cur) == ["Bins missing taxonomy: ['S1.bin2']"]
+    else:
+        for (sid,) in cur.execute("SELECT id FROM sample").fetchall():
+            assert check_duplicate_bins(cur, sid) == []
+    conn.close()

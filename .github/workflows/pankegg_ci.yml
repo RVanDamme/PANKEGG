@@ -10,9 +10,106 @@ permissions:
   contents: read
 
 jobs:
+  # Offline test suite on the oldest supported and the recommended Python.
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install pankegg with test dependencies
+        run: |
+          python -m pip install --upgrade pip "setuptools>=77" wheel
+          pip install -e ".[dev]" flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: CLI smoke test (must not fail)
+        run: |
+          python pankegg_make_db.py --help
+          python pankegg_app.py --help
+          pankegg_make_db --version
+          pankegg_app --version
+
+      - name: Run test suite (offline fixtures)
+        run: pytest -vv
+
+  # Regression against the published OSF example data and the 2.0.0 databases.
+  osf-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: OSF example data matches 2.0.0
+        run: pytest -vv --run-osf -m osf
+
+  # Build both distributions, install each into a fresh environment and run
+  # them from a directory that contains no checkout (finding F1).
+  clean-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build pankegg and pankegg-makedb (sdist + wheel)
+        run: |
+          python -m pip install --upgrade pip build "setuptools>=77" wheel
+          python -m build --outdir dist .
+          python tools/build_makedb.py --outdir dist
+          ls -l dist
+
+      - name: Inputs in an empty directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/work"
+          cp -r tests/fixtures/s1 tests/fixtures/sourmash_tax_genome "$RUNNER_TEMP/work/"
+          printf 'Sample name,Annotation_dir,classification_dir,Checkm2_dir\nS1,s1/eggnog/*.emapper.annotations,sourmash_tax_genome/S1.bin*.classifications.csv,s1/checkm2/S1_checkm2_report.tsv\n' \
+            > "$RUNNER_TEMP/work/samples.csv"
+
+      - name: pankegg-makedb in a fresh venv (no dependencies)
+        working-directory: ${{ runner.temp }}/work
+        run: |
+          python -m venv "$RUNNER_TEMP/venv-light"
+          "$RUNNER_TEMP/venv-light/bin/pip" install "$GITHUB_WORKSPACE"/dist/pankegg_makedb-*.whl
+          "$RUNNER_TEMP/venv-light/bin/pip" list
+          "$RUNNER_TEMP/venv-light/bin/pankegg_make_db" --version
+          "$RUNNER_TEMP/venv-light/bin/pankegg_make_db" -i samples.csv -o light --output_dir out --classification sourmash_tax
+          test -s out/light.db
+          test ! -e "$RUNNER_TEMP/venv-light/bin/pankegg_app"
+
+      - name: pankegg (full) in a fresh venv
+        working-directory: ${{ runner.temp }}/work
+        run: |
+          python -m venv "$RUNNER_TEMP/venv-full"
+          "$RUNNER_TEMP/venv-full/bin/pip" install "$GITHUB_WORKSPACE"/dist/pankegg-*.whl
+          "$RUNNER_TEMP/venv-full/bin/pankegg_make_db" -i samples.csv -o full --output_dir out
+          test -s out/full.db
+          "$RUNNER_TEMP/venv-full/bin/pankegg_app" --help
+          "$RUNNER_TEMP/venv-full/bin/python" -c "from pankegg.app import app; assert app.test_client().get('/').status_code == 200"
+
+      - name: Offline clean-install tests
+        run: |
+          pip install -e ".[dev]"
+          pytest -vv -m install
+
+  # The conda environment users create from conda.recipe/conda-lock.yml.
   test-conda:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -30,23 +127,10 @@ jobs:
           conda activate pankegg_env
           pip install -e .
 
-      - name: Lint with flake8
+      - name: CLI and tests
         run: |
           source $(conda info --base)/etc/profile.d/conda.sh
           conda activate pankegg_env
-          pip install flake8
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
-      - name: CLI help commands
-        run: |
-          source $(conda info --base)/etc/profile.d/conda.sh
-          conda activate pankegg_env
-          python pankegg_make_db.py --help || true
-          python pankegg_app.py --help || true
-
-      - name: Run test suite
-        run: |
-          source $(conda info --base)/etc/profile.d/conda.sh
-          conda activate pankegg_env
+          python pankegg_make_db.py --help
+          python pankegg_app.py --help
           pytest -vv
