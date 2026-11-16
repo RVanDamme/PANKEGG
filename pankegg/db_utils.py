@@ -5,6 +5,7 @@ import csv
 import glob
 import os
 from .sql_commands import *
+from .binnames import normalise_bin_name, bin_name_from_annotation_file
 
 
 def connect_db(path):
@@ -311,9 +312,7 @@ def add_bin_quality_values(cur, quality_report_path, sample_id):  # Include samp
     with open(quality_report_path, 'r') as file:
         reader = csv.DictReader(file, delimiter='\t')
         for row in reader:
-            bin_name = row['Name']
-            if bin_name.endswith(".fa"):
-                bin_name = bin_name[:-3]
+            bin_name = normalise_bin_name(row['Name'])
             completeness = float(row['Completeness'])
             contamination = float(row['Contamination'])
 
@@ -347,9 +346,7 @@ def process_taxonomy_files(cur, file_path, sample_id):
             line = next(file).strip()
             data = line.split(',')
             assigned_status = data[1]
-            bin_name = data[0]
-            if bin_name.endswith(".fa"):
-                bin_name = bin_name[:-3]
+            bin_name = normalise_bin_name(data[0])
             if assigned_status != "nomatch":
                 tax_id = insert_taxonomy(cur, data)
                 cur.execute(UPDATE_BIN_TAXONOMY, (tax_id, bin_name, sample_id))
@@ -360,17 +357,13 @@ def process_gtdbtk_taxonomy_files(cur, gtdbtk_dir_pattern, annotation_files_path
     all_bin_files = glob.glob(annotation_files_path)
     all_bins = set()
     for fname in all_bin_files:
-        base = os.path.basename(fname)
-        name_part = base.split('.')[0] + '.' + base.split('.')[1]
-        if name_part.endswith('.fa'):
-            name_part = name_part[:-3]
-        all_bins.add(name_part)
+        all_bins.add(bin_name_from_annotation_file(fname))
     found_bins = set()
     for summary_path in glob.glob(gtdbtk_dir_pattern):
         with open(summary_path, 'r') as f:
             reader = csv.DictReader(f, delimiter='\t')
             for row in reader:
-                bin_name = row['user_genome']
+                bin_name = normalise_bin_name(row['user_genome'])
                 tax_line = row['classification']
                 taxa = tax_line.split(';')
                 taxa = [t if t else None for t in taxa]
@@ -388,11 +381,7 @@ def process_gtdbtk_taxonomy_files(cur, gtdbtk_dir_pattern, annotation_files_path
 
 def sample_preliminary_process(cur, annotation_files_path, sample_id):
     for filename in glob.glob(annotation_files_path):
-        base_name = os.path.basename(filename)
-        name_part = base_name.split('.')[0] + '.' + base_name.split('.')[1]
-
-        if name_part.endswith(".fa"):
-            name_part = name_part[:-3]
+        name_part = bin_name_from_annotation_file(filename)
 
         cur.execute(SELECT_BIN_ID, (name_part, sample_id))  # Ensure unique bins per sample
         bin_id = cur.fetchone()
@@ -405,8 +394,7 @@ def process_annotation_file(cur, annotation_files_path, pathways_dict, sample_id
 
     for filename in glob.glob(annotation_files_path):
         with open(filename, 'r', newline='', encoding='utf-8') as file:
-            base_name = os.path.basename(filename)
-            name_part = base_name.split('.')[0] + '.' + base_name.split('.')[1]
+            name_part = bin_name_from_annotation_file(filename)
 
             # Read the file, skipping the first line (##)
             lines = file.readlines()
@@ -441,8 +429,6 @@ def process_annotation_file(cur, annotation_files_path, pathways_dict, sample_id
                     process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list)
 
             bin_name = name_part
-            if bin_name.endswith(".fa"):
-                bin_name = bin_name[:-3]
             link_bins_to_pathways(cur, bin_name, bin_map_list, sample_id)
 
     return maps_dict
@@ -477,11 +463,7 @@ def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
 def set_full_annot_table(cur, annotation_files_path, sample_id):
     for filename in glob.glob(annotation_files_path):
         with open(filename, 'r', newline='', encoding='utf-8') as file:
-            base = os.path.basename(filename)
-            name_part = base.split('.')[0] + '.' + base.split('.')[1]
-            bin_name = name_part
-            if bin_name.endswith(".fa"):
-                bin_name = bin_name[:-3]
+            bin_name = bin_name_from_annotation_file(filename)
 
             cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
             bin_id = cur.fetchone()
@@ -591,11 +573,7 @@ def link_kegg_to_map(cur, kos, map_id, bin_id):
 def link_bin_to_map_keg(cur, annotation_files_path, sample_id):
     for filename in glob.glob(annotation_files_path):
         with open(filename, 'r', newline='', encoding='utf-8') as file:
-            base_name = os.path.basename(filename)
-            name_part = base_name.split('.')[0] + '.' + base_name.split('.')[1]
-            bin_name = name_part
-            if bin_name.endswith(".fa"):
-                bin_name = bin_name[:-3]
+            bin_name = bin_name_from_annotation_file(filename)
 
             cur.execute(SELECT_BIN_ID, (bin_name, sample_id))
             bin_id = cur.fetchone()

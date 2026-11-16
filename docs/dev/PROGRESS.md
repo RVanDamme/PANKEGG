@@ -5,15 +5,15 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** 3 — Bin names
-- **Next action:** write failing tests for `S3.439`, `SemiBin_12`, `a.b.c`, `.fa`, `.fa.gz`, `.fna.gz`, then add one normalisation function.
+- **Step:** 4 — eggNOG reader
+- **Next action:** failing test: raw emapper file (several `##` lines before `#query`, `##` footer) vs legacy file must give identical DB content.
 
 ## Steps
 
 - [x] 0. Progress file, CI runs on this branch
 - [x] 1. Baseline from OSF example CSVs (regression reference)
 - [x] 2. Packaging: `pankegg` (full) + `pankegg-makedb` (light), single version, console scripts, `--version`, clean-install test
-- [ ] 3. Bin-name normalisation (brief 3.4)
+- [x] 3. Bin-name normalisation (brief 3.4)
 - [ ] 4. eggNOG reader: raw and legacy files (brief 3.5)
 - [ ] 5. Classification modes, tax genome reader, lca all rows, unclassified everywhere, schema additions
 - [ ] 6. CLI behaviour: stderr/exit codes, `--quiet`/`--verbose`, deterministic output, English help
@@ -36,6 +36,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | — | Python: `requires-python >= 3.9`; recommended and primary test version 3.13; CI also tests 3.9. Raise the floor if a dependency forces it. |
 | 2026-11-16 | — | Internal row IDs may differ from 2.0.0 (input files are sorted); allowed as long as samples, bins and all links between them are unchanged. Regression compares by names, not IDs. |
 | 2026-11-16 | — | Tests run offline from fixtures committed in `tests/fixtures`; the OSF download test is optional. |
+| 2026-11-16 | — | Bin names (step 3): `pankegg/binnames.py` strips `.emapper.annotations` / `.annotations.tsv` / `.annotations` from annotation file names and `.fa`/`.fna`/`.fasta` (+`.gz`) from every identifier. An annotation file without a known suffix keeps the 2.0.0 rule (first two dot parts) with a warning, so old inputs give the same DB. Side effect: the per-bin `<bin>_not_mapped` pseudo-pathway now uses the normalised name; it differs from 2.0.0 only when the annotation file name carried a FASTA extension before the suffix (e.g. `x.fa.emapper.annotations`: 2.0.0 `x.fa_not_mapped`, now `x_not_mapped`). |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes
@@ -50,6 +51,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
   F7: wheel installs a top-level `lib` package.
 - Pitfall found: a stale in-tree `build/` directory leaks old files into a wheel built with `pip wheel .`.
   The install test builds from a clean copy; release builds must use `python -m build` from a clean checkout.
+- F4/F5 reproduced before the fix (`tests/test_binnames.py::test_pipeline_bin_names_end_to_end`): 2.0.0 created bins
+  `SemiBin_12.emapper` and `a.b` with no quality values and no taxonomy.
 - Python 3.9.25 (via uv): full dependency set resolves (numpy 2.0.2, scipy 1.13.1, flask 3.1.3); tests pass.
 
 - Baseline (step 1): `tests/regression/osf_{sourmash,gtdbtk}_2.0.0.json`, built with the unchanged 2.0.0 code
