@@ -26,7 +26,9 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
 
 ### Added — database builder
 - **KEGG module completeness** per bin (new tables `module`, `bin_module`), computed from all KOs
-  of a bin and the 583 KEGG module definitions shipped in `pankegg/data/kegg_modules.tsv`.
+  of a bin and the 583 KEGG module definitions shipped in `pankegg/data/kegg_modules.tsv`. Completeness
+  is the mean score of the module's steps (best alternative per step; partly present steps count
+  partly); a module is complete at 100%.
 - **`--metadata FILE`**: sample metadata as a `sample<TAB>condition` file with free-text conditions;
   with a header, any number of variables (new table `sample_metadata`).
 - **KOs without a KEGG pathway are kept** (`KEGG_Pathway` = `-`). They were dropped before, so
@@ -53,7 +55,8 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
 - Web app: the "Both" column of the common-pathways tables was the sum of the two samples, not
   their overlap; Bin vs Bin mixed bins that have the same name in different samples; the bin PCA
   failed with fewer than 3 bins and the taxonomy heatmap with a single taxon; `/bin_query` returned
-  an error.
+  an error; names and search terms shown in page titles are escaped; an unknown taxonomic rank
+  in a URL is rejected instead of reaching the database.
 - `pip install` (not editable) produced a broken `pankegg_make_db`: KEGG reference data,
   templates and the example database were not installed. They now live inside the
   `pankegg` package.

@@ -8,13 +8,14 @@ Two completeness measures are used (see docs/dev/APP_REVIEW.md):
 
 * pathway per-ID completeness: distinct KOs of a KEGG map found, divided by
   all KOs drawn on that map;
-* module completeness: fraction of the steps of a KEGG module that are
-  satisfied (databases built by 2.1.0 or later).
+* module completeness: mean score of the steps of a KEGG module, 100% when
+  every step is fully present (databases built by 2.1.0 or later).
 """
 
 import csv
 import io
 import re
+from urllib.parse import quote, unquote
 from collections import Counter, defaultdict
 
 from . import resource_path
@@ -30,10 +31,12 @@ PER_ID_HELP = (
     "not to decide that a pathway is complete."
 )
 MODULE_HELP = (
-    "Module completeness is the fraction of the steps of a KEGG module that are satisfied. "
+    "Module completeness measures how many steps of a KEGG module are present. "
     "A module is a small functional unit defined as steps with alternatives (one KO or another), "
-    "complexes (several KOs together) and optional parts, so 100% means that every required "
-    "step has at least one of its alternatives."
+    "complexes (several KOs together) and optional parts. Each step scores between 0 and 1 "
+    "(its best alternative; a complex or a multi-reaction route with some KOs missing counts partly), "
+    "and the completeness is the mean of the steps. 100% means that every required step has one of "
+    "its alternatives in full; on the comparison pages a module counts as carried only at 100%."
 )
 
 
@@ -361,11 +364,13 @@ CONFIDENCE_COLOURS = {"classified": "#1f77b4", "low confidence": "#aec7e8", "unc
 
 
 def bin_pathways(conn):
-    """{bin_id: set(map_number)} for real KEGG maps."""
+    """{bin_id: set(map_number)}: a bin carries a pathway when it has at least one KO drawn on that
+    KEGG map, the same rule as the per-ID completeness (above 0%)."""
     out = defaultdict(set)
     for bin_id, number in conn.execute(
-            "SELECT bm.bin_id, m.map_number FROM bin_map bm JOIN map m ON m.id = bm.map_id "
-            "WHERE m.map_number LIKE 'map%'"):
+            """SELECT DISTINCT bmk.bin_id, m.map_number FROM bin_map_kegg bmk
+               JOIN map_kegg mk ON mk.id = bmk.map_kegg_id AND mk.real_pathway_id = 1
+               JOIN map m ON m.id = mk.map_id WHERE m.map_number LIKE 'map%'"""):
         out[bin_id].add(number)
     return out
 
@@ -676,7 +681,9 @@ def core_accessory(conn, level="pathway", include_unclassified=True, variable=No
     bins = load_bins(conn, include_unclassified)
     sets, names = features(conn, level)
     values = sample_conditions(conn).get(variable) if variable else None
-    group_of = (lambda sample: values.get(sample, NOT_SET)) if values is not None else (lambda sample: sample)
+    # samples without a value form their own group, distinct from any value a user wrote
+    missing = NOT_SET if values is None or NOT_SET not in values.values() else f"{NOT_SET} (no value)"
+    group_of = (lambda sample: values.get(sample, missing)) if values is not None else (lambda sample: sample)
     samples = sorted({group_of(b["sample"]) for b in bins}, key=str)
     by_sample = {s: set() for s in samples}
     for b in bins:
@@ -827,7 +834,7 @@ def group_options(conn):
     for variable, values in sorted(sample_conditions(conn).items()):
         counts = Counter(values.get(b["sample"]) for b in bins)
         options.append((f"Condition: {variable}",
-                        [(f"condition:{variable}={v}", f"{v} ({counts[v]} bins)")
+                        [(f"condition:{quote(variable, safe='')}={v}", f"{v} ({counts[v]} bins)")
                          for v in sorted(set(values.values()), key=str)]))
     for rank in ("phylum", "class", "order", "family", "genus"):
         counts = Counter(b["lineage"][rank] for b in bins if b["lineage"][rank])
@@ -860,9 +867,9 @@ def select_bins(bins, selector, conditions=None):
     key, _, value = rest.partition("=")
     if kind == "taxon" and key in RANKS:
         return [b for b in bins if b["lineage"][key] == value]
-    if kind == "condition":
-        values = (conditions or {}).get(key, {})
-        return [b for b in bins if str(values.get(b["sample"])) == value]
+    if kind == "condition":            # the variable name is percent-encoded, so it may contain '='
+        values = (conditions or {}).get(unquote(key), {})
+        return [b for b in bins if b["sample"] in values and values[b["sample"]] == value]
     return []
 
 

@@ -2,7 +2,8 @@
 
 A KEGG module definition is a logical expression over KOs:
 
-* a space separates consecutive steps (all needed);
+* a space separates consecutive steps (all needed); outside parentheses a
+  space always starts a new step;
 * a comma separates alternatives (one is enough);
 * ``+`` joins the subunits of a complex (all needed);
 * ``-`` marks an optional subunit (ignored);
@@ -12,8 +13,9 @@ A KEGG module definition is a logical expression over KOs:
 A KO scores 1 when present. A sequence or complex scores the mean of its
 parts and a set of alternatives the best of its parts, so every expression
 has a score between 0 and 1. The completeness of a module is the mean score
-of its top-level steps, as a percentage; a module is complete at 100%, when
-every step has one fully present alternative.
+of its top-level steps, as a percentage, so a step that is only partly
+present counts partly. A module is complete at 100%, when every step has one
+fully present alternative.
 """
 
 import re
@@ -125,14 +127,39 @@ class _Parser:
 
 
 def parse(definition):
-    """Parse a definition into its top-level steps (a list of expression trees)."""
-    parser = _Parser(tokenize(definition))
-    tree = parser.alternatives()
-    if parser.peek() is not None:
-        raise DefinitionError(f"unexpected {parser.peek()!r}")
-    if tree is None:
-        return []
-    return tree[1] if tree[0] == "seq" else [tree]
+    """Parse a definition into its top-level steps (a list of expression trees).
+
+    Outside parentheses a space always starts a new step, so ``(A B),(C D) E`` is two steps
+    (the first with two alternative routes). Inside parentheses a comma separates alternatives,
+    each of which may be a space-separated sequence.
+    """
+    chunks, current, depth = [], [], 0
+    for tok in tokenize(definition):
+        if tok == "(":
+            depth += 1
+        elif tok == ")":
+            depth -= 1
+            if depth < 0:
+                raise DefinitionError("unexpected ')'")
+        if tok == " " and depth == 0:
+            if current:
+                chunks.append(current)
+            current = []
+        else:
+            current.append(tok)
+    if depth:
+        raise DefinitionError("missing ')'")
+    if current:
+        chunks.append(current)
+    steps = []
+    for chunk in chunks:
+        parser = _Parser(chunk)
+        tree = parser.alternatives()
+        if parser.peek() is not None:
+            raise DefinitionError(f"unexpected {parser.peek()!r}")
+        if tree is not None:            # '--' and optional steps carry no requirement
+            steps.append(tree)
+    return steps
 
 
 def _score(node, kos, module_score):

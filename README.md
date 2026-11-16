@@ -626,6 +626,8 @@ SAMPLE3	sick	skin
 pankegg_make_db -i samples.csv -o my_db --metadata conditions.tsv
 ```
 
+Details: a comma-separated file is accepted too; blank lines, lines starting with `#` and empty fields at the end of a line are ignored; the header may start with `sample`, `samples`, `sample name`, `sample_name`, `sample id`, `sample_id` or `#sample`. A first line that starts with one of these words is always read as the header, so if one of your samples is really called `sample`, put a header line above it.
+
 Samples of the input CSV that are not in the file simply have no condition (a warning lists them). In the web app the variables appear wherever samples are grouped or coloured: the sample PCA, the two-group comparison, the core and accessory page, the overview and the similarity page.
 
 ## Parameters Make DB
@@ -683,7 +685,7 @@ From 2.1.0 the `bin` table also records how each bin was classified, in `classif
 Two more things are stored from 2.1.0:
 
 - **Every KO of the annotation files**, including the KOs that eggNOG-mapper assigns to no KEGG pathway (`KEGG_Pathway` is `-`). Earlier versions dropped them. They are linked to their bins through `bin_extra` and `bin_extra_kegg`.
-- **KEGG module completeness** of each bin, computed from all its KOs and the module definitions shipped with Pankegg (`pankegg/data/kegg_modules.tsv`). A module definition is a series of steps; a comma separates alternative KOs, `+` joins the subunits of a complex, and `-` marks an optional part. A KO scores 1 when present, a series or complex scores the mean of its parts and a set of alternatives the best of its parts; the completeness of a module is the mean score of its steps, and a module is complete at 100%. The existing measure, the share of the KOs of a KEGG map that were found, is kept and called *pathway per-ID completeness*; see [The two completeness measures](#the-two-completeness-measures).
+- **KEGG module completeness** of each bin, computed from all its KOs and the module definitions shipped with Pankegg (`pankegg/data/kegg_modules.tsv`). A module definition is a series of steps separated by spaces; a comma separates alternatives (inside parentheses an alternative can itself be a series of reactions), `+` joins the subunits of a complex, `-` marks an optional part, `--` stands for a reaction without a KO (ignored) and a module number refers to another module. A KO scores 1 when present, a series or complex scores the mean of its parts and a set of alternatives the best of its parts; the completeness of a module is the mean score of its steps, so a partly present step counts partly, and a module is complete at 100%. The existing measure, the share of the KOs of a KEGG map that were found, is kept and called *pathway per-ID completeness*; see [The two completeness measures](#the-two-completeness-measures).
 
 ## Using pankegg_make_db in a pipeline
 
@@ -1023,10 +1025,10 @@ Clicking a bin name in the Bin page opens the page of that bin: CheckM2 complete
 
 ## The two completeness measures
 
-Pankegg shows two different measures, and every page that displays one explains them in a "How to read the completeness values" box.
+Pankegg shows two different measures. The Pathway Stats, Bin details, Modules, Pathways by taxon, Core and accessory, Similarity and Compare two groups pages explain them in a "How to read the completeness values" box; the Map page and the Sample vs Sample heatmap name the measure they show.
 
 - **Pathway per-ID completeness** is the number of distinct KOs of a KEGG map found in a bin (or sample), divided by all KOs drawn on that map. A map collects every alternative route and every group of organisms, so no single genome reaches 100%: use it to compare bins, not to decide that a pathway is complete.
-- **Module completeness** is the fraction of the steps of a KEGG module that are satisfied. A module is a small functional unit defined as steps with alternatives (one KO or another), complexes (several KOs together) and optional parts, so 100% means that every required step has at least one of its alternatives. It is available for databases built with Pankegg 2.1.0 or later.
+- **Module completeness** measures how many steps of a KEGG module are present. A module is a small functional unit defined as steps with alternatives (one KO or another), complexes (several KOs together) and optional parts. Each step scores between 0 and 1: its best alternative counts, and a complex or a multi-reaction route with some KOs missing counts partly. The completeness is the mean of the steps, so 100% means that every required step has one of its alternatives in full. On the Core and accessory, Similarity and Compare two groups pages a module counts as carried only at 100%. It is available for databases built with Pankegg 2.1.0 or later.
 
 For example, in the test data the glycolysis map (map00010) is 11–21% complete per bin by ID, while the glycolysis module (M00001) is 56–94% complete in the same bins.
 

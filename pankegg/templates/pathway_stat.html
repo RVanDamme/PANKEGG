@@ -32,7 +32,7 @@
   <div class="alert alert-info">Several pathways match “{{ q }}”:</div>
   <ul>
     {% for number, name, total in matches %}
-    <li><a href="{{ url_for('pathway_stat', q=number) }}">{{ number }} — {{ name }}</a></li>
+    <li><a href="{{ url_for('pathway_stat', q=number, rank=request.args.get('rank', 'genus'), unclassified=request.args.getlist('unclassified')[-1] if request.args.getlist('unclassified') else 1) }}">{{ number }} — {{ name }}</a></li>
     {% endfor %}
   </ul>
   {% elif report %}
@@ -102,7 +102,7 @@
         <td>{{ sample.bins|selectattr('pathway_completeness', 'gt', 0)|list|length }} / {{ sample.bins|length }}</td>
         <td>
           <button class="btn btn-sm btn-info" data-bs-toggle="collapse" data-bs-target="#bins-{{ loop.index0 }}">Bins</button>
-          <button class="btn btn-sm btn-secondary" data-kos="{{ sample.kos|join(' ') }}" onclick="openKoPanel(this, '{{ sample.name }}')">KOs</button>
+          <button class="btn btn-sm btn-secondary" data-kos="{{ sample.kos|join(' ') }}" data-label="{{ sample.name }}" onclick="openKoPanel(this)">KOs</button>
         </td>
       </tr>
       <tr class="collapse" id="bins-{{ loop.index0 }}">
@@ -119,7 +119,7 @@
                 <td>{{ bin.lineage.species or '-' }}</td>
                 <td>{{ bin.completeness if bin.completeness is not none else '-' }} / {{ bin.contamination if bin.contamination is not none else '-' }}</td>
                 <td>{{ '%.2f'|format(bin.pathway_completeness) }}% ({{ bin.kos|length }} KOs)</td>
-                <td><button class="btn btn-sm btn-secondary" data-kos="{{ bin.kos|join(' ') }}" onclick="openKoPanel(this, '{{ bin.label }}')">KOs</button></td>
+                <td><button class="btn btn-sm btn-secondary" data-kos="{{ bin.kos|join(' ') }}" data-label="{{ bin.label }}" onclick="openKoPanel(this)">KOs</button></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -160,7 +160,8 @@
   <script>
     var KO_NAMES = {{ report.ko_names|tojson }};
     var panelKos = [];
-    function openKoPanel(el, label) {
+    function openKoPanel(el) {
+      var label = el.dataset.label || '';
       panelKos = el.dataset.kos ? el.dataset.kos.split(' ') : [];
       document.getElementById('koPanelLabel').textContent = panelKos.length + ' KOs — ' + label;
       var body = document.getElementById('koPanelBody');

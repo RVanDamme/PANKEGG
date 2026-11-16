@@ -5,8 +5,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Phase 2 (web app and summaries), step:** A13 — docs, review, acceptance re-run
-- **Next action:** README/docs/CHANGELOG for the new pages, modules, metadata, KOs; independent review; final report.
+- **Phase 2 (web app and summaries):** done (A1–A13). Waiting for the owner: confirm the open points below, then merge, tag 2.1.0 and publish (`RELEASE.md`).
+- **Next action:** none until the owner answers.
 - Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
 ## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
@@ -22,7 +22,7 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 - [x] A12. make_db: keep KOs with no pathway (regression: 2.0.0 content must be a subset)
 - [x] A9. make_db: KEGG module completeness (new tables) + module displays and the two-measures explanation
 - [x] A10. make_db: `--metadata` sample/condition TSV + colouring and grouping by condition
-- [ ] A13. Docs, CHANGELOG, screenshots check, independent review, acceptance re-run
+- [x] A13. Docs, CHANGELOG, screenshots check, independent review, acceptance re-run
 
 ## Steps (phase 1)
 
@@ -65,6 +65,8 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 | 2026-11-16 | A9 | Module completeness is computed in `pankegg_make_db` from **all KOs of a bin** and the KEGG module definitions shipped in `pankegg/data/kegg_modules.tsv` (583 modules, KEGG REST, 2026-11-16). The eggNOG `KEGG_Module` column is not used: it lists the modules a KO belongs to, not whether the module's steps are satisfied. Score: KO present = 1; sequence/complex = mean of parts; alternatives = best part; optional (`-`) and KO-less (`--`) parts ignored; completeness = mean of the top-level steps; complete = 100%. Tables `module`, `bin_module` (rows with completeness > 0). The existing measure is kept and named "pathway per-ID completeness"; both are explained on every page that shows one. |
 | 2026-11-16 | A10 | `--metadata FILE`: the simple form is `sample<TAB>condition` (no header needed, free text, any number of conditions). Proposed extension, implemented because it costs nothing for the simple case: with a header line starting with `sample`, every further column is a variable (e.g. condition, site, timepoint). Table `sample_metadata(sample_id, variable, value)`. The app offers the variables wherever samples are grouped or coloured: sample PCA (colour), two-group comparison (groups), core/accessory (pool samples by value), overview and similarity (columns). **Owner to confirm** the multi-variable extension; the two-column file works either way. |
 | 2026-11-16 | — | Known and not changed: the Map and Kegg list pages still render everything at once (OSF example: Map 4.1 MB; Kegg 6.1 MB with 2.0.0 data, 9.2 MB now that KOs without a pathway are kept). Pagination of these two pages was not in the agreed scope. |
+| 2026-11-16 | A13 | Independent review of phase 2 (fresh subagent, no blocker). Fixed: (1) the "Include unclassified bins" switch was stuck off after any form submission (the browser sends `unclassified=0&unclassified=1`; the last value now counts); (2) module definitions with a top-level comma **and** space were parsed with the wrong precedence, so M00651, M00854 and M01069 were one step instead of 2, 2 and 5 (nitrogenase alone made "Nitrogen cycle" 100%): outside parentheses a space now always starts a new step; (3) sample/bin names were inside inline `onclick` scripts on the pathway page (a quote broke the button and allowed script injection) — now `data-` attributes; (4) condition selectors with `=` in the variable name, the value `None`, and the value `not set`; (5) metadata: trailing tabs, quotes kept as text in TSV, one-column/header-only/non-UTF-8 messages, warning when a sample is called `sample`; (6) one rule for "a bin carries a pathway" (≥ 1 KO drawn on the map) on every new page; (7) module completeness described the same way everywhere (mean of step scores). Also fixed although older than this work, because the new pages link to them: names and search terms in the titles of the Bin, Map and Kegg pages were rendered as raw HTML; an unknown rank in `/taxonomy?level=` or the taxonomy PCA reached the SQL. |
+| 2026-11-16 | — | **Still open for the owner** (older than this work, not changed): `pankegg_app` starts Flask with `debug=True` on `0.0.0.0`; the Map and Kegg list pages render everything at once (see above). |
 | 2026-11-16 | — | Brief stays at `docs/dev/PANKEGG_update_brief.md`. |
 
 ## Notes

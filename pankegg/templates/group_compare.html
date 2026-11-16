@@ -19,6 +19,7 @@
     Fisher's exact test (two-sided). The q-value corrects for testing many functions at once (Benjamini–Hochberg);
     q &lt; 0.05 is highlighted. The unit is the bin: bins of the same sample or species are not independent,
     so read the result as a screen for candidates, not as proof.</p>
+  {{ plots.measures_help(per_id_help, module_help, true) }}
   <form method="get" class="row g-2 align-items-end mb-3">
     <div class="col-md-3"><label class="form-label mb-0 small">Group A</label>{{ group_select('a', a, false) }}</div>
     <div class="col-md-3"><label class="form-label mb-0 small">Group B</label>{{ group_select('b', b, true) }}</div>

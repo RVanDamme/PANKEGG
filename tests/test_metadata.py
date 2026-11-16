@@ -89,3 +89,34 @@ def test_missing_metadata_file(tmp_path):
                      f"A,{S1}/eggnog/*.emapper.annotations,{FIX}/sourmash_lca/*.lca.csv,{S1}/checkm2/S1_checkm2_report.tsv\n")
     res = run_make_db(csv_path, tmp_path / "out", "t", "--metadata", str(tmp_path / "nope.tsv"), check=False)
     assert res.returncode == 1 and "nope.tsv" in res.stderr
+
+
+# --- review (phase 2) --------------------------------------------------------------------------------------
+
+def test_trailing_tabs_from_spreadsheets(tmp_path):
+    _, db = build(tmp_path, "A\tsick\t\t\nB\thealthy\t\nC\tsick\n")
+    assert [r[2] for r in stored(db)[0]] == ["sick", "healthy", "sick"]
+
+
+def test_quotes_in_a_tsv_are_kept_as_text(tmp_path):
+    _, db = build(tmp_path, 'A\t"open\nB\t5" pipe\nC\tsay "hi"\n')
+    assert [r[2] for r in stored(db)[0]] == ['"open', '5" pipe', 'say "hi"']
+
+
+def test_sample_called_sample_is_reported(tmp_path):
+    res, db = build(tmp_path, "sample\tcontrol\nB\ttreated\n", samples=("sample", "B"))
+    assert res.returncode == 0 and "read as the header" in res.stderr
+
+
+@pytest.mark.parametrize("raw, message", [
+    (b"A sick\nB healthy\n", "two tab-separated columns"),
+    (b"sample\tcondition\n", "no sample line"),
+    (b"A\tsi\xe9ck\nB\tx\n", "meta.tsv"),
+], ids=["one-column", "header-only", "not-utf8"])
+def test_more_bad_metadata(tmp_path, raw, message):
+    rows = "".join(f"{s},{S1}/eggnog/S1.bin1.emapper.annotations,{FIX}/sourmash_lca/S1.bin1.lca.csv,"
+                   f"{S1}/checkm2/S1_checkm2_report.tsv\n" for s in ("A", "B"))
+    csv_path = write(tmp_path / "samples.csv", "Sample name,Annotation_dir,classification_dir,Checkm2_dir\n" + rows)
+    (tmp_path / "meta.tsv").write_bytes(raw)
+    res = run_make_db(csv_path, tmp_path / "out", "t", "--metadata", str(tmp_path / "meta.tsv"), check=False)
+    assert res.returncode == 1 and message in res.stderr and "Traceback" not in res.stderr, res.stderr

@@ -13,10 +13,10 @@
 
   <div class="row g-3 mb-3">
     <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
-      <div class="fs-3 fw-bold">{{ b.completeness if b.completeness is not none else '–' }}%</div>
+      <div class="fs-3 fw-bold">{% if b.completeness is not none %}{{ b.completeness }}%{% else %}–{% endif %}</div>
       <div class="small text-muted">CheckM2 completeness</div></div></div></div>
     <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
-      <div class="fs-3 fw-bold">{{ b.contamination if b.contamination is not none else '–' }}%</div>
+      <div class="fs-3 fw-bold">{% if b.contamination is not none %}{{ b.contamination }}%{% else %}–{% endif %}</div>
       <div class="small text-muted">CheckM2 contamination</div></div></div></div>
     <div class="col-md-3"><div class="card h-100"><div class="card-body text-center">
       <div class="fs-3 fw-bold text-capitalize">{{ b.tier }}</div>

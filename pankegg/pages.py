@@ -6,10 +6,11 @@ from . import insights
 
 
 def _flag(name, default=True):
-    value = request.args.get(name)
-    if value is None:
+    # A ticked box arrives as name=0&name=1 (hidden field, then the checkbox): the last value counts.
+    values = request.args.getlist(name)
+    if not values:
         return default
-    return value.lower() in ("1", "true", "on", "yes")
+    return values[-1].lower() in ("1", "true", "on", "yes")
 
 
 def _csv_response(text, filename):
@@ -97,7 +98,8 @@ def register(app, get_db_connection, pathway_groups):
                 [[r["id"], r["name"], r["category"], r["n_samples"], ";".join(r["samples"])] for r in data["rows"]]),
                 f"core_accessory_{level}.csv")
         return render_template("core_accessory.html", data=data, figs=insights.core_accessory_figures(data),
-                               levels=levels, unclassified=_flag("unclassified"), variables=variables)
+                               levels=levels, unclassified=_flag("unclassified"), variables=variables,
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     # --- similarity -----------------------------------------------------------------------------
     @app.route("/similarity")
@@ -118,7 +120,8 @@ def register(app, get_db_connection, pathway_groups):
                 [entity] + data["labels"], [[lab] + row for lab, row in zip(data["labels"], data["matrix"])]),
                 f"similarity_{entity}_{level}.csv")
         return render_template("similarity.html", data=data, figs=insights.similarity_figures(data),
-                               levels=levels, unclassified=_flag("unclassified"), conditions=conditions)
+                               levels=levels, unclassified=_flag("unclassified"), conditions=conditions,
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     # --- two-group comparison ------------------------------------------------------------------------
     @app.route("/group_compare")
@@ -147,7 +150,8 @@ def register(app, get_db_connection, pathway_groups):
                 f"group_comparison_{level}.csv")
         figs = insights.group_compare_figures(result, label_a, label_b) if result and not result["error"] else {}
         return render_template("group_compare.html", result=result, figs=figs, options=options, levels=levels,
-                               a=a, b=b, level=level, quality=quality, label_a=label_a, label_b=label_b)
+                               a=a, b=b, level=level, quality=quality, label_a=label_a, label_b=label_b,
+                               per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     # --- KEGG modules -------------------------------------------------------------------------------
     @app.route("/module")

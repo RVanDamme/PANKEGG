@@ -422,26 +422,47 @@ def read_sample_metadata(path, sample_names):
     * two columns without a header: ``sample<TAB>condition`` (the variable is called 'condition');
     * with a header whose first field is 'sample': one variable per further column.
 
-    Values are free text; empty values are skipped. Lines starting with '#' and blank lines are
-    ignored. Returns (variables, {sample: {variable: value}}, warnings); raises ValueError.
+    Values are free text (quotes are kept as written in tab-separated files); empty values are
+    skipped. Blank lines and lines starting with '#' are ignored, and so are empty fields at the
+    end of a line. Returns (variables, {sample: {variable: value}}, warnings); raises ValueError.
     """
-    with open(path, 'r', newline='', encoding='utf-8-sig') as fh:
-        lines = [(n, line.rstrip('\r\n')) for n, line in enumerate(fh, 1)]
+    try:
+        with open(path, 'r', newline='', encoding='utf-8-sig') as fh:
+            lines = [(n, line.rstrip('\r\n')) for n, line in enumerate(fh, 1)]
+    except UnicodeDecodeError as e:
+        raise ValueError(f"{path}: not a UTF-8 text file ({e.reason} at byte {e.start})") from None
     lines = [(n, line) for n, line in lines
              if line.strip() and (not line.lstrip().startswith('#') or line.lower().startswith('#sample'))]
     if not lines:
         raise ValueError(f"{path}: the metadata file is empty")
-    delimiter = '\t' if any('\t' in line for _, line in lines) else ','
-    rows = [(n, [f.strip() for f in next(csv.reader([line], delimiter=delimiter))]) for n, line in lines]
-    first = rows[0][1]
+    if any('\t' in line for _, line in lines):
+        rows = [(n, [f.strip() for f in line.split('\t')]) for n, line in lines]
+    else:
+        rows = [(n, [f.strip() for f in next(csv.reader([line]))]) for n, line in lines]
+
+    def trim(fields, keep):
+        while len(fields) > keep and fields[-1] == '':
+            fields = fields[:-1]
+        return fields
+
+    warnings = []
+    first = trim(rows[0][1], 2)
+    if len(first) < 2:
+        raise ValueError(f"{path}: expected two tab-separated columns (sample, condition); "
+                         f"line {rows[0][0]} has {len(first)}")
     if first[0].lower() in SAMPLE_HEADERS:
         variables = first[1:]
+        if first[0] in set(sample_names):
+            warnings.append(f"{path}: the first line is read as the header, but a sample is also called "
+                            f"{first[0]!r}; add a header line above it if that line is data")
         rows = rows[1:]
-        if not variables or any(not v for v in variables):
+        if any(not v for v in variables):
             raise ValueError(f"{path}: the header needs a name for every column after 'sample'")
         duplicated = sorted({v for v in variables if variables.count(v) > 1})
         if duplicated:
             raise ValueError(f"{path}: variable named more than once in the header: {', '.join(duplicated)}")
+        if not rows:
+            raise ValueError(f"{path}: no sample line after the header")
     elif len(first) == 2:
         variables = ['condition']
     else:
@@ -449,6 +470,7 @@ def read_sample_metadata(path, sample_names):
                          f"'sample' (found {len(first)} columns and no header)")
     values = {}
     for n, fields in rows:
+        fields = trim(fields, len(variables) + 1)
         if len(fields) != len(variables) + 1:
             raise ValueError(f"{path} line {n}: expected {len(variables) + 1} fields, found {len(fields)}")
         sample = fields[0]
@@ -459,7 +481,6 @@ def read_sample_metadata(path, sample_names):
     if not known & set(values):
         raise ValueError(f"{path}: none of the samples of the metadata file is in the input CSV "
                          f"(metadata: {', '.join(sorted(values)[:5])}; input: {', '.join(sorted(known)[:5])})")
-    warnings = []
     unknown = sorted(set(values) - known)
     if unknown:
         warnings.append(f"{path}: samples not in the input CSV, ignored: {', '.join(unknown)}")

@@ -3,6 +3,7 @@
 import os
 import sqlite3
 from flask import Flask, render_template, request, session, redirect, url_for, Response, jsonify, abort
+from markupsafe import escape
 import csv
 import io
 import json
@@ -681,6 +682,9 @@ def compar_full():
                 """
                 context = "PCA based on KOs"
             elif pca_type == 'taxonomy':
+                if taxonomy_level not in ('_kingdom_', '_phylum_', '_class_', '_order_', '_family_',
+                                          '_genus_', '_species_'):
+                    return jsonify({'context': 'Error', 'pca_data': [], 'error': 'Unknown taxonomic rank.'})
                 query = f"""
                 SELECT sample.sample_name, t.{taxonomy_level} AS taxon, COUNT(bin.id) AS count_bins
                 FROM sample
@@ -843,9 +847,9 @@ def export_bins():
             map_row = cur.fetchone()
             pathway_name = map_row[0] if map_row else None
             if pathway_name:
-                context = f"Display of bins for Pathway: {pathway_name}"
+                context = f"Display of bins for Pathway: {escape(pathway_name)}"
             else:
-                context = f"Display of bins for Map number: {map_number}"
+                context = f"Display of bins for Map number: {escape(map_number)}"
         elif kegg_id:
             # Modified to use ko_id
             query += " JOIN bin_map_kegg bmk ON bin.id = bmk.bin_id"
@@ -853,12 +857,12 @@ def export_bins():
             query += " JOIN kegg k ON mk.kegg_id = k.id"
             conditions.append("k.ko_id = ?")
             params.append(kegg_id)
-            context = f"Display of bins for KEGG ID: {kegg_id}"
+            context = f"Display of bins for KEGG ID: {escape(kegg_id)}"
         elif taxon:
             # Modified to use taxonomy_id
             conditions.append("? IN (kingdom, phylum, class, \"order\", family, genus, species)")
             params.append(taxon if taxon != "none" else "")
-            context = f"Display of bins for taxonomy entry: {taxon}"
+            context = f"Display of bins for taxonomy entry: {escape(taxon)}"
 
         if gtdb_filter:
             conditions.append("(completeness - 5 * contamination > 50)")
@@ -950,14 +954,14 @@ def export_maps():
                 bin_name, sample_name = bin_info
             else:
                 bin_name, sample_name = "Unknown bin", "Unknown sample"
-            context = f"Maps associated with bin: <strong>{bin_name}</strong> (Sample: <strong>{sample_name}</strong>)"
+            context = f"Maps associated with bin: <strong>{escape(bin_name)}</strong> (Sample: <strong>{escape(sample_name)}</strong>)"
             base_query += """
                 JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id
             """
             conditions.append("bmk.bin_id = ?")
             params.append(bin_id)
         elif ko_id:
-            context = f"Maps containing the KEGG identifier {ko_id}"
+            context = f"Maps containing the KEGG identifier {escape(ko_id)}"
             base_query = """
                     SELECT m.map_number, m.pathway_name, k2.ko_id, k2.kegg_name, m.pathway_total_orthologs, mk2.real_pathway_id
                     FROM map m
@@ -969,7 +973,7 @@ def export_maps():
             conditions.append("k.ko_id = ?")
             params.append(ko_id)
         elif taxon:
-            context = f"Maps associated with taxonomy: {taxon}"
+            context = f"Maps associated with taxonomy: {escape(taxon)}"
             base_query += """
                 JOIN bin_map_kegg bmk ON mk.id = bmk.map_kegg_id
                 JOIN bin bi ON bi.id = bmk.bin_id
@@ -1050,18 +1054,18 @@ def export_kegg():
         params = []
 
         if ko_id:
-            context = f"Display for KEGG ID: {ko_id}"
+            context = f"Display for KEGG ID: {escape(ko_id)}"
             conditions.append("k.ko_id = ?")
             params.append(ko_id)
         elif bin_id:
             cur.execute("SELECT bin_name FROM bin WHERE id = ?", (bin_id,))
             bin_name_result = cur.fetchone()
             bin_name = bin_name_result[0] if bin_name_result else "Unknown bin"
-            context = f"KEGG inputs associated with {bin_name}"
+            context = f"KEGG inputs associated with {escape(bin_name)}"
             conditions.append("b.id = ?")
             params.append(bin_id)
         elif taxon:
-            context = f"KEGG inputs associated with taxonomy: {taxon}"
+            context = f"KEGG inputs associated with taxonomy: {escape(taxon)}"
             query += " JOIN taxonomy t ON t.id = b.taxonomic_id"
             conditions.append("? IN (t._kingdom_, t._phylum_, t._class_, t._order_, t._family_, t._genus_, t._species_)")
             if taxon == "none":
@@ -1117,6 +1121,8 @@ def show_bins2():
 def taxonomy():
     try:
         level = request.args.get('level')
+        if level not in (None, '', 'kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species'):
+            abort(400, description="Unknown taxonomic rank")
         conn = get_db_connection()
         cur = conn.cursor()
 
@@ -1185,7 +1191,7 @@ def kegg():
 
         # Set filter context and SQL WHERE
         if ko_id:
-            context = f"Display for KEGG ID: <strong>{ko_id}</strong>"
+            context = f"Display for KEGG ID: <strong>{escape(ko_id)}</strong>"
             conditions.append("k.ko_id = ?")
             params.append(ko_id)
         elif bin_id:
@@ -1199,9 +1205,9 @@ def kegg():
             bin_row = cur.fetchone()
             if bin_row:
                 bin_name, sample_name = bin_row
-                context = f"KEGG inputs associated with <strong>{bin_name} [{sample_name}]</strong>"
+                context = f"KEGG inputs associated with <strong>{escape(bin_name)} [{escape(sample_name)}]</strong>"
             else:
-                context = f"KEGG inputs associated with bin id: <strong>{bin_id}</strong>"
+                context = f"KEGG inputs associated with bin id: <strong>{escape(bin_id)}</strong>"
             conditions.append("b.id = ?")
             params.append(bin_id)
         elif taxon:
@@ -1237,7 +1243,7 @@ def kegg():
                     "OR t._order_ = ? OR t._family_ = ? OR t._genus_ = ? OR t._species_ = ?)"
                 )
                 params.extend([normalized_taxon]*7)
-            context = f"KEGG inputs associated with taxonomy: <strong>{taxon}</strong>"
+            context = f"KEGG inputs associated with taxonomy: <strong>{escape(taxon)}</strong>"
         else:
             context = "Display of all KEGG IDs"
 
@@ -1513,16 +1519,16 @@ def show_bins():
             map_row = cur.fetchone()
             pathway_name = map_row[0] if map_row else None
             if pathway_name:
-                context = f"Display of bins for Pathway: {pathway_name}"
+                context = f"Display of bins for Pathway: {escape(pathway_name)}"
             else:
-                context = f"Display of bins for Map number: {map_number}"
+                context = f"Display of bins for Map number: {escape(map_number)}"
         elif ko_id:
             query += " JOIN bin_map_kegg bmk ON bin.id = bmk.bin_id"
             query += " JOIN map_kegg mk ON bmk.map_kegg_id = mk.id"
             query += " JOIN kegg k ON mk.kegg_id = k.id"
             conditions.append("k.ko_id = ?")
             params.append(ko_id)
-            context = f"Display of bins for KEGG ID: <strong>{ko_id}</strong>"
+            context = f"Display of bins for KEGG ID: <strong>{escape(ko_id)}</strong>"
         elif taxon:
             normalized_taxon = normalize_taxon_case(taxon)
             prefix = normalized_taxon[:3].lower()
@@ -1555,7 +1561,7 @@ def show_bins():
                     "OR taxonomy.\"_order_\" = ? OR taxonomy.\"_family_\" = ? OR taxonomy.\"_genus_\" = ? OR taxonomy.\"_species_\" = ?)"
                 )
                 params.extend([normalized_taxon]*7)
-            context = f"Display of bins for taxonomy entry: <strong>{taxon}</strong>"
+            context = f"Display of bins for taxonomy entry: <strong>{escape(taxon)}</strong>"
 
         if gtdb_filter:
             conditions.append("(bin.completeness - 5 * bin.contamination > 50)")

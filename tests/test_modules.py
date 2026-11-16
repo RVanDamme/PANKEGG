@@ -59,3 +59,17 @@ def test_every_shipped_definition_parses():
     result = mset.completeness(everything)
     incomplete = [m for m in modules if result.get(m, (0, 0, 0))[2] != 100.0]
     assert incomplete == [], f"with every KO present every module must be complete: {incomplete[:5]}"
+
+
+# --- review (phase 2): at the top level a space separates steps before a comma separates alternatives
+
+def test_top_level_steps_come_before_alternatives():
+    modules = load_modules(resource_path("data", "kegg_modules.tsv"))
+    mset = ModuleSet(modules)
+    assert len(mset.steps["M01069"]) == 5          # nitrogen cycle: five steps, the first has two alternatives
+    assert mset.completeness({"K02588", "K02586", "K02591"})["M01069"] == (1, 5, 20.0)   # nitrogenase only
+    assert len(mset.steps["M00651"]) == 2 and len(mset.steps["M00854"]) == 2
+    regulators_only = mset.completeness({"K18351", "K18352", "K18354", "K18353"})["M00651"]
+    assert regulators_only == (1, 2, 50.0)
+    assert one("(K00001 K00002),(K00003 K00004) K00005", ["K00003", "K00004"]) == (1, 2, 50.0)
+    assert one("K00001,K00002 K00003", ["K00002"]) == (1, 2, 50.0)

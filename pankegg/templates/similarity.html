@@ -7,6 +7,7 @@
   <p class="text-muted">Jaccard similarity = shared functions ÷ functions found in either one (1 = identical content, 0 = nothing in common).
     Rows and columns are ordered by hierarchical clustering, so similar {{ 'bins' if data.entity == 'bin' else 'samples' }} sit next to each other.
     Unlike a PCA, this stays readable with only a few samples.</p>
+  {{ plots.measures_help(per_id_help, module_help, true) }}
   <form method="get" class="row g-2 align-items-center mb-3">
     <div class="col-auto"><select name="entity" class="form-select">
       <option value="sample" {% if data.entity == 'sample' %}selected{% endif %}>Between samples (bins pooled)</option>

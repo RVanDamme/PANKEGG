@@ -59,6 +59,7 @@ Order: A1 → A2 → A3, A4 → A5–A8 → A9, A10, A12 (`pankegg_make_db`, add
 - **Pathway per-ID completeness** = distinct KOs of a KEGG map found in a bin (or sample) ÷ all KOs
   drawn on that map. A map collects every alternative route and every organism group, so no genome
   reaches 100%; use it to compare bins, not to decide that a pathway is "complete".
-- **Module completeness** = fraction of the steps of a KEGG module that are satisfied. A module is a
-  small functional unit defined as steps with alternatives (KO *or* KO), complexes (KO *and* KO) and
-  optional parts, so 100% means every required step has at least one of its alternatives.
+- **Module completeness** = mean score of the steps of a KEGG module. A module is a small functional
+  unit defined as steps with alternatives (KO *or* KO), complexes (KO *and* KO) and optional parts. A
+  step scores its best alternative, and a partly present complex or route counts partly; 100% means
+  every required step has one alternative in full.

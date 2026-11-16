@@ -10,6 +10,7 @@
     <strong>Core</strong> = in every sample, <strong>shared</strong> = in several but not all, <strong>unique</strong> = in one sample only.
     {% if data.level == 'pathway' %}A pathway counts as carried when a bin has at least one of its KOs.{% endif %}
     {% if data.level == 'module' %}A module counts as carried when it is 100% complete in a bin.{% endif %}</p>
+  {{ plots.measures_help(per_id_help, module_help, true) }}
   <form method="get" class="row g-2 align-items-center mb-3">
     <div class="col-auto"><select name="level" class="form-select">
       {% for value, label in levels.items() %}<option value="{{ value }}" {% if value == data.level %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>

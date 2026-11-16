@@ -96,8 +96,9 @@
         ('KOs', 'KEGG orthologs with the bins that carry them.', url_for('kegg')),
         ('Taxonomy', 'Taxa at each rank and their bins.', url_for('taxonomy')),
         ('Pathway statistics', 'One pathway in depth: who carries it, which KOs are missing.', url_for('pathway_stat')),
+        ('Modules', 'KEGG module completeness per bin and the steps that are missing.', url_for('module_list')),
         ('Comparisons', 'Samples, bins and taxa compared; similarity and statistics.', url_for('main_compare'))] %}
-    <div class="col-md-4 col-xl-2">
+    <div class="col-md-4 col-xl">
       <div class="card h-100"><div class="card-body">
         <h6 class="card-title"><a href="{{ link }}">{{ title }}</a></h6>
         <p class="card-text small text-muted mb-0">{{ text }}</p>

@@ -494,3 +494,81 @@ def test_no_metadata_no_condition_controls(databases, client_for):
     client = client_for(databases["two"])
     assert "across values of" not in client.get("/core_accessory").data.decode()
     assert "Condition:" not in client.get("/group_compare").data.decode()
+
+
+# --- review of phase 2 ----------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("page", ["/pathway_stat?q={q}", "/pathway_taxon?x=1", "/core_accessory?level=ko",
+                                  "/similarity?entity=bin", "/module?x=1"])
+def test_unclassified_switch_as_the_browser_sends_it(databases, client_for, a_pathway, page):
+    """A ticked box is sent as unclassified=0&unclassified=1 (hidden field, then checkbox)."""
+    client = client_for(databases["two"])
+    url = page.format(q=a_pathway[0])
+    on = client.get(url + "&unclassified=0&unclassified=1").data.decode()
+    off = client.get(url + "&unclassified=0").data.decode()
+    assert 'name="unclassified" value="1" checked' in on.replace("\n", " ").replace("  ", " ") or "checked" in on
+    assert on != off
+    if "pathway_stat" in page:
+        assert "S1.bin2" in on and "S1.bin2" not in off
+
+
+@pytest.fixture(scope="module")
+def odd_names_db(tmp_path_factory):
+    """Sample names and conditions with quotes, '=', '<' and the words 'None' and 'not set'."""
+    tmp = tmp_path_factory.mktemp("odd")
+    names = ["O'Brien farm", "x');alert('XSS", "<b>bold</b> & co", "plain"]
+    rows = "".join(f"{n},{FIX}/s1/eggnog/S1.bin1.emapper.annotations,{FIX}/sourmash_lca/*.lca.csv,"
+                   f"{FIX}/s1/checkm2/S1_checkm2_report.tsv\n" for n in names)
+    csv_path = write(tmp / "samples.csv", "Sample name,Annotation_dir,classification_dir,Checkm2_dir\n" + rows)
+    meta = write(tmp / "meta.tsv", "sample\ta=b\tstate\n"
+                 f"{names[0]}\tx\tNone\n{names[1]}\ty=z\tnot set\n{names[2]}\tx\t<i>it</i>\n{names[3]}\t\t\n")
+    run_make_db(csv_path, tmp, "odd", "--metadata", str(meta), "--quiet")
+    return tmp / "odd.db"
+
+
+def test_names_are_never_inside_inline_scripts(odd_names_db, client_for):
+    from pankegg import insights
+    con = _con(odd_names_db)
+    number = next(n for n, _, _ in insights.list_pathways(con) if insights.pathway_report(con, n)["found_kos"])
+    con.close()
+    client = client_for(odd_names_db)
+    html = client.get("/pathway_stat", query_string={"q": number}).data.decode()
+    assert "onclick=\"openKoPanel(this)\"" in html and "alert(&#39;XSS" in html
+    assert "openKoPanel(this, " not in html
+    for page in ("/", "/bin", "/map", "/kegg", "/similarity", "/core_accessory?by=state", "/group_compare",
+                 "/pathway_taxon", "/module", "/bin/1", "/map?bin_id=1", "/kegg?bin_id=1"):
+        body = client.get(page).data.decode()
+        assert "<b>bold</b>" not in body and "<i>it</i>" not in body, f"{page} renders names as HTML"
+
+
+def test_selectors_with_odd_variables_and_values(odd_names_db):
+    from pankegg import insights
+    con = _con(odd_names_db)
+    options = dict(insights.group_options(con))
+    by_label = {label.split(" (")[0]: value for value, label in options["Condition: a=b"]}
+    res = insights.group_compare(con, by_label["x"], "rest", "ko")
+    assert (res["n_a"], res["n_b"]) == (2, 2), "variable names may contain '='"
+    assert insights.group_compare(con, by_label["y=z"], "rest", "ko")["n_a"] == 1
+    state = {label.split(" (")[0]: value for value, label in options["Condition: state"]}
+    assert insights.group_compare(con, state["None"], "rest", "ko")["n_a"] == 1, "'None' is a value, not 'missing'"
+    core = insights.core_accessory(con, "ko", variable="state")
+    assert len(core["samples"]) == 4, "the value 'not set' and a missing value are different groups"
+    con.close()
+
+
+def test_one_rule_for_carrying_a_pathway(databases):
+    """Overview, core/accessory, similarity and the group test agree with the pathway page."""
+    from pankegg import insights
+    con = _con(databases["two"])
+    sets = insights.bin_pathways(con)
+    comp = insights.bin_pathway_completeness(con)
+    assert {(b, n) for b, s in sets.items() for n in s} == {k for k, v in comp.items() if v > 0}
+    con.close()
+
+
+@pytest.mark.parametrize("page, method, data", [
+    ("/taxonomy?level=x", "get", None), ("/taxonomy?level=genus;drop", "get", None),
+    ("/compar_full", "post", {"pca_type": "taxonomy", "taxonomy_level": "nope"})])
+def test_unknown_ranks_are_not_server_errors(databases, client_for, page, method, data):
+    res = getattr(client_for(databases["two"]), method)(page, data=data)
+    assert res.status_code in (200, 400), res.status_code
