@@ -2,7 +2,7 @@ name: PanKEGG CI
 
 on:
   push:
-    branches: [ "master" , "OpenAI_Codex_Test" ]
+    branches: [ "master" , "OpenAI_Codex_Test", "Update_Sourmash" ]
   pull_request:
     branches: [ "master" , "OpenAI_Codex_Test" ]
 
