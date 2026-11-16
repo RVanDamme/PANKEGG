@@ -5,10 +5,26 @@ Branch: `Update_Sourmash` (based on master `c09bf8a` + brief + fixtures).
 
 ## Now
 
-- **Step:** done (all 10 steps). Waiting for the owner: merge, tag 2.1.0, publish (see `docs/dev/RELEASE.md`).
-- **Next action:** none until the owner decides on the open points below.
+- **Phase 2 (web app and summaries), step:** A1 — correct wrong numbers, bundle Plotly/Bootstrap
+- **Next action:** failing tests for "Both", Bin vs Bin by sample and the PCA guards; then fix.
+- Phase 1 (steps 0–10 below) is complete; release is on hold until phase 2 is done (owner, 2026-11-16).
 
-## Steps
+## Phase 2 steps (see `APP_REVIEW.md` for the analysis and decisions)
+
+- [ ] A1. "Both" = overlap; Bin vs Bin by sample; PCA/heatmap guards; Plotly and Bootstrap bundled in the package
+- [ ] A2. Pathway Stats rework (name search, KO × bin matrix, distribution, who carries it, missing KOs, unclassified toggle, CSV)
+- [ ] A3. Overview page replaces the static home
+- [ ] A4. Bin detail page
+- [ ] A5. Pathway × taxon matrix
+- [ ] A6. Core vs accessory pathways and KOs
+- [ ] A7. Sample similarity heatmap
+- [ ] A8. Two-group comparison with statistics
+- [ ] A12. make_db: keep KOs with no pathway (regression: 2.0.0 content must be a subset)
+- [ ] A9. make_db: KEGG module completeness (new tables) + module displays and the two-measures explanation
+- [ ] A10. make_db: `--metadata` sample/condition TSV + colouring and grouping by condition
+- [ ] A13. Docs, CHANGELOG, screenshots check, independent review, acceptance re-run
+
+## Steps (phase 1)
 
 - [x] 0. Progress file, CI runs on this branch
 - [x] 1. Baseline from OSF example CSVs (regression reference)
