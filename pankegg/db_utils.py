@@ -4,11 +4,33 @@ import sqlite3
 import csv
 import glob
 import logging
-import os
-from .sql_commands import *
+from .sql_commands import (  # noqa: F401  (SCHEMA_VERSION is re-exported for older imports)
+    CREATE_TABLES,
+    DROP_TABLE,
+    INSERT_BIN,
+    INSERT_BIN_EXTRA,
+    INSERT_BIN_EXTRA_KEGG,
+    INSERT_BIN_MAP,
+    INSERT_BIN_MAP_KEGG,
+    INSERT_BIN_MODULE,
+    INSERT_KEGG,
+    INSERT_MAP,
+    INSERT_MAP_KEGG,
+    INSERT_MODULE,
+    INSERT_SAMPLE,
+    INSERT_SAMPLE_METADATA,
+    INSERT_TAXONOMY,
+    SELECT_BIN_ID,
+    SELECT_KEGG_ID,
+    SELECT_MAP_ID,
+    SELECT_MAP_KEGG_ID,
+    SELECT_TAXONOMY_ID,
+    UPDATE_BIN_QUALITY,
+    SCHEMA_VERSION,
+)
 from .binnames import normalise_bin_name, bin_name_from_annotation_file
-from .classification import (METHODS as CLASSIFICATION_METHODS, ClassificationError,
-                             apply_sample, detect_file_type, resolve_sample)
+from .classification import (  # noqa: F401  (detect_file_type and METHODS are re-exported for tests and make_db)
+    METHODS as CLASSIFICATION_METHODS, ClassificationError, apply_sample, detect_file_type, resolve_sample)
 
 log = logging.getLogger("pankegg")
 
@@ -64,6 +86,7 @@ def insert_bin(cur, bin_name, taxonomic_id, sample_id):
     if not bin_id:  # Insert only if the bin does not exist for this sample
         cur.execute(INSERT_BIN, (bin_name, taxonomic_id, sample_id))
 
+
 def load_pathways(pathway_file):
     """Load Pathways data from file and store in a dict."""
     pathways_dict = {}
@@ -74,7 +97,6 @@ def load_pathways(pathway_file):
             pathway_description = row[1].strip() if len(row) > 1 else None
             # pathways_orthologs_number = int(row[2].strip())
             pathways_orthologs_number = row[2].split(",")
-            #  print(pathways_orthologs_number)
             #  pathways_dict[map_id] = pathway_description
             pathways_dict[map_id] = [pathway_description, pathways_orthologs_number]
     return pathways_dict
@@ -90,6 +112,7 @@ def load_ko_descriptions(ko_file):
             description = row[1].split(";") if len(row) > 1 else ["Unknown"]
             ko_dict[ko_id] = description
     return ko_dict
+
 
 def read_eggnog_annotations(path):
     """Read an eggNOG-mapper annotation file (brief §3.5).
@@ -202,11 +225,6 @@ def safe_open_file(filepath, mode='r', encoding=None):
 
 
 # Flask DB Connection Test (to use in pankegg_app.py)
-def print_db_status(conn):
-    cur = conn.cursor()
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    print("[Flask] Tables in DB:", [r[0] for r in cur.fetchall()])
-
 
 # Duplicate/Blank Bin Name Check (per sample)
 def check_duplicate_bins(cur, sample_id):
@@ -242,22 +260,6 @@ def check_classification_mode_per_row(csv_file, gtdbtk_flag=False):
 
 
 # Data process
-
-# def process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list):
-#     if pathway not in bin_map_list:
-#         bin_map_list.append(pathway)
-#
-#     if pathway not in maps_dict:
-#         # Tente d'insérer le pathway dans la base de données si ce n'est pas déjà fait
-#         description = pathways_dict.get(pathway, "Description not available")  # Utilise une description par défaut si non trouvée
-#         cur.execute(INSERT_MAP, (description, pathway, pathway))
-#         maps_dict[pathway] = kos
-#     else:
-#         map_ko_list = maps_dict.get(pathway)
-#         original_length = len(map_ko_list)
-#         map_ko_list.extend([ko for ko in kos if ko not in map_ko_list])
-#         if len(map_ko_list) > original_length:
-#             maps_dict[pathway] = map_ko_list
 
 
 def process_pathways_and_kos(cur, pathway, maps_dict, pathways_dict, kos, bin_map_list):
@@ -541,6 +543,7 @@ def process_annotation_file(cur, annotation_files_path, pathways_dict, sample_id
 
     return maps_dict
 
+
 def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
     # Insert the full annotation line
     cur.execute(INSERT_BIN_EXTRA, (bin_id, kegg_gos, kegg_kos, kegg_free_desc))
@@ -550,7 +553,6 @@ def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
         kos = kegg_kos.split(',')
         for ko in kos:
             if ":" not in ko:  # Skip invalid KO entries
-                #print(f"Skipping invalid KEGG_ko entry: {ko}")
                 continue
 
             ko_entry = ko.split(":")[1]  # Extract KO ID safely
@@ -563,7 +565,6 @@ def link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc):
                 ko_id = ko_id[0]
                 cur.execute(INSERT_BIN_EXTRA_KEGG, (kegg_extra_line_id, ko_id, kegg_extra_line_id, ko_id))
             else:
-                #print(f"Warning: KEGG ID {ko_entry} not found in the database")
                 continue
 
 
@@ -590,38 +591,6 @@ def set_full_annot_table(cur, annotation_files_path, sample_id):
 
             if kegg_kos:
                 link_full_line_with_kos(cur, bin_id, kegg_gos, kegg_kos, kegg_free_desc)
-
-# def link_bin_to_map_keg(cur, annotation_files_path):
-#     for filename in sorted(glob.glob(annotation_files_path)):
-#         with open(filename, 'r', newline='') as file:
-#             base_name = os.path.basename(filename)
-#             name_part = base_name.split('.')[0] + '.' + base_name.split('.')[1]
-#             bin_name = name_part + ".fa"
-#
-#             cur.execute(SELECT_BIN_ID, (bin_name,))
-#             bin_id = cur.fetchone()[0]  # Supposons qu'il y a toujours un bin_id valide
-#
-#             reader = csv.DictReader(file, delimiter='\t')
-#             for row in reader:
-#                 kegg_pathways = row['KEGG_Pathway']
-#                 kegg_kos = row['KEGG_ko']
-#                 kos = kegg_kos.split(',')
-#
-#                 for pathway in kegg_pathways.split(',') if kegg_pathways else [name_part + "_not_mapped"]:
-#                     pathway = pathway.strip()
-#                     if pathway.startswith('map'):
-#                         cur.execute(SELECT_MAP_ID, (pathway,))
-#                         map_id = cur.fetchone()[0]
-#
-#                         for ko_entry in kos:
-#                             ko_id = ko_entry.split(":")[1]
-#                             cur.execute(SELECT_KEGG_ID, (ko_id,))
-#                             kegg_id = cur.fetchone()[0]  # Supposons que kegg_id est toujours valide
-#
-#                             cur.execute(SELECT_MAP_KEGG_ID, (map_id, kegg_id,))
-#                             map_kegg_id = cur.fetchone()[0]  # Supposons que map_kegg_id est toujours valide
-#
-#                             cur.execute(INSERT_BIN_MAP_KEGG, (bin_id, map_kegg_id, bin_id, map_kegg_id))
 
 
 def count_map_kegg_ids(cur):
@@ -708,6 +677,7 @@ def link_bin_to_map_keg(cur, annotation_files_path, sample_id):
 
         if no_pathway:
             log.debug(f"{filename}: {no_pathway} rows without a KEGG pathway")
+
 
 def add_sample_in_db(cur, name):
     cur.execute(INSERT_SAMPLE, (name,))

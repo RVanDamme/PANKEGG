@@ -8,7 +8,6 @@ import csv
 import io
 import json
 import click
-import sys
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
@@ -16,9 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from scipy.cluster.hierarchy import linkage, dendrogram
 from scipy.spatial.distance import pdist
-# Import your robust DB print function
 from . import __version__, resource_path
-from .db_utils import print_db_status
 from dotenv import find_dotenv, load_dotenv
 
 # .env (FLASK_SECRET_KEY) in the directory pankegg_app is started from, then
@@ -30,6 +27,8 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev")
 
 # Helper: Get DB path (env > default)
+
+
 def resolve_db_path():
     # Try to get from environment variable first
     db_path = app.config.get('PANKEGG_DB_PATH')
@@ -38,11 +37,13 @@ def resolve_db_path():
     # Fallback: the example database shipped inside the package
     return get_default_db_path()
 
+
 def get_db_connection():
     db_path = resolve_db_path()
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 def handle_sql_error(e):
     err = str(e)
@@ -53,17 +54,21 @@ def handle_sql_error(e):
     else:
         return f"<h2>[ERROR] Database operational error: {e}</h2>", 500
 
+
 def taxon_unclassified(val):
     v = val or ''
     if v in ['', 'G__', 'g__', 'S__', 's__', 'D__', 'd__', 'P__', 'p__', 'C__', 'c__', 'O__', 'o__', 'F__', 'f__']:
         return '<span class="text-muted fst-italic">Unclassified</span>'
     return v
+
+
 app.jinja_env.filters['taxon_unclassified'] = taxon_unclassified
 
 
 @app.errorhandler(404)
 def page_not_found(error):
     return "<h2>404 Not Found</h2><p>The item you requested was not found.</p>", 404
+
 
 @app.route('/get_taxonomy_data', methods=['POST'])
 def get_taxonomy_data():
@@ -336,7 +341,7 @@ def parse_pathway_groups(file_path):
                     if current_group is not None:
                         pathway_groups[current_group].append(f"map{line}")
                     else:
-                        print(f"Warning: Found map number '{line}' without a group header.")
+                        app.logger.warning("pathway_groups.txt: map number %s without a group header", line)
 
         return pathway_groups
     except sqlite3.OperationalError as e:
@@ -383,7 +388,7 @@ def get_bins_list():
         cur.close()
         conn.close()
         return jsonify(items=items)
-    except Exception as e:
+    except sqlite3.Error:
         return jsonify(items=[])
 
 
@@ -506,6 +511,7 @@ def get_scatterplot_data():
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
 
+
 @app.route('/get_scatterplot_all_samples', methods=['GET'])
 def get_scatterplot_all_samples():
     conn = get_db_connection()
@@ -524,7 +530,7 @@ def get_scatterplot_all_samples():
 
     # Build one trace per sample
     import pandas as pd
-    df = pd.DataFrame(rows, columns=['sample_name','bin_name','completeness','contamination'])
+    df = pd.DataFrame(rows, columns=['sample_name', 'bin_name', 'completeness', 'contamination'])
     result = {}
     for sample, group in df.groupby('sample_name'):
         result[sample] = {
@@ -534,8 +540,6 @@ def get_scatterplot_all_samples():
         }
     from flask import jsonify
     return jsonify(result)
-
-
 
 
 @app.route('/get_common_pathways_data', methods=['POST'])
@@ -713,14 +717,12 @@ def compar_full():
             elif pca_type == 'taxonomy':
                 df = pd.DataFrame(rows, columns=['sample_name', 'taxon', 'count_bins'])
 
-
             if pca_type == 'maps':
                 df_pivot = df.pivot_table(index='sample_name', columns='map_number', values='count_bins', fill_value=0)
             elif pca_type == 'kos':
                 df_pivot = df.pivot_table(index='sample_name', columns='ko_id', values='count_bins', fill_value=0)
             elif pca_type == 'taxonomy':
                 df_pivot = df.pivot_table(index='sample_name', columns='taxon', values='count_bins', fill_value=0)
-
 
             n_samples = len(df_pivot.index)
             if n_samples < 3:
@@ -737,7 +739,6 @@ def compar_full():
             # Remove constant columns
             df_pivot = df_pivot.loc[:, (df_pivot != df_pivot.iloc[0]).any()]
 
-
             # Check if dataframe is empty after removing constant columns
             if df_pivot.empty:
                 return jsonify({
@@ -749,7 +750,6 @@ def compar_full():
             # Normalization
             scaler = StandardScaler()
             df_pivot_normalized = scaler.fit_transform(df_pivot)
-
 
             # Perform PCA
             pca = PCA(n_components=2)
@@ -763,11 +763,9 @@ def compar_full():
                     'error': str(e)
                 })
 
-
             # Convert PCA results to DataFrame for visualization
             pca_df = pd.DataFrame(pca_results, columns=['PC1', 'PC2'])
             pca_df['sample_name'] = df_pivot.index
-
 
             # Return JSON response for AJAX
             from . import insights
@@ -814,7 +812,7 @@ def export_bins():
 
         # Prepare the columns to fetch from each tables
         bin_columns = ['bin.id as bin_id', 'bin.bin_name', 'bin.completeness', 'bin.contamination', "sample.sample_name",
-                    "CAST(SUBSTR(bin_name, INSTR(bin_name, '.') + 1) AS INTEGER) AS bin_number"]
+                       "CAST(SUBSTR(bin_name, INSTR(bin_name, '.') + 1) AS INTEGER) AS bin_number"]
         taxonomy_columns = [
             'taxonomy."_kingdom_" as kingdom',
             'taxonomy."_phylum_" as phylum',
@@ -1004,7 +1002,6 @@ def export_maps():
         conn.close()
 
         # Organise data for CSV
-        maps = []
         map_kos = {}
         for row in rows:
             map_key = (row[0], row[1])  # map_number, pathway_name
@@ -1138,7 +1135,7 @@ def taxonomy():
             cur.execute(query)
             results = cur.fetchall()
             taxons = [{'name': row['taxon'].capitalize() if row['taxon'] else 'none',
-                    'count': row['bins_associated']} for row in results]
+                       'count': row['bins_associated']} for row in results]
         else:
             taxons = []
 
@@ -1148,6 +1145,7 @@ def taxonomy():
         return render_template('taxonomy.html', taxons=taxons, level=level or "none")
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
+
 
 PAGE_SIZES = (25, 50, 100, 250)
 
@@ -1274,7 +1272,7 @@ def kegg():
                     "(t._kingdom_ = ? OR t._phylum_ = ? OR t._class_ = ? "
                     "OR t._order_ = ? OR t._family_ = ? OR t._genus_ = ? OR t._species_ = ?)"
                 )
-                params.extend([normalized_taxon]*7)
+                params.extend([normalized_taxon] *7)
             context = f"KEGG inputs associated with taxonomy: <strong>{escape(taxon)}</strong>"
         else:
             context = "Display of all KEGG IDs"
@@ -1323,10 +1321,6 @@ def kegg():
         return handle_sql_error(e)
 
 
-
-
-
-
 @app.route('/map', methods=['GET', 'POST'])
 def show_maps():
     try:
@@ -1336,7 +1330,6 @@ def show_maps():
         ko_id = request.form.get('ko_id') or request.args.get('ko_id')
         taxon = request.form.get('taxon') or request.args.get('taxon')
         search_query = request.form.get('search_query') or request.args.get('search_query') or ''
-
 
         # Bin auto-filter logic as before (not shown here for brevity)
 
@@ -1364,7 +1357,7 @@ def show_maps():
                 "(LOWER(_kingdom_) = LOWER(?) OR LOWER(_phylum_) = LOWER(?) OR LOWER(_class_) = LOWER(?) "
                 "OR LOWER(_order_) = LOWER(?) OR LOWER(_family_) = LOWER(?) OR LOWER(_genus_) = LOWER(?) OR LOWER(_species_) = LOWER(?))))"
             )
-            params.extend([taxon]*7)
+            params.extend([taxon] *7)
             context_tags.append(f"<span class='tag-chip'>{escape(taxon)}</span>")
 
         # Tag filtering (sample/bin)
@@ -1421,7 +1414,7 @@ def show_maps():
             maps_to_show = [row[0] for row in cur.fetchall()]
             context_tags.append(f"<span class='tag-chip'>{escape(ko_id)}</span>")
             if maps_to_show:
-                filters_clause.append("m.map_number IN ({})".format(','.join(['?']*len(maps_to_show))))
+                filters_clause.append("m.map_number IN ({})".format(','.join(['?'] *len(maps_to_show))))
                 params.extend(maps_to_show)
             else:
                 maps = {}
@@ -1461,7 +1454,6 @@ def show_maps():
             if map_key[0] not in map_completions:
                 map_completions[map_key[0]] = pathway_total_orthologs
 
-
         for map_key in maps.keys():
             kegg_ids = list(maps[map_key]['kegg_ids'])
             filtered_kegg_ids = [kegg_id[0] for kegg_id in kegg_ids if kegg_id[2] == 1]
@@ -1499,9 +1491,6 @@ def show_maps():
         return handle_sql_error(e)
 
 
-
-
-
 @app.route('/bin', methods=['GET', 'POST'])
 def show_bins():
     def normalize_taxon_case(taxon):
@@ -1515,7 +1504,7 @@ def show_bins():
 
     try:
         map_number = request.values.get('map_number')
-        ko_id = request.values.get('ko_id') or request.values.get('kegg_id')  # <- patch here!
+        ko_id = request.values.get('ko_id') or request.values.get('kegg_id')  # kegg_id: older links
         taxon = request.values.get('taxon')
         search_query = request.form.get('search_query', '') or request.values.get('search_query', '')
         gtdb_filter = session.get('gtdb_filter', False)
@@ -1607,7 +1596,7 @@ def show_bins():
                     "(taxonomy.\"_kingdom_\" = ? OR taxonomy.\"_phylum_\" = ? OR taxonomy.\"_class_\" = ? "
                     "OR taxonomy.\"_order_\" = ? OR taxonomy.\"_family_\" = ? OR taxonomy.\"_genus_\" = ? OR taxonomy.\"_species_\" = ?)"
                 )
-                params.extend([normalized_taxon]*7)
+                params.extend([normalized_taxon] *7)
             context = f"Display of bins for taxonomy entry: <strong>{escape(taxon)}</strong>"
 
         if gtdb_filter:
@@ -1693,9 +1682,6 @@ def show_bins():
         return handle_sql_error(e)
 
 
-
-
-
 @app.route('/toggle_gtdb_filter', methods=['POST'])
 def toggle_gtdb_filter():
     try:
@@ -1704,7 +1690,7 @@ def toggle_gtdb_filter():
         # Redirect while preserving current settings
         map_number = request.form.get('map_number')
         kegg_id = request.form.get('kegg_id')
-        taxon = request.form.get('taxon')  
+        taxon = request.form.get('taxon')
 
         if map_number:
             return redirect(url_for('show_bins', map_number=map_number))
@@ -1717,6 +1703,7 @@ def toggle_gtdb_filter():
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
 
+
 @app.route('/set_sort_option', methods=['POST'])
 def set_sort_option():
     try:
@@ -1726,8 +1713,10 @@ def set_sort_option():
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)
 
+
 def get_default_db_path():
     return resource_path('data', 'pankegg.db')
+
 
 # Summary and cross-module pages (pankegg/pages.py)
 from . import pages  # noqa: E402

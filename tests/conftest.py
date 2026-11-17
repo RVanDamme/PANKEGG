@@ -5,7 +5,6 @@ Tests that need the published OSF example archive (network) are marked
 ``osf`` and run only with ``pytest --run-osf``.
 """
 
-import os
 import sys
 import zipfile
 from pathlib import Path

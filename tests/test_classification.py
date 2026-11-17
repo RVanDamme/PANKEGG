@@ -143,7 +143,7 @@ def test_sourmash_lca_per_bin_files(tmp_path):
 def test_sourmash_lca_reads_all_rows(tmp_path):
     """F6: 2.0.0 read only the first data line of each file."""
     lines = [f.read_text().splitlines() for f in sorted(LCA.glob("*.csv"))]
-    text = "\n".join([lines[0][0]] + [l[1] for l in lines]) + "\n"
+    text = "\n".join([lines[0][0]] + [line[1] for line in lines]) + "\n"
     _, db = build(tmp_path, [("all.lca.csv", text)])
     got = bins(db)
     assert got["S1.bin1"]["tax"] == ECOLI

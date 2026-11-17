@@ -5,6 +5,7 @@ import pytest
 import pankegg_make_db
 from pankegg.db_utils import check_db_schema
 
+
 @pytest.mark.usefixtures('test_data_dir')
 def test_make_db_sourmash(tmp_path, test_data_dir, monkeypatch):
     output_dir = tmp_path / "out"
@@ -26,7 +27,6 @@ def test_make_db_sourmash(tmp_path, test_data_dir, monkeypatch):
     except RuntimeError as e:
         pytest.fail(f"Generated database schema invalid: {e}")
     conn.close()
-
 
 
 def test_make_db_offline(tmp_path, monkeypatch):

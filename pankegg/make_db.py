@@ -12,8 +12,36 @@ import sys
 import traceback
 
 from . import __version__, resource_path
-from .db_utils import *
+from .db_utils import (
+    CLASSIFICATION_METHODS,
+    add_all_kos,
+    add_bin_modules,
+    add_bin_quality_values,
+    add_modules,
+    add_sample_in_db,
+    add_sample_metadata,
+    check_bin_consistency,
+    check_db_schema,
+    check_duplicate_bins,
+    check_input_csv,
+    check_required_files_and_headers,
+    connect_db,
+    create_tables,
+    drop_all_tables,
+    link_bin_to_map_keg,
+    link_maps_to_kos,
+    load_ko_descriptions,
+    load_pathways,
+    process_annotation_file,
+    process_classifications,
+    read_sample_metadata,
+    resolve_classifications,
+    sample_preliminary_process,
+    set_full_annot_table,
+    set_ko,
+)
 from .modules import ModuleSet, load_modules
+from .sql_commands import INSERT_INFO, SCHEMA_VERSION
 
 log = logging.getLogger("pankegg")
 

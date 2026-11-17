@@ -5,7 +5,6 @@ and the legacy stripped file (one '##' line, then the header) must give
 identical database content.
 """
 
-from pathlib import Path
 
 from tests.helpers import FIX, run_make_db, write
 from tests.regression.summarise_db import summarise, unchanged_part
@@ -21,9 +20,9 @@ CHECKM2_S3 = "Name\tCompleteness\tContamination\nS3.439\t80.0\t1.0\n"
 def emapper_wrap(legacy_text):
     """Turn a legacy file into what emapper writes: header block, '#query' header, data, footer."""
     raw_lines = RAW.read_text().splitlines(keepends=True)
-    head = [l for l in raw_lines[:5] if l.startswith("##")]
-    foot = [l for l in raw_lines if l.startswith("##")][len(head):]
-    body = [l for l in legacy_text.splitlines(keepends=True) if not l.startswith("##")]
+    head = [line for line in raw_lines[:5] if line.startswith("##")]
+    foot = [line for line in raw_lines if line.startswith("##")][len(head):]
+    body = [line for line in legacy_text.splitlines(keepends=True) if not line.startswith("##")]
     return "".join(head + body + foot)
 
 
