@@ -642,3 +642,73 @@ def test_search_terms_in_titles_are_escaped(databases, client_for):
     for page, data in (("/map", {"search_query": "<b>x</b>"}), ("/map", {"taxon": "<b>x</b>"}),
                        ("/map", {"active_filters": "<b>x</b>"}), ("/kegg", {"search_query": "<b>x</b>"})):
         assert "<b>x</b>" not in client.post(page, data=data).data.decode(), (page, data)
+
+
+# --- search and selection: bins with the same name in different samples ------------------------------------
+
+def test_search_finds_and_distinguishes_bins(databases):
+    from pankegg import insights
+    con = _con(databases["two"])
+    res = insights.search(con, "S1.bin1")
+    assert [(b["name"], b["sample"]) for b in res["bins"]] == [("S1.bin1", "S1"), ("S1.bin1", "S2")]
+    # every term must match: bin name, sample name or lineage, in any order
+    assert [(b["name"], b["sample"]) for b in insights.search(con, "bin1 S2")["bins"]] == [("S1.bin1", "S2")]
+    assert [(b["name"], b["sample"]) for b in insights.search(con, "s2 BIN1")["bins"]] == [("S1.bin1", "S2")]
+    assert {(b["name"], b["sample"]) for b in insights.search(con, "escherichia s1")["bins"]} == \
+        {("S1.bin1", "S1"), ("S1.bin1", "S2")}                      # "s1" also matches the bin name S1.bin1
+    assert [b["sample"] for b in insights.search(con, "sample:S2 bin:bin1")["bins"]] == ["S2"]
+    assert {b["sample"] for b in insights.search(con, "sample:S2")["bins"]} == {"S2"}
+    assert len(insights.search(con, "sample:S2")["bins"]) == 2
+    assert [b["name"] for b in insights.search(con, "unclassified sample:S1")["bins"]] == ["S1.bin2"]
+    other = insights.search(con, "metabolism")
+    assert other["pathways"] and not other["bins"]
+    ko = insights.search(con, other and next(iter(insights.bin_kos(con)[1])))
+    assert ko["kos"] and ko["kos"][0]["n_bins"] >= 1
+    assert insights.search(con, "Escherichia")["taxa"][0]["n_bins"] == 2
+    assert insights.search(con, "")["total"] == 0 and insights.search(con, "zzzz")["total"] == 0
+    assert insights.search(con, "%")["total"] == 0, "'%' is a character, not a wildcard"
+    con.close()
+
+
+def test_search_page_and_navbar(databases, client_for):
+    client = client_for(databases["two"])
+    assert 'action="/search"' in client.get("/bin").data.decode(), "search box on every page"
+    html = client.get("/search?q=bin1").data.decode()
+    assert html.count(">S1.bin1</a>") == 2 and ">S1<" in html and ">S2<" in html
+    assert client.get("/search?q=zzzz").status_code == 200 and client.get("/search").status_code == 200
+    assert "<b>x</b>" not in client.get("/search", query_string={"q": "<b>x</b>"}).data.decode()
+    assert client.get("/search", query_string={"q": "x" * 5000}).status_code == 200
+    old = client_for(databases["2.0.0"]).get("/search?q=bin")
+    assert old.status_code == 200 and b"S1.bin2" in old.data
+
+
+def test_bin_page_lists_namesakes(databases, client_for):
+    import sqlite3
+    con = sqlite3.connect(databases["two"])
+    s1_bin1, s2_bin1 = [r[0] for r in con.execute(
+        "SELECT b.id FROM bin b JOIN sample s ON s.id=b.sample_id WHERE b.bin_name='S1.bin1' ORDER BY s.sample_name")]
+    s1_bin3 = con.execute("SELECT id FROM bin WHERE bin_name='S1.bin3'").fetchone()[0]
+    con.close()
+    client = client_for(databases["two"])
+    html = client.get(f"/bin/{s1_bin1}").data.decode()
+    assert "same name" in html and f'href="/bin/{s2_bin1}"' in html
+    assert "same name" not in client.get(f"/bin/{s1_bin3}").data.decode()
+
+
+def test_bin_list_filters_by_sample_and_several_terms(databases, client_for):
+    client = client_for(databases["two"])
+
+    def bins(**params):
+        import re
+        html = client.get("/bin", query_string=params).data.decode()
+        return sorted(re.findall(r'href="/bin/(\d+)"', html))
+
+    everything = bins()
+    assert len(everything) == 5
+    only_s2 = bins(sample="S2")
+    assert len(only_s2) == 2 and set(only_s2) < set(everything)
+    assert len(bins(search_query="bin1")) == 2
+    assert bins(search_query="%") == [], "'%' is a character, not a wildcard"
+    assert bins(search_query="bin1 S2") == bins(search_query="bin1", sample="S2") and len(bins(search_query="bin1 S2")) == 1
+    assert bins(sample="no-such-sample") == []
+    assert 'name="sample"' in client.get("/bin").data.decode()

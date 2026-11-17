@@ -45,13 +45,14 @@ def register(app, get_db_connection, pathway_groups):
         try:
             report = insights.bin_report(conn, bin_id, map_groups)
             modules = insights.bin_modules(conn, bin_id) if report else []
+            same_name = insights.namesakes(conn, report["bin"]) if report else []
             modules_available = insights.has_modules(conn)
         finally:
             conn.close()
         if report is None:
             abort(404, description=f"No bin with id {bin_id}")
         return render_template("bin_detail.html", report=report, figs=insights.bin_figures(report),
-                               modules=modules, modules_available=modules_available,
+                               modules=modules, modules_available=modules_available, same_name=same_name,
                                per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
 
     # --- pathway x taxon ------------------------------------------------------------------
@@ -191,6 +192,17 @@ def register(app, get_db_connection, pathway_groups):
         return render_template("module_detail.html", report=report, figs=insights.module_figures(report),
                                ranks=insights.RANKS,
                                per_id_help=insights.PER_ID_HELP, module_help=insights.MODULE_HELP)
+
+    # --- search ----------------------------------------------------------------------------------------
+    @app.route("/search")
+    def search():
+        q = request.args.get("q", "").strip()[:200]
+        conn = get_db_connection()
+        try:
+            result = insights.search(conn, q)
+        finally:
+            conn.close()
+        return render_template("search.html", result=result, q=q, limit=insights.SEARCH_LIMIT)
 
     @app.route("/favicon.ico")
     def favicon():

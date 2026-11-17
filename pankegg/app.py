@@ -1523,7 +1523,9 @@ def show_bins():
         bin_name_sort_sql_command = " ORDER BY bin_number ASC"
         completeness_sort_sql_command = " ORDER BY bin.completeness DESC"
         contamination_sort_sql_command = " ORDER BY bin.contamination DESC"
-        search_fields = request.form.getlist('search_fields') or ['sample_name', 'bin_name']
+        search_fields = (request.form.getlist('search_fields') or request.args.getlist('search_fields')
+                         or ['sample_name', 'bin_name'])
+        sample_filter = request.values.get('sample', '')
 
         context = "Display of all bins"
 
@@ -1624,25 +1626,30 @@ def show_bins():
                 'genus': 'taxonomy.\"_genus_\"',
                 'species': 'taxonomy.\"_species_\"'
             }
-            search_subclauses = []
-            search_pattern = f"%{search_query}%"
-            is_unclassified = "unclassified" in search_query.lower()
-            for field in search_fields:
-                dbcol = search_column_map.get(field)
-                if dbcol:
+            # Every word must match one of the selected fields, so "bin.78 Sample2" finds that bin
+            # in that sample; a single word behaves as before. % and _ are matched literally.
+            for term in search_query.split():
+                search_subclauses = []
+                is_unclassified = term.lower() == "unclassified"
+                for field in search_fields:
+                    dbcol = search_column_map.get(field)
+                    if not dbcol:
+                        continue
                     if is_unclassified and field in ['kingdom', 'phylum', 'class', 'order', 'family', 'genus', 'species']:
                         prefix = field[0].lower() + '__'
-                        search_subclauses.append(
-                            f"({dbcol} IS NULL OR {dbcol} = '' OR LOWER({dbcol}) = ?)"
-                        )
+                        search_subclauses.append(f"({dbcol} IS NULL OR {dbcol} = '' OR LOWER({dbcol}) = ?)")
                         params.append(prefix)
                     else:
-                        search_subclauses.append(f"{dbcol} LIKE ?")
-                        params.append(search_pattern)
-            if search_subclauses:
-                search_condition = '(' + ' OR '.join(search_subclauses) + ')'
-                conditions.append(search_condition)
+                        search_subclauses.append(f"{dbcol} LIKE ? ESCAPE '!'")
+                        params.append('%' + term.replace('!', '!!').replace('%', '!%').replace('_', '!_') + '%')
+                if search_subclauses:
+                    conditions.append('(' + ' OR '.join(search_subclauses) + ')')
             context += f" with search pattern: <strong>{escape(search_query)}</strong>"
+
+        if sample_filter:
+            conditions.append("sample.sample_name = ?")
+            params.append(sample_filter)
+            context += f" in sample <strong>{escape(sample_filter)}</strong>"
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
@@ -1657,6 +1664,7 @@ def show_bins():
         cur.execute(query, params)
 
         rows = cur.fetchall()
+        all_samples = [r[0] for r in cur.execute("SELECT sample_name FROM sample ORDER BY sample_name")]
         cur.close()
         conn.close()
 
@@ -1677,7 +1685,9 @@ def show_bins():
             sample_names=sample_names,
             search_fields=search_fields,
             search_query=search_query,
-            taxon=taxon
+            taxon=taxon,
+            all_samples=all_samples,
+            sample_filter=sample_filter
         )
     except sqlite3.OperationalError as e:
         return handle_sql_error(e)

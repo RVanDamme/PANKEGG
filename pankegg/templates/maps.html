@@ -188,18 +188,30 @@
 
 <!-- JS for tag input and dropdown -->
 <script>
-let currentTags = new Set([{% for tag in active_filters %}'{{ tag|e }}',{% endfor %}]);
-let filterMode = '{{ filter_mode }}';
+let currentTags = new Set({{ (active_filters or [])|tojson }});
+let filterMode = {{ (filter_mode or 'sample')|tojson }};
 let dropdown = null, dropdownIndex = -1;
 
 function updateTagUI() {
     let filterTags = document.getElementById('filterTags');
     filterTags.innerHTML = '';
     currentTags.forEach(tag => {
+        // Built from elements, not HTML strings: sample and bin names may contain quotes or '<'.
         let chip = document.createElement('span');
         chip.className = 'tag-chip';
-        chip.innerHTML = `${tag} <button type="button" class="remove-tag" tabindex="-1" onclick="removeTag('${tag.replace(/'/g, "\\'")}')">&times;</button>` +
-            `<input type="hidden" name="active_filters" value="${tag}">`;
+        chip.appendChild(document.createTextNode(tag + ' '));
+        let remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'remove-tag';
+        remove.tabIndex = -1;
+        remove.textContent = '\u00d7';
+        remove.addEventListener('click', () => removeTag(tag));
+        chip.appendChild(remove);
+        let hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'active_filters';
+        hidden.value = tag;
+        chip.appendChild(hidden);
         filterTags.appendChild(chip);
     });
     let tagInput = document.createElement('input');

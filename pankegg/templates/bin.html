@@ -93,12 +93,19 @@
                         <input type="hidden" name="map_number" value="{{ request.values.get('map_number', '') }}">
                         <input type="hidden" name="ko_id" value="{{ request.values.get('ko_id', '') }}">
                         <input type="hidden" name="taxon" value="{{ request.values.get('taxon', '') }}">
+                        <div class="input-group mb-2">
+                            <label class="input-group-text" for="sampleFilter">Sample</label>
+                            <select class="form-select" name="sample" id="sampleFilter">
+                                <option value="">All samples</option>
+                                {% for s in all_samples %}<option value="{{ s }}" {% if s == sample_filter %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                            </select>
+                        </div>
                         <div class="input-group">
                             <input type="text" name="search_query" class="form-control" placeholder="Search by Sample, Bin, or Taxonomy (type 'unclassified' for unclassified bins at a selected rank)" value="{{ request.form.get('search_query', '') }}">
                             <button class="btn btn-outline-secondary" type="submit">Search</button>
                         </div>
                         <small class="text-muted d-block mt-1">
-                            <strong>Tip:</strong> For unclassified filtering, select the rank (e.g. genus/species), then type the complete word <code>unclassified</code> in the search box.
+                            <strong>Tip:</strong> Several words narrow the search: every word must match one of the selected fields, so <code>bin.78 Sample2</code> finds that bin in that sample. For unclassified filtering, select the rank (e.g. genus/species), then type the complete word <code>unclassified</code> in the search box.
                         </small>
                     </form>
                 </div>

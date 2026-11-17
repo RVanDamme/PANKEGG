@@ -1077,3 +1077,94 @@ def module_figures(report):
         "layout": {"height": 340, "showlegend": False, "margin": {"t": 20},
                    "yaxis": {"title": {"text": "Module completeness (%)"}, "range": [-4, 104]}}}
     return figs
+
+
+# --- search ------------------------------------------------------------------------------------------
+
+SEARCH_LIMIT = 100
+_FIELDS = ("sample", "bin")
+
+
+def search(conn, query, limit=SEARCH_LIMIT):
+    """Find bins, samples, taxa, pathways, modules and KOs.
+
+    Every word must match (case-insensitive, anywhere in the text). For a bin the words are looked
+    for in its name, its sample and its lineage, so "bin.78 Sample2" finds that bin in that sample,
+    and bins that share a name are listed once per sample. ``sample:NAME`` and ``bin:NAME`` restrict
+    a word to that field; the word ``unclassified`` selects bins without a classification.
+    """
+    words = (query or "").lower().split()[:20]
+    fielded, free = [], []
+    for w in words:
+        field, sep, value = w.partition(":")
+        if sep and field in _FIELDS and value:
+            fielded.append((field, value))
+        else:
+            free.append(w)
+    want_unclassified = "unclassified" in free
+    free = [w for w in free if w != "unclassified"]
+    result = {"query": query or "", "bins": [], "samples": [], "taxa": [], "pathways": [], "modules": [],
+              "kos": [], "counts": {}, "total": 0}
+    if not words:
+        return result
+
+    def matches(text, terms):
+        text = text.lower()
+        return all(t in text for t in terms)
+
+    bins = load_bins(conn)
+    conditions = sample_conditions(conn)
+    found = []
+    for b in bins:
+        if want_unclassified and b["classified"]:
+            continue
+        if not all(value in (b["sample"] if field == "sample" else b["name"]).lower() for field, value in fielded):
+            continue
+        if matches(" ".join([b["name"], b["sample"], *[v for v in b["lineage"].values() if v]]), free):
+            found.append(b)
+    names = Counter(b["name"] for b in bins)
+    for b in found:
+        b["namesakes"] = names[b["name"]] - 1
+        b["conditions"] = {v: vals[b["sample"]] for v, vals in sorted(conditions.items()) if b["sample"] in vals}
+    result["counts"]["bins"] = len(found)
+    result["bins"] = found[:limit]
+    result["variables"] = sorted(conditions)
+
+    if free and not fielded and not want_unclassified:
+        per_sample = Counter(b["sample"] for b in bins)
+        result["samples"] = [{"name": s, "n_bins": n} for s, n in sorted(per_sample.items()) if matches(s, free)]
+        taxa = Counter()
+        for b in bins:
+            for rank in RANKS:
+                value = b["lineage"][rank]
+                if value and matches(value, free):
+                    taxa[(rank, value)] += 1
+        result["taxa"] = [{"rank": r, "name": v, "n_bins": n}
+                          for (r, v), n in sorted(taxa.items(), key=lambda kv: (RANKS.index(kv[0][0]), kv[0][1]))]
+        result["pathways"] = [{"number": n, "name": name} for n, name, _ in list_pathways(conn)
+                              if matches(f"{n} {name or ''}", free)]
+        if has_modules(conn):
+            seen = {r[0] for r in conn.execute(
+                "SELECT DISTINCT m.module_number FROM bin_module bm JOIN module m ON m.id = bm.module_id")}
+            result["modules"] = [{"number": n, "name": name, "in_bins": n in seen} for n, name in conn.execute(
+                "SELECT module_number, module_name FROM module ORDER BY module_number")
+                if matches(f"{n} {name or ''}", free)]
+        kos = [(ko, " ".join(x for x in (name, full) if x and x != "None")) for ko, name, full in conn.execute(
+            "SELECT ko_id, kegg_name, kegg_full_name FROM kegg ORDER BY ko_id")
+            if matches(f"{ko} {name or ''} {full or ''}", free)]
+        result["counts"]["kos"] = len(kos)
+        if kos:
+            per_ko = Counter(ko for kos_of_bin in bin_kos(conn).values() for ko in kos_of_bin)
+            result["kos"] = [{"id": ko, "name": name, "n_bins": per_ko[ko]} for ko, name in kos[:limit]]
+        for key in ("samples", "taxa", "pathways", "modules"):
+            result["counts"][key] = len(result[key])
+            result[key] = result[key][:limit]
+    result["total"] = sum(result["counts"].values())
+    return result
+
+
+def namesakes(conn, bin_):
+    """Bins with the same name in other samples: [(bin id, sample name)]."""
+    return [(r[0], r[1]) for r in conn.execute(
+        "SELECT b.id, s.sample_name FROM bin b JOIN sample s ON s.id = b.sample_id "
+        "WHERE b.bin_name = ? AND b.id != ? ORDER BY s.sample_name", (bin_["name"], bin_["id"]))]

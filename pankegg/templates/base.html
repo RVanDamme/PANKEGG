@@ -103,6 +103,11 @@
                 <a class="nav-link" href="/module">Modules</a>
             </li>
           </ul>
+        <form class="d-flex ms-auto" role="search" action="/search" method="get">
+            <input class="form-control form-control-sm me-2" type="search" name="q" value="{{ request.args.get('q', '') if request.path == '/search' else '' }}"
+                   placeholder="Search bins, samples, taxa, pathways, KOs" aria-label="Search" style="min-width: 300px;">
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Search</button>
+        </form>
         </div>
       </div>
     </nav>
