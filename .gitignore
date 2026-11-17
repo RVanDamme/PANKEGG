@@ -1,31 +1,27 @@
-# Python cache and compiled files
-lib/__pycache__/*.pyc
-*.pyc
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
 
-# Build and dist directories from pip/setuptools/conda
+# Build artefacts (pip, setuptools, conda)
 build/
 dist/
 *.egg-info/
 
-# Old patterns
-lib/pycache/*
-pycache/*
+# Local configuration: Flask secret key
+.env
 
-# OS-specific
-.DS_Store
-Thumbs.db
-
-
-# Flask stuff:
+# Flask
 instance/
 .webassets-cache
 
-# Secret key
-.env
-
-# Quarto files
+# Quarto
 docs/.quarto/
 docs/_site/
+/.quarto/
 
-# Python bytecode anywhere
-__pycache__/
+# Operating systems
+.DS_Store
+Thumbs.db

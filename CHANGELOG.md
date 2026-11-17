@@ -46,7 +46,7 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
 - Database (additive, schema 2.1): `bin.classification_method`, `bin.classification_status`
   and a `pankegg_info` table (`pankegg_version`, `schema_version`, `classification_methods`).
   Databases from 2.0.0 still open in `pankegg_app`.
-- `generate_input_sourmash_tax_by_sample.sh` and `generate_input_sourmash_tax_by_tool.sh`.
+- `scripts/generate_input_sourmash_tax_by_sample.sh` and `scripts/generate_input_sourmash_tax_by_tool.sh`.
 - `Checkm2_dir` accepts glob patterns like the other CSV columns.
 - `pankegg_app` also reads `FLASK_SECRET_KEY` from a `.env` file in the directory it is started from (or a parent directory).
 - Classification globs: directories and binary files are skipped with a warning; a pattern whose directory does not exist is an error; UTF-8 byte-order marks are accepted in every input.
@@ -79,6 +79,9 @@ MUFFIN nf-core pipeline. Existing commands, input CSVs and databases keep workin
   lines to one per sample. Help text in English.
 
 ### Changed
+- Repository tidied: the `generate_input_*.sh` helper scripts moved to `scripts/`; the unused
+  `pankegg/data/sample_path.csv` (local paths of a developer's computer) and the unreferenced
+  `pip_requirements.txt` (duplicating `pyproject.toml`) were removed; dead code removed.
 - **`pankegg_app` listens on `127.0.0.1` with the Flask debugger off** (it was `0.0.0.0` with the
   debugger on, which let anyone on the network run code on the computer). New options `--host`,
   `--port` and `--debug`; use `--host 0.0.0.0` to serve other computers.

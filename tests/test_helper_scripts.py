@@ -27,7 +27,7 @@ def layout(root, by_tool):
                                              ("generate_input_sourmash_tax_by_tool.sh", True)])
 def test_tax_genome_helper_script(tmp_path, script, by_tool):
     layout(tmp_path, by_tool)
-    subprocess.run(["bash", str(REPO / script)], cwd=tmp_path, check=True)
+    subprocess.run(["bash", str(REPO / "scripts" / script)], cwd=tmp_path, check=True)
     lines = (tmp_path / "samples.csv").read_text().splitlines()
     assert lines[0] == "Sample name,Annotation_dir,classification_dir,Checkm2_dir"
     assert len(lines) == 2 and lines[1].startswith("S1,")

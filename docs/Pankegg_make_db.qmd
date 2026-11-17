@@ -64,7 +64,7 @@ Dots inside a name are kept: `S3.439.emapper.annotations`, CheckM2 `S3.439` and 
 
 ### Create the input file
 
-You can create this input CSV file automatically with a bash loop, depending on how your data are organized. The repository contains ready-made scripts that you can edit: `generate_input_sourmash_tax_by_sample.sh`, `generate_input_sourmash_tax_by_tool.sh` (`sourmash tax genome`), `generate_input_sourmash_by_sample.sh`, `generate_input_sourmash_by_tool.sh` (`sourmash lca classify`), `generate_input_gtdbtk_by_sample.sh` and `generate_input_gtdbtk_by_tool.sh`.
+You can create this input CSV file automatically with a bash loop, depending on how your data are organized. The `scripts/` folder of the repository contains ready-made scripts that you can edit (see `scripts/README.md`): `scripts/generate_input_sourmash_tax_by_sample.sh`, `scripts/generate_input_sourmash_tax_by_tool.sh` (`sourmash tax genome`), `scripts/generate_input_sourmash_by_sample.sh`, `scripts/generate_input_sourmash_by_tool.sh` (`sourmash lca classify`), `scripts/generate_input_gtdbtk_by_sample.sh` and `scripts/generate_input_gtdbtk_by_tool.sh`.
 
 
 #### If your results are grouped by sample:
@@ -96,7 +96,7 @@ for sample in Dir/*; do
 done
 ```
 
-For `sourmash tax genome` results, use `class_path="$sample/sourmash/*.classifications.csv"` (and `*.emapper.annotations` for raw eggNOG-mapper files), or edit `generate_input_sourmash_tax_by_sample.sh`.
+For `sourmash tax genome` results, use `class_path="$sample/sourmash/*.classifications.csv"` (and `*.emapper.annotations` for raw eggNOG-mapper files), or edit `scripts/generate_input_sourmash_tax_by_sample.sh`.
 
 Run the following script to include GTDBTK annotation:
 
@@ -146,7 +146,7 @@ for sample in Dir/bin_annotation/*; do
 done
 ```
 
-For `sourmash tax genome` results, use `class_path="Dir/sourmash/$name/*.classifications.csv"`, or edit `generate_input_sourmash_tax_by_tool.sh`.
+For `sourmash tax genome` results, use `class_path="Dir/sourmash/$name/*.classifications.csv"`, or edit `scripts/generate_input_sourmash_tax_by_tool.sh`.
 
 Run the following script to include GTDBTK annotation:
 

@@ -1,4 +1,0 @@
-Sample name,Annotation_dir,classification_dir,Checkm2_dir
-Sample_1_test,C:/Users/Arnaud/Desktop/rework/annotate/bin_annotation/*.annotations.tsv,C:/Users/Arnaud/Desktop/rework/classify/sourmash/*,C:/Users/Arnaud/Desktop/rework/classify/checkm2/checkm2_dir/quality_report.tsv
-Sample2_comebin,C:/Users/Arnaud/Desktop/rework/r2/bin_annotation/*.annotations.tsv,C:/Users/Arnaud/Desktop/rework/r2/sourmash/*,C:/Users/Arnaud/Desktop/rework/r2/quality_report.tsv
-Sample3_fly,C:/Users/Arnaud/Desktop/rework/r3/bin_annotation/*.annotations.tsv,C:/Users/Arnaud/Desktop/rework/r3/sourmash/*,C:/Users/Arnaud/Desktop/rework/r3/quality_report.tsv
